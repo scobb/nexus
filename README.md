@@ -13,6 +13,8 @@
 
 ## Quickstart
 
+### TypeScript
+
 ```bash
 npm install @keylightdigital/nexus
 ```
@@ -28,6 +30,25 @@ await trace.addSpan({ name: 'extract-data', output: { invoice_id: '123' } })
 await trace.addSpan({ name: 'call-gpt-4o', input: { prompt }, output: { result } })
 
 await trace.end({ status: 'success' })
+```
+
+### Python
+
+```bash
+pip install keylightdigital-nexus
+```
+
+```python
+from nexus_agent import NexusClient
+
+nexus = NexusClient(api_key='nxs_...', agent_id='my-assistant')
+
+trace = nexus.start_trace(name='process-invoice')
+
+trace.add_span(name='extract-data', output={'invoice_id': '123'})
+trace.add_span(name='call-gpt-4o', input={'prompt': prompt}, output={'result': result})
+
+trace.end(status='success')
 ```
 
 Get your API key at [nexus.keylightdigital.dev](https://nexus.keylightdigital.dev). That's it.
@@ -65,7 +86,7 @@ Nexus is that tool. Built on Cloudflare — near-zero latency globally, no serve
 - **Trace viewer** — Waterfall view of every span: inputs, outputs, errors, timing
 - **Agent health dashboard** — Error rate, avg latency, 7-day volume sparkline
 - **Email alerts** — Notified when an agent trace ends with `error` or `timeout` (Pro)
-- **Open-source SDK** — TypeScript, non-throwing, zero dependencies beyond fetch
+- **Open-source SDKs** — TypeScript and Python, non-throwing, minimal dependencies
 - **Multi-agent** — Track as many agents as you want (Pro), or start with 1 (Free)
 - **Privacy-aware** — Cloudflare-native, data stays in your D1 database
 
