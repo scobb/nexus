@@ -78,6 +78,7 @@ export function landingPage(deletedMessage?: boolean): string {
     <div class="max-w-5xl mx-auto flex items-center justify-between">
       <span class="text-lg font-bold text-white">Nexus</span>
       <div class="flex items-center gap-3">
+        <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
         <a href="/auth/login" class="text-sm text-gray-400 hover:text-white transition-colors">Sign in</a>
         <a href="/register" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Start free</a>
       </div>
