@@ -14,6 +14,7 @@ import billingRoutes from './routes/billing'
 import webhookRoutes from './routes/webhooks'
 import settingsRoutes from './routes/settings'
 import demoRoutes from './routes/demo'
+import blogRoutes from './routes/blog'
 import testRoutes from './routes/test'
 
 const BATCH_LIMIT = 1000
@@ -85,6 +86,8 @@ app.get('/sitemap.xml', (c) => {
     { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/vs/langfuse`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langsmith`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
+    { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
     // Sample demo trace detail pages (hardcoded demo IDs with spans)
     { loc: `${base}/demo/traces/demo-t1`, priority: '0.7', changefreq: 'monthly' },
     { loc: `${base}/demo/traces/demo-t3`, priority: '0.7', changefreq: 'monthly' },
@@ -149,6 +152,9 @@ app.get('/register', (c) => c.redirect('/auth/login'))
 
 // Demo page — no auth required
 app.route('/demo', demoRoutes)
+
+// Blog — no auth required
+app.route('/blog', blogRoutes)
 
 // Test helper routes — only available in non-production environments
 app.use('/test/*', async (c, next) => {
