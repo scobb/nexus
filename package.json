@@ -1,0 +1,22 @@
+{
+  "name": "nexus",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\"",
+    "test:smoke": "playwright test",
+    "migrations:local": "wrangler d1 migrations apply nexus-db --local"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "@playwright/test": "^1.59.1",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.80.0"
+  }
+}

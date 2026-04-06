@@ -1,0 +1,43 @@
+{
+  "name": "@keylightdigital/nexus",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Nexus agent observability — the Plausible for AI agents",
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "ai-agents",
+    "observability",
+    "tracing",
+    "llm",
+    "monitoring"
+  ],
+  "license": "MIT",
+  "author": "Keylight Digital LLC <ralph@keylightdigital.dev>",
+  "homepage": "https://nexus.keylightdigital.dev",
+  "bugs": {
+    "url": "https://github.com/scobb/nexus/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scobb/nexus"
+  }
+}

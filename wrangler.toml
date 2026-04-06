@@ -1,0 +1,20 @@
+name = "nexus"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "NEXUS_DB"
+database_name = "nexus-db"
+database_id = "5055f9eb-ea3f-4991-b456-653e049cea49"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "NEXUS_KV"
+id = "edc59fe4d4e140bcb2136a48443dc007"
+
+[triggers]
+crons = ["0 2 * * *"]
+
+[vars]
+ENVIRONMENT = "production"
