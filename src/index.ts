@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import type { Env, HonoVariables } from './types'
 import { landingPage } from './pages/landing'
+import { docsPage } from './pages/docs'
+import { vsLangfusePage, vsLangsmithPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
@@ -79,7 +81,10 @@ app.get('/sitemap.xml', (c) => {
   // Public pages
   const urls = [
     { loc: `${base}/`, priority: '1.0', changefreq: 'weekly' },
+    { loc: `${base}/docs`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${base}/vs/langfuse`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/langsmith`, priority: '0.8', changefreq: 'monthly' },
     // Sample demo trace detail pages (hardcoded demo IDs with spans)
     { loc: `${base}/demo/traces/demo-t1`, priority: '0.7', changefreq: 'monthly' },
     { loc: `${base}/demo/traces/demo-t3`, priority: '0.7', changefreq: 'monthly' },
@@ -131,6 +136,13 @@ app.get('/og-image.png', (c) => {
     },
   })
 })
+
+// API documentation
+app.get('/docs', (c) => c.html(docsPage()))
+
+// SEO comparison pages
+app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
+app.get('/vs/langsmith', (c) => c.html(vsLangsmithPage()))
 
 // /register is the public CTA — serve same login page
 app.get('/register', (c) => c.redirect('/auth/login'))
