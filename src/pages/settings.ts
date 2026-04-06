@@ -28,6 +28,7 @@ function navBar(email: string): string {
       <a href="/dashboard/keys" class="text-sm text-gray-400 hover:text-white transition-colors">API Keys</a>
       <a href="/dashboard/billing" class="text-sm text-gray-400 hover:text-white transition-colors">Billing</a>
       <a href="/dashboard/settings" class="text-sm text-white font-medium">Settings</a>
+      <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
       <span class="text-gray-600">|</span>
       <span class="text-sm text-gray-400">${escHtml(email)}</span>
       <form method="POST" action="/auth/logout">
