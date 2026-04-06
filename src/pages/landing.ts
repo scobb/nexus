@@ -70,6 +70,8 @@ export function landingPage(deletedMessage?: boolean): string {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
   </style>
+  <!-- Cloudflare Web Analytics -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
   ${deletedBanner}
@@ -78,6 +80,7 @@ export function landingPage(deletedMessage?: boolean): string {
     <div class="max-w-5xl mx-auto flex items-center justify-between">
       <span class="text-lg font-bold text-white">Nexus</span>
       <div class="flex items-center gap-3">
+        <a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a>
         <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
         <a href="/auth/login" class="text-sm text-gray-400 hover:text-white transition-colors">Sign in</a>
         <a href="/register" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Start free</a>
@@ -126,7 +129,7 @@ export function landingPage(deletedMessage?: boolean): string {
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div class="text-2xl mb-3">⚡</div>
         <h3 class="font-semibold text-white mb-2">One SDK, 10 lines</h3>
-        <p class="text-sm text-gray-400">Open-source TypeScript SDK. Drop it into any agent — Claude, GPT-4, LangChain, custom. Start seeing traces in under 5 minutes.</p>
+        <p class="text-sm text-gray-400">Open-source TypeScript and Python SDKs. Drop into any agent — Claude, GPT-4, LangChain, custom. Start seeing traces in under 5 minutes.</p>
       </div>
     </div>
   </section>
@@ -141,8 +144,9 @@ export function landingPage(deletedMessage?: boolean): string {
           <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white mb-4">1</div>
             <h3 class="font-semibold text-white mb-2">Install the SDK</h3>
-            <p class="text-sm text-gray-400 mb-3">One npm install in your existing agent project.</p>
-            <code class="text-xs bg-gray-950 text-indigo-300 px-3 py-2 rounded-lg block font-mono">npm install @keylightdigital/nexus</code>
+            <p class="text-sm text-gray-400 mb-2">TypeScript or Python — one install in your agent project.</p>
+            <code class="text-xs bg-gray-950 text-indigo-300 px-3 py-1.5 rounded-lg block font-mono mb-1">npm install @keylightdigital/nexus</code>
+            <code class="text-xs bg-gray-950 text-indigo-300 px-3 py-1.5 rounded-lg block font-mono">pip install keylightdigital-nexus</code>
           </div>
           <div class="hidden sm:block absolute top-1/2 -right-3 text-gray-700 text-xl font-bold z-10">›</div>
         </div>
@@ -169,13 +173,15 @@ export function landingPage(deletedMessage?: boolean): string {
   <section class="px-4 pb-16">
     <div class="max-w-3xl mx-auto">
       <h2 class="text-2xl font-bold text-white text-center mb-3">6 lines to full observability</h2>
-      <p class="text-gray-400 text-center mb-8">Drop this into any TypeScript agent. Works with Claude, GPT-4, LangChain, or raw fetch calls.</p>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <p class="text-gray-400 text-center mb-8">Works with Claude, GPT-4, LangChain, or raw fetch calls — in TypeScript or Python.</p>
+      <!-- TypeScript example -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-4">
         <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
           <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
           <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
           <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
           <span class="ml-2 text-xs text-gray-500 font-mono">my-agent.ts</span>
+          <span class="ml-auto text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded">TypeScript</span>
         </div>
         <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-indigo-400">import</span> <span class="text-gray-100">{ NexusClient }</span> <span class="text-indigo-400">from</span> <span class="text-green-400">'@keylightdigital/nexus'</span>
 
@@ -188,6 +194,27 @@ export function landingPage(deletedMessage?: boolean): string {
 <span class="text-indigo-400">const</span> <span class="text-gray-100">trace</span> <span class="text-gray-500">=</span> <span class="text-indigo-400">await</span> <span class="text-gray-100">nexus.</span><span class="text-yellow-300">startTrace</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-500">:</span> <span class="text-green-400">'process-request'</span> <span class="text-gray-100">})</span>
 <span class="text-indigo-400">await</span> <span class="text-gray-100">trace.</span><span class="text-yellow-300">addSpan</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-500">:</span> <span class="text-green-400">'call-llm'</span><span class="text-gray-100">,</span> <span class="text-blue-300">output</span><span class="text-gray-500">:</span> <span class="text-gray-100">llmResponse</span> <span class="text-gray-100">})</span>
 <span class="text-indigo-400">await</span> <span class="text-gray-100">trace.</span><span class="text-yellow-300">end</span><span class="text-gray-100">({</span> <span class="text-blue-300">status</span><span class="text-gray-500">:</span> <span class="text-green-400">'success'</span> <span class="text-gray-100">})</span></code></pre>
+      </div>
+      <!-- Python example -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+          <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+          <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+          <span class="ml-2 text-xs text-gray-500 font-mono">my_agent.py</span>
+          <span class="ml-auto text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded">Python</span>
+        </div>
+        <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-indigo-400">from</span> <span class="text-gray-100">nexus_agent</span> <span class="text-indigo-400">import</span> <span class="text-gray-100">NexusClient</span>
+
+<span class="text-gray-100">nexus</span> <span class="text-gray-500">=</span> <span class="text-yellow-300">NexusClient</span><span class="text-gray-100">(</span>
+  <span class="text-blue-300">api_key</span><span class="text-gray-500">=</span><span class="text-green-400">'nxs_your_key_here'</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">agent_id</span><span class="text-gray-500">=</span><span class="text-green-400">'my-assistant'</span>
+<span class="text-gray-100">)</span>
+
+<span class="text-gray-500"># Start a trace when your agent begins</span>
+<span class="text-gray-100">trace</span> <span class="text-gray-500">=</span> <span class="text-gray-100">nexus.</span><span class="text-yellow-300">start_trace</span><span class="text-gray-100">(</span><span class="text-blue-300">name</span><span class="text-gray-500">=</span><span class="text-green-400">'process-request'</span><span class="text-gray-100">)</span>
+<span class="text-gray-100">trace.</span><span class="text-yellow-300">add_span</span><span class="text-gray-100">(</span><span class="text-blue-300">name</span><span class="text-gray-500">=</span><span class="text-green-400">'call-llm'</span><span class="text-gray-100">,</span> <span class="text-blue-300">output</span><span class="text-gray-500">=</span><span class="text-gray-100">llm_response</span><span class="text-gray-100">)</span>
+<span class="text-gray-100">trace.</span><span class="text-yellow-300">end</span><span class="text-gray-100">(</span><span class="text-blue-300">status</span><span class="text-gray-500">=</span><span class="text-green-400">'success'</span><span class="text-gray-100">)</span></code></pre>
       </div>
       <div class="mt-4 text-center">
         <a href="/demo" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">See what this looks like in the dashboard →</a>
@@ -362,7 +389,7 @@ export function landingPage(deletedMessage?: boolean): string {
             <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
           </summary>
           <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
-            The current SDK is TypeScript only. However, the Nexus API is simple REST — you can send traces from any language with plain HTTP calls. A Python SDK is on the roadmap. Until then, <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">POST /api/v1/traces</code> with a JSON body and your API key as a Bearer token works fine from Python, Go, or any other language.
+            Yes! The Python SDK is available now: <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">pip install keylightdigital-nexus</code>. It mirrors the TypeScript SDK's API surface with <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">NexusClient</code>, <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">start_trace()</code>, <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">add_span()</code>, and <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">end()</code>. Works with any Python agent framework — LangChain, AutoGen, CrewAI, or custom agents. See the <a href="/docs" class="text-indigo-400 hover:text-indigo-300">docs</a> for the full Python quickstart.
           </div>
         </details>
 
