@@ -11,6 +11,7 @@ import agentsRoutes from './routes/agents'
 import billingRoutes from './routes/billing'
 import webhookRoutes from './routes/webhooks'
 import settingsRoutes from './routes/settings'
+import demoRoutes from './routes/demo'
 import testRoutes from './routes/test'
 
 const BATCH_LIMIT = 1000
@@ -61,8 +62,38 @@ app.get('/', (c) => {
   return c.html(landingPage(deleted))
 })
 
+app.get('/og-image.png', (c) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#030712"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#grad)"/>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#030712;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <circle cx="900" cy="150" r="300" fill="#4f46e5" opacity="0.08"/>
+  <circle cx="200" cy="500" r="200" fill="#4f46e5" opacity="0.05"/>
+  <text x="100" y="240" font-family="system-ui,-apple-system,sans-serif" font-size="96" font-weight="800" fill="white">Nexus</text>
+  <text x="100" y="320" font-family="system-ui,-apple-system,sans-serif" font-size="36" fill="#a5b4fc">Plausible for AI Agents</text>
+  <text x="100" y="390" font-family="system-ui,-apple-system,sans-serif" font-size="28" fill="#6b7280">Simple observability for indie developers · $9/mo</text>
+  <rect x="100" y="450" width="220" height="56" rx="10" fill="#4f46e5"/>
+  <text x="210" y="484" font-family="system-ui,-apple-system,sans-serif" font-size="22" fill="white" text-anchor="middle" font-weight="600">Start free</text>
+  <text x="100" y="570" font-family="system-ui,-apple-system,sans-serif" font-size="20" fill="#374151">nexus.keylightdigital.dev</text>
+</svg>`
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  })
+})
+
 // /register is the public CTA — serve same login page
 app.get('/register', (c) => c.redirect('/auth/login'))
+
+// Demo page — no auth required
+app.route('/demo', demoRoutes)
 
 // Test helper routes — only available in non-production environments
 app.use('/test/*', async (c, next) => {

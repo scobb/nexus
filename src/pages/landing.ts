@@ -11,6 +11,19 @@ export function landingPage(deletedMessage?: boolean): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus — Plausible for AI Agents</title>
   <meta name="description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev">
+  <!-- Open Graph -->
+  <meta property="og:title" content="Nexus — Plausible for AI Agents">
+  <meta property="og:description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta property="og:site_name" content="Nexus">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nexus — Plausible for AI Agents">
+  <meta name="twitter:description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -72,6 +85,70 @@ export function landingPage(deletedMessage?: boolean): string {
         <div class="text-2xl mb-3">⚡</div>
         <h3 class="font-semibold text-white mb-2">One SDK, 10 lines</h3>
         <p class="text-sm text-gray-400">Open-source TypeScript SDK. Drop it into any agent — Claude, GPT-4, LangChain, custom. Start seeing traces in under 5 minutes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="px-4 pb-16">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-2xl sm:text-3xl font-bold text-white text-center mb-3">How it works</h2>
+      <p class="text-gray-400 text-center mb-10">From zero to first trace in under 5 minutes.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="relative">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white mb-4">1</div>
+            <h3 class="font-semibold text-white mb-2">Install the SDK</h3>
+            <p class="text-sm text-gray-400 mb-3">One npm install in your existing agent project.</p>
+            <code class="text-xs bg-gray-950 text-indigo-300 px-3 py-2 rounded-lg block font-mono">npm install @keylightdigital/nexus</code>
+          </div>
+          <div class="hidden sm:block absolute top-1/2 -right-3 text-gray-700 text-xl font-bold z-10">›</div>
+        </div>
+        <div class="relative">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white mb-4">2</div>
+            <h3 class="font-semibold text-white mb-2">Add 3 lines of code</h3>
+            <p class="text-sm text-gray-400">Wrap your agent run in a trace. Spans auto-capture timing.</p>
+          </div>
+          <div class="hidden sm:block absolute top-1/2 -right-3 text-gray-700 text-xl font-bold z-10">›</div>
+        </div>
+        <div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white mb-4">3</div>
+            <h3 class="font-semibold text-white mb-2">See traces in dashboard</h3>
+            <p class="text-sm text-gray-400">Every run shows up at nexus.keylightdigital.dev — waterfall view, error rates, timing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code example -->
+  <section class="px-4 pb-16">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold text-white text-center mb-3">6 lines to full observability</h2>
+      <p class="text-gray-400 text-center mb-8">Drop this into any TypeScript agent. Works with Claude, GPT-4, LangChain, or raw fetch calls.</p>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+          <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+          <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+          <span class="ml-2 text-xs text-gray-500 font-mono">my-agent.ts</span>
+        </div>
+        <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-indigo-400">import</span> <span class="text-gray-100">{ NexusClient }</span> <span class="text-indigo-400">from</span> <span class="text-green-400">'@keylightdigital/nexus'</span>
+
+<span class="text-indigo-400">const</span> <span class="text-gray-100">nexus</span> <span class="text-gray-500">=</span> <span class="text-indigo-400">new</span> <span class="text-yellow-300">NexusClient</span><span class="text-gray-100">({</span>
+  <span class="text-blue-300">apiKey</span><span class="text-gray-500">:</span> <span class="text-green-400">'nxs_your_key_here'</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">agentId</span><span class="text-gray-500">:</span> <span class="text-green-400">'my-assistant'</span>
+<span class="text-gray-100">})</span>
+
+<span class="text-gray-500">// Start a trace when your agent begins</span>
+<span class="text-indigo-400">const</span> <span class="text-gray-100">trace</span> <span class="text-gray-500">=</span> <span class="text-indigo-400">await</span> <span class="text-gray-100">nexus.</span><span class="text-yellow-300">startTrace</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-500">:</span> <span class="text-green-400">'process-request'</span> <span class="text-gray-100">})</span>
+<span class="text-indigo-400">await</span> <span class="text-gray-100">trace.</span><span class="text-yellow-300">addSpan</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-500">:</span> <span class="text-green-400">'call-llm'</span><span class="text-gray-100">,</span> <span class="text-blue-300">output</span><span class="text-gray-500">:</span> <span class="text-gray-100">llmResponse</span> <span class="text-gray-100">})</span>
+<span class="text-indigo-400">await</span> <span class="text-gray-100">trace.</span><span class="text-yellow-300">end</span><span class="text-gray-100">({</span> <span class="text-blue-300">status</span><span class="text-gray-500">:</span> <span class="text-green-400">'success'</span> <span class="text-gray-100">})</span></code></pre>
+      </div>
+      <div class="mt-4 text-center">
+        <a href="/demo" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">See what this looks like in the dashboard →</a>
       </div>
     </div>
   </section>
@@ -208,6 +285,76 @@ export function landingPage(deletedMessage?: boolean): string {
       <p class="text-gray-400 text-sm leading-relaxed">
         Every feature in Nexus was motivated by a real problem Ralph encountered managing AI workflows: knowing when a trace failed, understanding why an agent stalled, tracking performance over time. If you're building with AI agents, you have the same problems. Nexus is for you.
       </p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="px-4 pb-16">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl sm:text-3xl font-bold text-white text-center mb-10">Frequently asked questions</h2>
+      <div class="space-y-4">
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            Why not Langfuse or LangSmith?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            LangSmith is excellent if you're deep in the LangChain ecosystem. Langfuse is great if you want to self-host. But both are built for teams with engineering resources. Nexus is built for indie developers and small teams who want a hosted solution that just works — no Docker, no infra, no $39/mo minimum. If you're building with Claude, GPT-4, or raw API calls (not LangChain), Nexus fits better.
+          </div>
+        </details>
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            Where is my data stored?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            Traces are stored in Cloudflare D1 (SQLite at the edge), globally distributed across Cloudflare's network. Your data never leaves Cloudflare's infrastructure. Free plan data is retained for 30 days; Pro plan for 90 days. You can delete your account and all data at any time from Settings.
+          </div>
+        </details>
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            Can I use this with Python?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            The current SDK is TypeScript only. However, the Nexus API is simple REST — you can send traces from any language with plain HTTP calls. A Python SDK is on the roadmap. Until then, <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">POST /api/v1/traces</code> with a JSON body and your API key as a Bearer token works fine from Python, Go, or any other language.
+          </div>
+        </details>
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            What happens when I hit the free limit?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            When you hit 1,000 traces on the Free plan, the API returns a <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">429</code> with a clear error message and a link to upgrade. Your existing traces are never deleted — they stay visible in your dashboard until the 30-day retention window. Upgrading to Pro ($9/mo) instantly raises the limit to 50,000 traces.
+          </div>
+        </details>
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            Is there a self-hosted option?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            Nexus is open-source (MIT license) at <a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">github.com/scobb/nexus</a>. You can deploy it to your own Cloudflare account using the included <code class="text-indigo-400 bg-gray-950 px-1.5 py-0.5 rounded text-xs">deploy.sh</code> script. The hosted version at nexus.keylightdigital.dev is the easiest option — but self-hosting is fully supported.
+          </div>
+        </details>
+
+        <details class="bg-gray-900 border border-gray-800 rounded-xl group">
+          <summary class="px-6 py-4 cursor-pointer font-medium text-white flex items-center justify-between select-none">
+            Who built this?
+            <span class="text-gray-500 group-open:rotate-180 transition-transform text-lg">›</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-gray-400 leading-relaxed">
+            Nexus was built by <strong class="text-gray-200">Ralph</strong>, an autonomous AI agent employed by <strong class="text-gray-200">Keylight Digital LLC</strong>. Ralph built the product he needed to monitor his own agent runs. The project is maintained by Keylight Digital — a small software shop building tools for developers. Questions? Email <a href="mailto:ralph@keylightdigital.dev" class="text-indigo-400 hover:text-indigo-300">ralph@keylightdigital.dev</a>.
+          </div>
+        </details>
+
+      </div>
     </div>
   </section>
 

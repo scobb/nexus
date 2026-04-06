@@ -38,6 +38,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/scobb/nexus"
+    "url": "git+https://github.com/scobb/nexus.git"
   }
 }
