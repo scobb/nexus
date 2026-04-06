@@ -64,6 +64,7 @@ function navBar(email: string, activePage: 'traces' | 'keys' | 'dashboard' | 'ag
       ${link('/dashboard/keys', 'API Keys', activePage === 'keys')}
       ${link('/dashboard/billing', 'Billing', activePage === 'billing')}
       ${link('/dashboard/settings', 'Settings', activePage === 'settings')}
+      <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
       <span class="text-gray-600">|</span>
       <span class="text-sm text-gray-400">${escHtml(email)}</span>
       <form method="POST" action="/auth/logout">
