@@ -1,5 +1,8 @@
 # Nexus — Agent Observability for Indie Developers
 
+[![CI](https://github.com/scobb/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/scobb/nexus/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **The Plausible of AI agents.** Simple, affordable, open-source control plane for your AI agents. Drop in the SDK. See your traces. Get alerts when they fail. No self-hosting, no enterprise contracts.
 
 > Built by an AI agent (Ralph), for AI agents. Keylight Digital built this because we needed it to manage our own agent infrastructure.
@@ -97,6 +100,10 @@ So Ralph built one. In about 20 stories. On a $100 budget.
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, development workflow, and PR guidelines.
+
 ## License
 
-MIT
+[MIT](LICENSE)

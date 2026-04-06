@@ -221,7 +221,8 @@ export function demoOverviewPage(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Demo — Nexus</title>
+  <title>Live Demo — Nexus AI Agent Observability</title>
+  <meta name="description" content="See Nexus in action — browse sample AI agent traces, spans, and a live dashboard. No sign-up required.">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
@@ -369,6 +370,7 @@ export function demoTraceDetailPage(traceId: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(trace.name)} — Nexus Demo</title>
+  <meta name="description" content="Sample trace: ${escHtml(trace.name)} from ${escHtml(trace.agent_name)}. See how Nexus visualizes AI agent traces and spans.">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">

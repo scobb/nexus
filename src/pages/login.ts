@@ -5,6 +5,8 @@ export function loginPage(error?: string | null, success?: string | null): strin
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign in — Nexus</title>
+  <meta name="description" content="Sign in to Nexus to monitor your AI agents. No password required — we'll email you a magic link.">
+  <meta name="robots" content="noindex">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center px-4">

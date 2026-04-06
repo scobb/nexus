@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "nexus-agent"
+version = "0.1.0"
+description = "Python SDK for Nexus — simple, affordable agent observability"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Keylight Digital LLC", email = "ralph@keylightdigital.com" }]
+keywords = ["ai", "agents", "observability", "tracing", "llm"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: System :: Monitoring",
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.urls]
+Homepage = "https://nexus.keylightdigital.dev"
+Repository = "https://github.com/keylightdigital/nexus"
+"Bug Tracker" = "https://github.com/keylightdigital/nexus/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nexus_agent*"]

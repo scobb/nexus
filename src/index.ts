@@ -57,6 +57,49 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', version: '0.1.0' })
 })
 
+app.get('/robots.txt', (c) => {
+  const body = [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /dashboard/',
+    'Disallow: /auth/',
+    'Disallow: /test/',
+    '',
+    'Sitemap: https://nexus.keylightdigital.dev/sitemap.xml',
+  ].join('\n')
+  return new Response(body, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+})
+
+app.get('/sitemap.xml', (c) => {
+  const base = 'https://nexus.keylightdigital.dev'
+  const today = new Date().toISOString().split('T')[0]
+
+  // Public pages
+  const urls = [
+    { loc: `${base}/`, priority: '1.0', changefreq: 'weekly' },
+    { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
+    // Sample demo trace detail pages (hardcoded demo IDs with spans)
+    { loc: `${base}/demo/traces/demo-t1`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t3`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t5`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t7`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t8`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t10`, priority: '0.7', changefreq: 'monthly' },
+  ]
+
+  const urlEntries = urls.map(u =>
+    `  <url>\n    <loc>${u.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`
+  ).join('\n')
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries}\n</urlset>`
+
+  return new Response(xml, {
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+  })
+})
+
 app.get('/', (c) => {
   const deleted = c.req.query('deleted') === '1'
   return c.html(landingPage(deleted))

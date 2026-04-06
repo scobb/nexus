@@ -9,21 +9,62 @@ export function landingPage(deletedMessage?: boolean): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus — Plausible for AI Agents</title>
-  <meta name="description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <title>Nexus — AI Agent Observability for Indie Developers</title>
+  <meta name="description" content="Simple, affordable AI agent observability. Drop in the SDK. See your traces. Get alerts when agents fail. No self-hosting, no enterprise contracts. $9/mo.">
   <link rel="canonical" href="https://nexus.keylightdigital.dev">
   <!-- Open Graph -->
-  <meta property="og:title" content="Nexus — Plausible for AI Agents">
-  <meta property="og:description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <meta property="og:title" content="Nexus — AI Agent Observability for Indie Developers">
+  <meta property="og:description" content="Simple, affordable AI agent observability. Drop in the SDK. See your traces. Get alerts when agents fail. No self-hosting, no enterprise contracts. $9/mo.">
   <meta property="og:url" content="https://nexus.keylightdigital.dev">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <meta property="og:site_name" content="Nexus">
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Nexus — Plausible for AI Agents">
-  <meta name="twitter:description" content="Simple, affordable agent observability for indie developers. Drop in the SDK. See your traces. Get alerts when agents fail. $9/mo.">
+  <meta name="twitter:title" content="Nexus — AI Agent Observability for Indie Developers">
+  <meta name="twitter:description" content="Simple, affordable AI agent observability. Drop in the SDK. See your traces. Get alerts when agents fail. No self-hosting, no enterprise contracts. $9/mo.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Keylight Digital LLC",
+      "url": "https://nexus.keylightdigital.dev",
+      "description": "Keylight Digital LLC builds developer tools for indie developers and small teams.",
+      "brand": {
+        "@type": "Brand",
+        "name": "Nexus"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Nexus",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any",
+      "description": "Simple, affordable AI agent observability for indie developers. Drop in the SDK, see your traces, get alerts when agents fail.",
+      "url": "https://nexus.keylightdigital.dev",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "1 agent, 1,000 traces/month, 30-day retention"
+        },
+        {
+          "@type": "Offer",
+          "name": "Pro",
+          "price": "9",
+          "priceCurrency": "USD",
+          "description": "Unlimited agents, 50,000 traces/month, 90-day retention, email alerts"
+        }
+      ]
+    }
+  ]
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
