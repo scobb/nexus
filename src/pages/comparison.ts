@@ -943,7 +943,447 @@ ${navBar}
         <a href="/vs/agentops" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs AgentOps →</a>
       </div>
 
+      <!-- Helicone -->
+      <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-cyan-400">Helicone</h3>
+            <p class="text-sm text-gray-400">AI gateway and LLM request logging via proxy</p>
+          </div>
+          <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1 rounded-full">Alternative</span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Pricing</p><p class="text-sm text-white">$0 · $120/mo Team+</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Hosting</p><p class="text-sm text-white">Hosted (proxy-based)</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">SDKs</p><p class="text-sm text-white">TypeScript + Python (proxy)</p></div>
+        </div>
+        <p class="text-sm text-gray-300 mb-4">
+          Best for developers who want automatic LLM call logging without code changes — route requests through Helicone's proxy and every call is captured. Includes caching, rate limiting, and prompt management.
+        </p>
+        <a href="/vs/helicone" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Helicone →</a>
+      </div>
+
+      <!-- Braintrust -->
+      <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-rose-400">Braintrust</h3>
+            <p class="text-sm text-gray-400">LLM evaluation platform with experiment tracking and production logging</p>
+          </div>
+          <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1 rounded-full">Alternative</span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Pricing</p><p class="text-sm text-white">$0 · Usage-based</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Hosting</p><p class="text-sm text-white">Hosted only</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">SDKs</p><p class="text-sm text-white">TypeScript + Python</p></div>
+        </div>
+        <p class="text-sm text-gray-300 mb-4">
+          Best for teams that run structured LLM evaluations — compare prompts, models, and configurations against test datasets. Strong eval framework, dataset management, and prompt playground. Costs scale quickly with log volume.
+        </p>
+        <a href="/vs/braintrust" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Braintrust →</a>
+      </div>
+
     </section>
+
+    ${ctaSection()}
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function vsHeliconePage(): string {
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Nexus vs Helicone — AI Agent Observability Compared",
+    "description": "Honest comparison of Nexus and Helicone for AI agent monitoring. Proxy-based logging vs trace/span instrumentation, pricing, and feature tradeoffs for indie developers.",
+    "url": "https://nexus.keylightdigital.dev/vs/helicone",
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Feature Comparison: Nexus vs Helicone",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Nexus — trace/span agent observability at $9/mo" },
+        { "@type": "ListItem", "position": 2, "name": "Helicone — proxy-based LLM request logging" }
+      ]
+    }
+  })
+
+  return `${comparisonHead(
+    'Nexus vs Helicone — AI Agent Observability Compared',
+    'Nexus vs Helicone: honest comparison of agent tracing vs proxy-based LLM logging. Pricing, setup complexity, and feature tradeoffs for indie developers.',
+    'https://nexus.keylightdigital.dev/vs/helicone',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+  <script type="application/ld+json">${structuredData}</script>
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Comparison</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Nexus vs Helicone</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Helicone is an AI gateway that captures LLM calls automatically by routing requests through a proxy.
+        Here's an honest look at when Nexus makes more sense — and when Helicone is the better fit.
+      </p>
+    </div>
+
+    <!-- TL;DR -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">TL;DR</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-indigo-400 mb-2">Choose Nexus if you…</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>✓ Build multi-step agents with custom logic between LLM calls</li>
+            <li>✓ Need full trace/span visibility into agent workflows</li>
+            <li>✓ Use TypeScript agents or non-OpenAI/Anthropic models</li>
+            <li>✓ Don't want to route production traffic through a third-party proxy</li>
+            <li>✓ Want $9/mo flat rate (not $120/mo for team features)</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-cyan-400 mb-2">Choose Helicone if you…</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>✓ Want zero-instrumentation LLM call logging via proxy</li>
+            <li>✓ Need built-in caching, rate limiting, or prompt management</li>
+            <li>✓ Are primarily making direct OpenAI/Anthropic API calls</li>
+            <li>✓ Need team collaboration features at scale</li>
+            <li>✓ Want LLM cost tracking per user or request</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key difference callout -->
+    <section class="bg-gray-900 border border-amber-800/40 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">The fundamental difference: proxy vs instrumentation</h2>
+      <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Helicone works as a proxy:</strong> you change your OpenAI base URL from
+          <code class="bg-gray-800 px-1.5 py-0.5 rounded text-cyan-300">api.openai.com</code> to
+          <code class="bg-gray-800 px-1.5 py-0.5 rounded text-cyan-300">oai.helicone.ai</code> and every LLM call
+          is automatically captured. No SDK, no code changes beyond a one-line config edit.
+        </p>
+        <p>
+          <strong class="text-white">Nexus works via instrumentation:</strong> you wrap your agent logic with the
+          Nexus SDK to capture traces (entire agent runs) and spans (individual steps — LLM calls, tool use,
+          retrieval). This means more setup, but you get visibility into the full agent workflow — not just raw LLM calls.
+        </p>
+        <p class="text-amber-200/70">
+          If your "agent" is mostly a single LLM call with a system prompt, Helicone's proxy model is simpler.
+          If you're building multi-step agents where you need to understand what happened between calls,
+          Nexus's trace/span model gives you the full picture.
+        </p>
+      </div>
+    </section>
+
+    <!-- Pricing comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Pricing</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Plan</th>
+              <th class="text-left px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-left px-5 py-3 text-cyan-400 font-semibold">Helicone</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Free</td>
+              <td class="px-5 py-3 text-gray-300">$0 · 1K traces/mo · 1 agent</td>
+              <td class="px-5 py-3 text-gray-300">$0 · 10K requests/mo</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Pro / Growth</td>
+              <td class="px-5 py-3 text-gray-300"><strong class="text-white">$9/mo</strong> · 50K traces · unlimited agents</td>
+              <td class="px-5 py-3 text-gray-300">$120/mo · 2M requests/mo</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Enterprise</td>
+              <td class="px-5 py-3 text-gray-300">—</td>
+              <td class="px-5 py-3 text-gray-300">Custom pricing</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 mt-3">Helicone pricing as of 2026. Nexus counts agent traces (full runs); Helicone counts individual LLM API requests — these are not equivalent units.</p>
+    </section>
+
+    <!-- Feature comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Feature comparison</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Feature</th>
+              <th class="text-center px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-center px-5 py-3 text-cyan-400 font-semibold">Helicone</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            ${[
+              ['Agent trace &amp; span model', '✓', '—'],
+              ['Zero-code LLM call capture', '—', '✓ (proxy)'],
+              ['TypeScript SDK', '✓ open-source', '✓ (proxy wrapper)'],
+              ['Python SDK', '✓ open-source', '✓ (proxy wrapper)'],
+              ['Multi-step agent visibility', '✓ full waterfall', 'Partial (per-request)'],
+              ['LLM cost tracking', '—', '✓'],
+              ['Request caching', '—', '✓'],
+              ['Rate limiting', '—', '✓'],
+              ['Prompt management', '—', '✓'],
+              ['Email alerts on failure', '✓ (Pro)', '✓'],
+              ['Self-hosted option', '—', '✓ (open-source)'],
+              ['Cloudflare edge (global CDN)', '✓', '—'],
+              ['Open-source server', '—', '✓'],
+              ['Multi-agent dashboard', '✓', 'Partial'],
+              ['Setup time', '&lt; 2 min', '&lt; 1 min (proxy change)'],
+            ].map(([feat, nexus, helicone]) => `
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300">${feat}</td>
+              <td class="px-5 py-3 text-center ${nexus === '—' ? 'text-gray-600' : 'text-green-400'}">${nexus}</td>
+              <td class="px-5 py-3 text-center ${helicone === '—' ? 'text-gray-600' : 'text-green-400'}">${helicone}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The honest take -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">The honest take</h2>
+      <div class="space-y-5 text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Helicone is genuinely excellent for its use case:</strong> if you're building
+          applications that make direct OpenAI or Anthropic API calls and you want logging, caching, and rate limiting
+          without touching your application code, the proxy model is hard to beat. One line change to your base URL
+          and you have full request/response logging.
+        </p>
+        <p>
+          <strong class="text-white">The proxy model has real tradeoffs.</strong> Your production LLM traffic routes
+          through Helicone's servers — that's an extra network hop and a dependency on their availability. For most
+          teams this is fine, but it's worth considering. There's also a mental model gap: Helicone shows you
+          individual requests, not agent runs. When a complex agent makes 12 LLM calls, you see 12 separate entries
+          rather than one trace with 12 spans.
+        </p>
+        <p>
+          <strong class="text-white">Nexus is built for the agent workflow problem specifically.</strong> If you're
+          debugging "why did my agent fail on step 3?" you want traces with spans in waterfall order, not a list of
+          raw API calls. The instrumentation overhead is 3–5 lines of SDK code, but you get the full agent timeline in return.
+        </p>
+        <p>
+          The pricing difference is significant for indie developers: $9/mo vs $120/mo at the first paid tier.
+          Helicone's free tier is generous (10K requests/mo) but the paid jump is steep for individual developers.
+        </p>
+      </div>
+    </section>
+
+    ${comparisonRelated('/docs/langchain', 'LangChain observability guide — instrument chains with Nexus')}
+
+    ${ctaSection()}
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function vsBraintrustPage(): string {
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Nexus vs Braintrust — AI Agent Observability Compared",
+    "description": "Honest comparison of Nexus and Braintrust for AI agent monitoring. Observability-first vs eval-first, pricing, agent tracing, and feature tradeoffs for developers.",
+    "url": "https://nexus.keylightdigital.dev/vs/braintrust",
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Feature Comparison: Nexus vs Braintrust",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Nexus — agent trace/span observability at $9/mo" },
+        { "@type": "ListItem", "position": 2, "name": "Braintrust — LLM evaluation, experiment tracking, and production logging" }
+      ]
+    }
+  })
+
+  return `${comparisonHead(
+    'Nexus vs Braintrust — AI Agent Observability Compared',
+    'Nexus vs Braintrust: honest comparison of agent observability vs LLM evaluation platforms. Pricing, agent tracing, experiment tracking, and feature tradeoffs for indie developers.',
+    'https://nexus.keylightdigital.dev/vs/braintrust',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+  <script type="application/ld+json">${structuredData}</script>
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Comparison</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Nexus vs Braintrust</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Braintrust is a powerful LLM evaluation platform — built for running experiments, comparing prompts, and
+        tracking model performance over time. Here is an honest look at when Nexus makes more sense, and when Braintrust is the right choice.
+      </p>
+    </div>
+
+    <!-- TL;DR -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">TL;DR</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-indigo-400 mb-2">Choose Nexus if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>✓ Want production observability into multi-step agent workflows</li>
+            <li>✓ Need trace/span waterfalls showing exactly what your agent did</li>
+            <li>✓ Are an indie dev or small team watching spend closely</li>
+            <li>✓ Do not need a structured evaluation framework or test datasets</li>
+            <li>✓ Want $9/mo flat rate with no per-log usage fees</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-rose-400 mb-2">Choose Braintrust if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>✓ Run structured LLM evals — compare prompts, models, configurations</li>
+            <li>✓ Need a dataset management and versioning system</li>
+            <li>✓ Want experiment tracking with statistical comparison</li>
+            <li>✓ Need a prompt playground to iterate on system prompts</li>
+            <li>✓ Have a team that prioritizes eval-driven development</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key difference callout -->
+    <section class="bg-gray-900 border border-amber-800/40 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">The fundamental difference: observability vs evaluation</h2>
+      <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Nexus is observability-first:</strong> you instrument your agent code with the
+          Nexus SDK and watch what happens in production — traces (full agent runs), spans (individual steps),
+          latency, errors. The question Nexus answers is <em>what did my agent do on this run?</em>
+        </p>
+        <p>
+          <strong class="text-white">Braintrust is eval-first:</strong> you define test datasets and scoring functions,
+          then run experiments to compare different prompts, models, or code versions against those datasets.
+          The question Braintrust answers is <em>which version of my agent performs better?</em>
+        </p>
+        <p class="text-amber-200/70">
+          These tools solve adjacent but different problems. Nexus is the right fit when you need to debug and monitor
+          production agent runs. Braintrust is the right fit when you need to systematically evaluate and improve
+          LLM quality before or after deploying. Many teams use both — Braintrust offline for evals, Nexus online for monitoring.
+        </p>
+      </div>
+    </section>
+
+    <!-- Pricing comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Pricing</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Plan</th>
+              <th class="text-left px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-left px-5 py-3 text-rose-400 font-semibold">Braintrust</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Free</td>
+              <td class="px-5 py-3 text-gray-300">$0 · 1K traces/mo · 1 agent</td>
+              <td class="px-5 py-3 text-gray-300">$0 · 1K logs/mo</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Pro / Team</td>
+              <td class="px-5 py-3 text-gray-300"><strong class="text-white">$9/mo flat</strong> · 50K traces · unlimited agents</td>
+              <td class="px-5 py-3 text-gray-300">Usage-based · ~$1-3 per 1K logs above free tier</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Enterprise</td>
+              <td class="px-5 py-3 text-gray-300">—</td>
+              <td class="px-5 py-3 text-gray-300">Custom pricing</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 mt-3">Braintrust pricing as of 2026 — usage-based costs vary by log volume. Nexus is flat-rate: $9/mo regardless of how many traces you send (up to 50K).</p>
+    </section>
+
+    <!-- Feature comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Feature comparison</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Feature</th>
+              <th class="text-center px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-center px-5 py-3 text-rose-400 font-semibold">Braintrust</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            ${[
+              ['Agent trace &amp; span waterfall', '✓', 'Partial'],
+              ['Production LLM logging', '✓', '✓'],
+              ['LLM evaluation framework', '—', '✓'],
+              ['Dataset management', '—', '✓'],
+              ['Experiment tracking', '—', '✓'],
+              ['Prompt playground', '—', '✓'],
+              ['Statistical eval comparison', '—', '✓'],
+              ['TypeScript SDK', '✓ open-source', '✓'],
+              ['Python SDK', '✓ open-source', '✓'],
+              ['Multi-agent dashboard', '✓', 'Partial'],
+              ['Flat-rate pricing', '✓ $9/mo', '—'],
+              ['Cloudflare edge (global CDN)', '✓', '—'],
+              ['Setup time', '&lt; 2 min', '~10-30 min (eval setup)'],
+              ['Self-hosted option', '—', '—'],
+            ].map(([feat, nexus, bt]) => `
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300">${feat}</td>
+              <td class="px-5 py-3 text-center ${nexus === '—' ? 'text-gray-600' : 'text-green-400'}">${nexus}</td>
+              <td class="px-5 py-3 text-center ${bt === '—' ? 'text-gray-600' : 'text-green-400'}">${bt}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The honest take -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">The honest take</h2>
+      <div class="space-y-5 text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Braintrust is genuinely excellent for LLM evaluation.</strong> If your team
+          is doing systematic prompt engineering — running the same prompt against 100 test cases, comparing
+          GPT-4o vs Claude 3.5, scoring outputs with custom evaluators — Braintrust's eval framework and
+          dataset management are best-in-class. It is built for teams that treat LLM quality as an engineering problem.
+        </p>
+        <p>
+          <strong class="text-white">The tradeoff: Braintrust solves a different problem than observability.</strong>
+          Knowing that prompt version B scores 12% better on your eval dataset does not tell you why a specific
+          production agent run failed at step 3. For production debugging, you want real traces showing exactly
+          which tool calls were made, what the LLM returned, and where latency spiked.
+        </p>
+        <p>
+          <strong class="text-white">Nexus is built for the "what just happened?" question.</strong>
+          When a user reports that your agent gave a wrong answer, you open the trace, see the full span waterfall,
+          and immediately understand the sequence of events. No test dataset needed — you are debugging a real run.
+        </p>
+        <p>
+          The pricing structure is also meaningfully different: Braintrust's usage-based model makes sense for
+          teams running many experiments, but costs can grow unexpectedly with log volume. At $9/mo flat,
+          Nexus is more predictable for indie developers who want observability without a surprise invoice.
+        </p>
+      </div>
+    </section>
+
+    ${comparisonRelated('/docs/llamaindex', 'LlamaIndex observability guide — instrument RAG pipelines with Nexus')}
 
     ${ctaSection()}
   </div>

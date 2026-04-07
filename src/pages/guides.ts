@@ -1619,3 +1619,610 @@ async def run_with_tools(task: str) -> str:
 </body>
 </html>`
 }
+
+export function docsDSPyPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'DSPy Observability with Nexus — Tracing & Monitoring',
+    description: 'How to add observability to DSPy programs using Nexus. Module tracing, optimizer observability, and evaluation monitoring.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install Nexus', text: 'Run: pip install keylightdigital-nexus dspy-ai' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Set it as NEXUS_API_KEY in your environment.' },
+      { '@type': 'HowToStep', name: 'Instrument DSPy modules', text: 'Wrap your dspy.Module forward() calls with Nexus trace and span creation to capture every LLM call and retriever step.' },
+      { '@type': 'HowToStep', name: 'Trace optimizer runs', text: 'Wrap BootstrapFewShot and MIPRO optimizer calls in traces to observe compilation time, iterations, and metric scores.' },
+      { '@type': 'HowToStep', name: 'Monitor evaluations', text: 'Trace dspy.Evaluate runs to see per-example pass/fail rates and latency in the Nexus dashboard.' },
+    ],
+  })
+  const installCode = codeBlock('pip install keylightdigital-nexus dspy-ai', 'bash')
+  const apikeyCode = codeBlock('export NEXUS_API_KEY="nxs_your_api_key_here"', 'bash')
+  const setupCode = codeBlock(
+    `import dspy
+import os
+from nexus_client import NexusClient
+
+# Configure your LM as usual
+lm = dspy.LM("openai/gpt-4o-mini", api_key=os.environ["OPENAI_API_KEY"])
+dspy.configure(lm=lm)
+
+# Initialize Nexus client
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="dspy-app",
+)`,
+    'python',
+  )
+  const moduleCode = codeBlock(
+    `import dspy
+from nexus_client import NexusClient
+import os
+
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="dspy-rag")
+
+# Define your DSPy signatures
+class GenerateAnswer(dspy.Signature):
+    """Answer a question given supporting context."""
+    context: str = dspy.InputField(desc="Relevant passages from the knowledge base")
+    question: str = dspy.InputField()
+    answer: str = dspy.OutputField(desc="Concise answer based on the context")
+
+class RAGModule(dspy.Module):
+    def __init__(self):
+        self.retrieve = dspy.Retrieve(k=3)
+        self.generate = dspy.ChainOfThought(GenerateAnswer)
+
+    def forward(self, question: str) -> dspy.Prediction:
+        # Create a trace for the full module run
+        trace = nexus.start_trace(
+            name="rag: " + question[:60],
+            metadata={"module": "RAGModule", "retrieve_k": 3},
+        )
+        try:
+            # Span for retrieval step
+            retrieve_span = nexus.add_span(
+                trace_id=trace["id"],
+                name="retrieve",
+                input={"question": question, "k": 3},
+            )
+            passages = self.retrieve(question)
+            nexus.end_span(
+                trace_id=trace["id"],
+                span_id=retrieve_span["span_id"],
+                output={"num_passages": len(passages.passages)},
+                status="ok",
+            )
+
+            # Span for generation step
+            gen_span = nexus.add_span(
+                trace_id=trace["id"],
+                name="chain-of-thought",
+                input={"context_length": sum(len(p) for p in passages.passages)},
+            )
+            prediction = self.generate(
+                context=passages.passages,
+                question=question,
+            )
+            nexus.end_span(
+                trace_id=trace["id"],
+                span_id=gen_span["span_id"],
+                output={"answer_length": len(prediction.answer)},
+                status="ok",
+            )
+
+            nexus.end_trace(trace_id=trace["id"], status="success")
+            return prediction
+        except Exception as e:
+            nexus.end_trace(trace_id=trace["id"], status="error")
+            raise
+
+rag = RAGModule()
+result = rag("What is DSPy and how does it differ from LangChain?")
+print(result.answer)
+
+# Nexus dashboard shows:
+#   trace: rag: What is DSPy...
+#   +-- retrieve (3 passages fetched)
+#   +-- chain-of-thought (answer generated)`,
+    'python',
+  )
+  const optimizerCode = codeBlock(
+    `import dspy
+from dspy.teleprompt import BootstrapFewShot
+from nexus_client import NexusClient
+import os
+
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="dspy-optimizer")
+
+# Define metric
+def answer_exact_match(example, pred, trace=None):
+    return example.answer.lower() == pred.answer.lower()
+
+# Training data
+trainset = [
+    dspy.Example(question="What is the capital of France?", answer="Paris").with_inputs("question"),
+    dspy.Example(question="Who wrote Hamlet?", answer="Shakespeare").with_inputs("question"),
+    # ... more examples
+]
+
+# Trace the entire optimization run
+opt_trace = nexus.start_trace(
+    name="bootstrap-few-shot optimization",
+    metadata={"metric": "exact_match", "trainset_size": len(trainset), "max_bootstrapped_demos": 3},
+)
+try:
+    teleprompter = BootstrapFewShot(metric=answer_exact_match, max_bootstrapped_demos=3)
+    optimized_program = teleprompter.compile(RAGModule(), trainset=trainset)
+
+    # Log a compilation-complete span
+    nexus.add_span(
+        trace_id=opt_trace["id"],
+        name="compilation-complete",
+        output={"status": "compiled", "demos_generated": 3},
+        status="ok",
+    )
+    nexus.end_trace(trace_id=opt_trace["id"], status="success")
+except Exception as e:
+    nexus.end_trace(trace_id=opt_trace["id"], status="error")
+    raise
+
+# Save and reuse the optimized program
+optimized_program.save("optimized_rag.json")
+
+# Nexus dashboard shows:
+#   trace: bootstrap-few-shot optimization
+#   +-- compilation-complete`,
+    'python',
+  )
+  const evaluationCode = codeBlock(
+    `import dspy
+from nexus_client import NexusClient
+import os
+
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="dspy-evaluator")
+
+# Evaluation dataset
+devset = [
+    dspy.Example(question="What is RAG?", answer="Retrieval-Augmented Generation").with_inputs("question"),
+    dspy.Example(question="Define gradient descent", answer="An optimization algorithm").with_inputs("question"),
+    # ... more examples
+]
+
+def answer_f1(example, pred, trace=None):
+    pred_tokens = set(pred.answer.lower().split())
+    gold_tokens = set(example.answer.lower().split())
+    if not pred_tokens or not gold_tokens:
+        return 0.0
+    precision = len(pred_tokens & gold_tokens) / len(pred_tokens)
+    recall = len(pred_tokens & gold_tokens) / len(gold_tokens)
+    return (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+
+# Trace the evaluation run
+eval_trace = nexus.start_trace(
+    name="evaluation run",
+    metadata={"metric": "f1", "devset_size": len(devset), "program": "RAGModule"},
+)
+
+evaluate = dspy.Evaluate(devset=devset, metric=answer_f1, num_threads=4)
+score = evaluate(optimized_program)
+
+nexus.add_span(
+    trace_id=eval_trace["id"],
+    name="evaluation-result",
+    output={"f1_score": score, "devset_size": len(devset)},
+    status="ok",
+)
+nexus.end_trace(trace_id=eval_trace["id"], status="success")
+print(f"Evaluation score: {score:.2f}")
+
+# Nexus dashboard shows:
+#   trace: evaluation run
+#   +-- evaluation-result (f1_score: 0.78)`,
+    'python',
+  )
+  return `${guideHead(
+    'DSPy Observability & Tracing — Nexus Integration Guide',
+    'Monitor DSPy programs with Nexus. Module tracing, optimizer observability, and evaluation monitoring. Add Nexus in minutes — no framework changes needed.',
+    'https://nexus.keylightdigital.dev/docs/dspy',
+    jsonLd,
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Breadcrumb -->
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">&#x203A;</span>
+      <span class="text-gray-400">DSPy</span>
+    </p>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Integration Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">DSPy Observability with Nexus</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Add production observability to DSPy programs. Trace every module forward pass, monitor
+        optimizer compilations, and track evaluation runs — all in a single dashboard.
+      </p>
+    </div>
+
+    <!-- Why Nexus for DSPy -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Why use Nexus with DSPy?</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>&#x2713; <strong class="text-white">Module tracing</strong> &#x2014; capture every <code class="text-indigo-300 bg-gray-800 px-1 rounded">forward()</code> call with input, output, and latency</li>
+        <li>&#x2713; <strong class="text-white">Optimizer observability</strong> &#x2014; monitor BootstrapFewShot and MIPRO compilation time and outcomes</li>
+        <li>&#x2713; <strong class="text-white">Evaluation monitoring</strong> &#x2014; track metric scores, per-example pass/fail, and regression across runs</li>
+        <li>&#x2713; <strong class="text-white">Zero DSPy internals</strong> &#x2014; wraps the public API, no monkey-patching or private hooks needed</li>
+        <li>&#x2713; <strong class="text-white">$9/mo</strong> &#x2014; no enterprise contracts, free plan for prototyping</li>
+      </ul>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 &#x2014; Install dependencies</h2>
+      <p class="text-gray-400 mb-4">DSPy is a Python framework. Install the Nexus Python SDK alongside DSPy:</p>
+      ${installCode}
+      <p class="text-sm text-gray-500 mt-3">Requires Python 3.9+ and dspy-ai &ge; 2.4.0</p>
+    </section>
+
+    <!-- Step 2: API Key -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 &#x2014; Create an API key</h2>
+      <p class="text-gray-400 mb-4">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>
+        and create a new API key. Add it to your environment:
+      </p>
+      ${apikeyCode}
+    </section>
+
+    <!-- Step 3: Setup -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 &#x2014; Configure DSPy and Nexus</h2>
+      <p class="text-gray-400 mb-4">
+        Configure your language model and Nexus client at startup. The Nexus client is lightweight
+        and safe to initialize globally &#x2014; all methods fail silently if the API is unreachable.
+      </p>
+      ${setupCode}
+    </section>
+
+    <!-- Step 4: Module tracing -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 4 &#x2014; Trace DSPy modules</h2>
+      <p class="text-gray-400 mb-4">
+        Wrap your <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">dspy.Module.forward()</code>
+        method with a Nexus trace. Add child spans for each distinct step (retrieval, prediction, tool call).
+        This gives you a full waterfall view per module run.
+      </p>
+      ${moduleCode}
+    </section>
+
+    <!-- Step 5: Optimizer tracing -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 5 &#x2014; Trace optimizer runs</h2>
+      <p class="text-gray-400 mb-4">
+        DSPy optimizers (teleprompts) like <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">BootstrapFewShot</code>
+        and <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">MIPRO</code> can run
+        for minutes or hours. Wrapping them in a trace lets you compare compilation cost across
+        different configurations and track regressions.
+      </p>
+      ${optimizerCode}
+    </section>
+
+    <!-- Step 6: Evaluation tracing -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 6 &#x2014; Monitor evaluations</h2>
+      <p class="text-gray-400 mb-4">
+        Trace <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">dspy.Evaluate</code> calls
+        to track metric scores over time. Compare pre-optimization vs post-optimization performance
+        in the Nexus dashboard without digging through terminal output.
+      </p>
+      ${evaluationCode}
+    </section>
+
+    <!-- Step 7: View traces -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 7 &#x2014; View traces in Nexus</h2>
+      <p class="text-gray-400 mb-4">
+        Navigate to
+        <a href="/dashboard/traces" class="text-indigo-400 hover:text-indigo-300">/dashboard/traces</a>
+        to see every module run, optimizer compilation, and evaluation as a trace with span waterfall,
+        latency breakdown, and status indicators.
+      </p>
+      <a href="/demo" class="inline-block text-sm text-indigo-400 hover:text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:bg-indigo-950 transition-colors">
+        View demo with sample traces &#x2192;
+      </a>
+    </section>
+
+    <!-- Links -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">More resources</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a></li>
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
+        <li><a href="/docs/llamaindex" class="text-indigo-400 hover:text-indigo-300">LlamaIndex integration guide</a></li>
+        <li><a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK integration guide</a></li>
+        <li><a href="/blog/monitoring-rag-pipelines" class="text-indigo-400 hover:text-indigo-300">Blog: Monitoring RAG pipelines in production</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> &#x2014; free plan or $9/mo Pro</li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your DSPy programs</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed. Add tracing in under 10 minutes.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free &#x2192;
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function docsLlamaIndexPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'LlamaIndex Observability with Nexus — Tracing & Monitoring',
+    description: 'How to add observability to LlamaIndex RAG pipelines and agents using Nexus.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install Nexus', text: 'Run: pip install keylightdigital-nexus llama-index' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Set it as NEXUS_API_KEY in your environment.' },
+      { '@type': 'HowToStep', name: 'Configure the callback handler', text: 'Import NexusCallbackHandler and pass it to Settings.callback_manager so LlamaIndex emits events to Nexus automatically.' },
+      { '@type': 'HowToStep', name: 'Trace a query engine', text: 'Build your VectorStoreIndex and query engine normally — all retrieval, LLM, and synthesizer spans appear in the Nexus dashboard.' },
+      { '@type': 'HowToStep', name: 'Trace an agent', text: 'Wrap a ReActAgent or OpenAIAgent with a manual trace for multi-step tool-use visibility.' },
+    ],
+  })
+  const installCode = codeBlock('pip install keylightdigital-nexus llama-index', 'bash')
+  const apikeyCode = codeBlock('export NEXUS_API_KEY="nxs_your_api_key_here"', 'bash')
+  const callbackCode = codeBlock(
+    `from nexus_client import NexusClient, NexusCallbackHandler
+from llama_index.core import Settings
+from llama_index.core.callbacks import CallbackManager
+import os
+
+# Initialize Nexus client
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="llamaindex-rag-app",
+)
+
+# Create the callback handler
+nexus_handler = NexusCallbackHandler(nexus_client=nexus)
+
+# Register globally — all LlamaIndex pipelines will use this
+Settings.callback_manager = CallbackManager([nexus_handler])`,
+    'python',
+  )
+  const queryEngineCode = codeBlock(
+    `from nexus_client import NexusClient, NexusCallbackHandler
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+from llama_index.core.callbacks import CallbackManager
+import os
+
+# --- Setup (run once at startup) ---
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="rag-pipeline")
+Settings.callback_manager = CallbackManager([NexusCallbackHandler(nexus_client=nexus)])
+
+# --- Index your documents ---
+documents = SimpleDirectoryReader("./data").load_data()
+index = VectorStoreIndex.from_documents(documents)
+
+# --- Query: each call creates a trace automatically ---
+query_engine = index.as_query_engine(similarity_top_k=3)
+
+response = query_engine.query("What is the capital of France?")
+print(response)
+
+# Nexus dashboard will show:
+#   trace: query
+#   +-- retrieve (3 nodes fetched, latency, similarity scores)
+#   +-- llm-call (prompt tokens, completion tokens, model)
+#   +-- synthesize (output text)`,
+    'python',
+  )
+  const agentCode = codeBlock(
+    `from nexus_client import NexusClient, NexusCallbackHandler
+from llama_index.core import Settings
+from llama_index.core.callbacks import CallbackManager
+from llama_index.core.tools import FunctionTool
+from llama_index.agent.openai import OpenAIAgent
+import os
+
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="llamaindex-agent")
+Settings.callback_manager = CallbackManager([NexusCallbackHandler(nexus_client=nexus)])
+
+# --- Define tools ---
+def search_docs(query: str) -> str:
+    """Search internal documentation for relevant content."""
+    return "Found relevant content for: " + query
+
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression safely."""
+    return "42"
+
+search_tool = FunctionTool.from_defaults(fn=search_docs)
+calc_tool = FunctionTool.from_defaults(fn=calculate)
+agent = OpenAIAgent.from_tools([search_tool, calc_tool], verbose=True)
+
+# --- Run with a manual trace for the outer agent loop ---
+def run_agent(user_query: str) -> str:
+    trace = nexus.start_trace(
+        name="agent: " + user_query[:60],
+        metadata={"agent_type": "openai", "tools": ["search_docs", "calculate"]},
+    )
+    try:
+        result = agent.chat(user_query)
+        nexus.end_trace(trace_id=trace["id"], status="success")
+        return str(result)
+    except Exception as e:
+        nexus.end_trace(trace_id=trace["id"], status="error")
+        raise
+
+answer = run_agent("How many tokens did our last 10 queries use in total?")
+print(answer)
+
+# Nexus dashboard will show:
+#   agent: How many tokens... (outer trace)
+#   +-- llm-call (initial planning)
+#   +-- tool-search_docs
+#   +-- llm-call (reasoning)
+#   +-- tool-calculate
+#   +-- llm-call (final answer)`,
+    'python',
+  )
+  return `${guideHead(
+    'LlamaIndex Observability & Tracing — Nexus Integration Guide',
+    'Monitor LlamaIndex RAG pipelines and agents with Nexus. Callback handler setup, query engine tracing, and agent tracing with full span waterfalls. Python examples.',
+    'https://nexus.keylightdigital.dev/docs/llamaindex',
+    jsonLd,
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Breadcrumb -->
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">&#x203A;</span>
+      <span class="text-gray-400">LlamaIndex</span>
+    </p>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Integration Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">LlamaIndex Observability with Nexus</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Add full observability to your LlamaIndex RAG pipelines and agents. Track every retrieval,
+        LLM call, re-ranker, and synthesizer step in a span waterfall — no code changes needed for
+        standard pipelines.
+      </p>
+    </div>
+
+    <!-- Why Nexus for LlamaIndex -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Why use Nexus with LlamaIndex?</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>&#x2713; <strong class="text-white">Callback-based auto-tracing</strong> — plug in one handler to trace the entire pipeline</li>
+        <li>&#x2713; <strong class="text-white">RAG span visibility</strong> — see retrieval, embedding, re-ranking, and synthesis as separate spans</li>
+        <li>&#x2713; <strong class="text-white">Agent step tracing</strong> — track every tool call and LLM turn in ReAct and OpenAI agents</li>
+        <li>&#x2713; <strong class="text-white">LlamaIndex monitoring</strong> — latency, errors, and token usage in one dashboard</li>
+        <li>&#x2713; <strong class="text-white">No vendor lock-in</strong> — works alongside any LLM provider LlamaIndex supports</li>
+      </ul>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 — Install dependencies</h2>
+      <p class="text-gray-400 mb-4">LlamaIndex is primarily a Python framework. Install both packages:</p>
+      ${installCode}
+      <p class="text-sm text-gray-500 mt-3">Requires Python 3.9+ and llama-index &ge; 0.10.0</p>
+    </section>
+
+    <!-- Step 2: API Key -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 — Create an API key</h2>
+      <p class="text-gray-400 mb-4">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>
+        and create a new API key. Add it to your environment:
+      </p>
+      ${apikeyCode}
+    </section>
+
+    <!-- Step 3: Callback handler -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 — Configure the callback handler</h2>
+      <p class="text-gray-400 mb-4">
+        Nexus integrates with LlamaIndex via the built-in
+        <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">CallbackManager</code>.
+        Configure it once via <code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">Settings</code>
+        and all subsequent query engines and agents will emit traces automatically.
+      </p>
+      ${callbackCode}
+      <p class="text-sm text-gray-500 mt-3">
+        The handler automatically captures <code class="text-indigo-300">LLMStartEvent</code>,
+        <code class="text-indigo-300">LLMEndEvent</code>, <code class="text-indigo-300">RetrieveStartEvent</code>,
+        and <code class="text-indigo-300">RetrieveEndEvent</code> from LlamaIndex's event system.
+      </p>
+    </section>
+
+    <!-- Step 4: Query Engine tracing -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 4 — Trace a query engine</h2>
+      <p class="text-gray-400 mb-4">
+        With the callback handler configured, build your index and query engine as normal.
+        Every query automatically produces a trace with retrieval and LLM spans.
+      </p>
+      ${queryEngineCode}
+    </section>
+
+    <!-- Step 5: Agent tracing -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 5 — Trace a LlamaIndex agent</h2>
+      <p class="text-gray-400 mb-4">
+        For agents (ReAct, OpenAI function-calling), wrap the agent run in a manual trace to
+        capture the full multi-step loop alongside the automatic callback spans.
+      </p>
+      ${agentCode}
+    </section>
+
+    <!-- Step 6: View traces -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 6 — View traces in Nexus</h2>
+      <p class="text-gray-400 mb-4">
+        Run your pipeline and navigate to
+        <a href="/dashboard/traces" class="text-indigo-400 hover:text-indigo-300">/dashboard/traces</a>.
+        Each query or agent run appears as a trace. The span waterfall shows retrieval, LLM, and
+        tool calls in sequence — with latency and token counts at a glance.
+      </p>
+      <a href="/demo" class="inline-block text-sm text-indigo-400 hover:text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:bg-indigo-950 transition-colors">
+        View demo with sample RAG traces &#x2192;
+      </a>
+    </section>
+
+    <!-- Links -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">More resources</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a></li>
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
+        <li><a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK integration guide</a></li>
+        <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI integration guide</a></li>
+        <li><a href="/blog/autonomous-agent-observability" class="text-indigo-400 hover:text-indigo-300">Blog: Autonomous agent observability</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your LlamaIndex pipelines</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed. Callback handler setup in under 5 minutes.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free &#x2192;
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}

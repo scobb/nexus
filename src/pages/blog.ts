@@ -43,6 +43,13 @@ export const POSTS: BlogPost[] = [
     readingTime: '7 min read',
   },
   {
+    slug: 'monitoring-rag-pipelines',
+    title: 'Monitoring RAG Pipelines in Production: A Practical Guide',
+    date: '2026-04-07',
+    excerpt: 'RAG pipelines fail in subtle ways: bad retrievals, context stuffing, hallucinations from irrelevant chunks. Here\'s what to monitor, what metrics matter, and how to trace retrieval and generation steps with Nexus.',
+    readingTime: '8 min read',
+  },
+  {
     slug: 'monitor-ai-agents-production',
     title: 'How to Monitor Your AI Agents in Production',
     date: '2026-04-07',
@@ -116,6 +123,9 @@ export function blogIndexPage(): string {
 export function blogPostPage(slug: string): string | null {
   if (slug === 'introducing-nexus') {
     return introducingNexusPost()
+  }
+  if (slug === 'monitoring-rag-pipelines') {
+    return monitoringRagPipelinesPost()
   }
   if (slug === 'monitor-ai-agents-production') {
     return monitorAIAgentsProductionPost()
@@ -755,6 +765,386 @@ session-end            [success, 17.8s total]</code></pre>
     <div class="mt-16 bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-8 text-center">
       <h2 class="text-xl font-bold text-white mb-2">Instrument your autonomous agent</h2>
       <p class="text-gray-400 text-sm mb-5">1,000 traces/month free. No credit card needed.</p>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors text-sm">
+          Start free →
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors text-sm">
+          View demo
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function monitoringRagPipelinesPost(): string {
+  const post = POSTS.find(p => p.slug === 'monitoring-rag-pipelines')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/monitoring-rag-pipelines',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const installCode = `pip install keylightdigital-nexus`
+  const basicSetupCode = `from nexus import NexusClient
+
+nexus = NexusClient(api_key="nxs_...", agent_id="rag-pipeline")`
+  const traceRetrievalCode = `async def answer_question(query: str) -> str:
+    trace = await nexus.start_trace(name="rag-query", metadata={"query": query})
+
+    # Trace the retrieval step
+    retrieval_span = await trace.start_span(
+        name="vector-retrieval",
+        input={"query": query, "top_k": 5}
+    )
+    chunks = await vector_store.similarity_search(query, k=5)
+    await retrieval_span.end(output={
+        "chunk_count": len(chunks),
+        "top_score": chunks[0].score if chunks else 0,
+        "sources": [c.metadata["source"] for c in chunks],
+    })
+
+    # Trace the generation step
+    context = "\\n".join(c.page_content for c in chunks)
+    generation_span = await trace.start_span(
+        name="llm-generation",
+        input={"context_length": len(context), "query": query}
+    )
+    response = await llm.apredict(
+        "Answer based on context:\\n" + context + "\\n\\nQuestion: " + query
+    )
+    await generation_span.end(output={
+        "answer": response,
+        "answer_length": len(response),
+    })
+
+    await trace.end(status="success", output={"answer": response})
+    return response`
+  const relevanceScoreCode = `# Log relevance scores alongside chunk count
+retrieval_span = await trace.start_span(
+    name="vector-retrieval",
+    input={"query": query, "top_k": 5}
+)
+chunks = await vector_store.similarity_search_with_score(query, k=5)
+scores = [score for _, score in chunks]
+
+await retrieval_span.end(output={
+    "chunk_count": len(chunks),
+    "avg_score": sum(scores) / len(scores) if scores else 0,
+    "min_score": min(scores) if scores else 0,
+    "max_score": max(scores) if scores else 0,
+    "low_relevance": sum(1 for s in scores if s < 0.7),  # flag weak retrievals
+})`
+  const agentCode = `from nexus import NexusClient
+
+nexus = NexusClient(api_key="nxs_...", agent_id="rag-agent")
+
+async def rag_agent_loop(user_query: str):
+    trace = await nexus.start_trace(name="agent-session", metadata={"query": user_query})
+    turn = 0
+
+    while turn < 10:
+        turn += 1
+        plan_span = await trace.start_span(name=f"plan-turn-{turn}", input={"turn": turn})
+        action = await llm_plan(user_query, history)
+        await plan_span.end(output={"action": action["type"]})
+
+        if action["type"] == "retrieve":
+            ret_span = await trace.start_span(name="retrieve", input={"query": action["query"]})
+            chunks = await vector_store.search(action["query"])
+            await ret_span.end(output={"chunks": len(chunks)})
+        elif action["type"] == "answer":
+            await trace.end(status="success", output={"answer": action["text"]})
+            return action["text"]
+
+    await trace.end(status="error", output={"reason": "max_turns_exceeded"})`
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      RAG (retrieval-augmented generation) pipelines are deceptively easy to get working in development and deceptively hard to keep working in production. The retrieval looks fine. The generation looks fine. But users ask questions that fall outside the indexed corpus, the vector similarity scores are borderline, or the LLM confidently answers from irrelevant context — and you have no visibility into which step failed.
+    </p>
+    <p class="text-gray-300 leading-relaxed mb-6">
+      This guide covers the RAG failure modes you'll encounter in production, the metrics worth tracking, and how to instrument your pipeline with trace-level observability using the Nexus SDK.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What can go wrong in RAG</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      RAG failures cluster into three categories:
+    </p>
+
+    <h3 class="text-lg font-semibold text-white mt-6 mb-2">1. Retrieval failures</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      The vector store returns chunks that are syntactically similar but semantically irrelevant. The LLM receives wrong context and either hallucinates or says "I don't know." These are the hardest failures to diagnose because the system doesn't error — it just answers incorrectly.
+    </p>
+    <ul class="text-gray-300 space-y-2 mb-6 pl-4">
+      <li>• <strong class="text-gray-200">Low similarity scores</strong> — retrieved chunks have cosine similarity below your threshold but still get passed to the LLM</li>
+      <li>• <strong class="text-gray-200">Embedding model mismatch</strong> — your query embeddings and document embeddings were generated by different model versions</li>
+      <li>• <strong class="text-gray-200">Chunking artifacts</strong> — a fact is split across two chunks; neither chunk alone answers the question</li>
+      <li>• <strong class="text-gray-200">Stale index</strong> — your knowledge base was updated but the vector index wasn't re-embedded</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-white mt-6 mb-2">2. Context window issues</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      You retrieve 10 chunks because you want high recall. Each chunk is 500 tokens. Add the system prompt, the conversation history, and the query — you're at 7,000 tokens before the LLM generates a single word. With GPT-4o's 128k context, this seems fine. But:
+    </p>
+    <ul class="text-gray-300 space-y-2 mb-6 pl-4">
+      <li>• <strong class="text-gray-200">Lost-in-the-middle problem</strong> — LLMs pay more attention to content at the start and end of the context window. Information buried in the middle of a long context gets less attention.</li>
+      <li>• <strong class="text-gray-200">Token cost</strong> — 7,000 input tokens per query adds up fast at scale. Without tracking context length per request, you won't catch runaway costs until the bill arrives.</li>
+      <li>• <strong class="text-gray-200">Truncation</strong> — if you're using a model with a smaller context window, long contexts get truncated silently.</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-white mt-6 mb-2">3. Hallucinations from bad context</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      When retrieved chunks don't contain the answer, LLMs often extrapolate rather than admitting they don't know. The answer sounds confident and coherent but is fabricated. This is the worst failure mode — users trust wrong answers more than obvious errors.
+    </p>
+    <p class="text-gray-300 leading-relaxed mb-6">
+      You can't catch hallucinations without either human review or automated answer evaluation. But you can detect the <em>preconditions</em> for hallucination: low retrieval scores, short context, queries with no good chunk matches.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What to monitor</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      For each RAG query, you want to capture:
+    </p>
+    <div class="overflow-x-auto mb-8">
+      <table class="w-full text-sm border border-gray-800 rounded-xl overflow-hidden">
+        <thead>
+          <tr class="bg-gray-900 text-left">
+            <th class="px-4 py-3 text-gray-300 font-semibold border-b border-gray-800">Metric</th>
+            <th class="px-4 py-3 text-gray-300 font-semibold border-b border-gray-800">Why it matters</th>
+            <th class="px-4 py-3 text-gray-300 font-semibold border-b border-gray-800">Red flag</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-800/50">
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">retrieval_latency_ms</td>
+            <td class="px-4 py-3 text-gray-400">Vector search cost per query</td>
+            <td class="px-4 py-3 text-gray-500">&gt; 500ms at p95</td>
+          </tr>
+          <tr class="border-b border-gray-800/50">
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">chunk_count</td>
+            <td class="px-4 py-3 text-gray-400">How many chunks were retrieved</td>
+            <td class="px-4 py-3 text-gray-500">0 chunks = no context</td>
+          </tr>
+          <tr class="border-b border-gray-800/50">
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">avg_relevance_score</td>
+            <td class="px-4 py-3 text-gray-400">Average cosine similarity of retrieved chunks</td>
+            <td class="px-4 py-3 text-gray-500">&lt; 0.7 signals poor retrieval</td>
+          </tr>
+          <tr class="border-b border-gray-800/50">
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">context_tokens</td>
+            <td class="px-4 py-3 text-gray-400">Total tokens sent to the LLM</td>
+            <td class="px-4 py-3 text-gray-500">Spikes = inefficient chunking</td>
+          </tr>
+          <tr class="border-b border-gray-800/50">
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">generation_latency_ms</td>
+            <td class="px-4 py-3 text-gray-400">LLM call duration</td>
+            <td class="px-4 py-3 text-gray-500">Correlated with context_tokens</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 text-indigo-300 font-mono text-xs">answer_length</td>
+            <td class="px-4 py-3 text-gray-400">Length of LLM response</td>
+            <td class="px-4 py-3 text-gray-500">Very short = LLM giving up</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Instrumenting a RAG pipeline with Nexus</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      Install the Nexus Python SDK:
+    </p>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden my-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">terminal</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${installCode}</code></pre>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden my-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">setup.py</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${basicSetupCode}</code></pre>
+    </div>
+
+    <h3 class="text-lg font-semibold text-white mt-8 mb-3">Tracing retrieval and generation separately</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      The key pattern is creating one trace per user query, with separate child spans for the retrieval step and the generation step. This lets you see exactly where latency comes from and what data each step received:
+    </p>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden my-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">rag_pipeline.py</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${traceRetrievalCode}</code></pre>
+    </div>
+
+    <p class="text-gray-300 leading-relaxed mb-6">
+      In your Nexus dashboard, each query appears as a trace with two child spans: <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">vector-retrieval</code> and <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">llm-generation</code>. You can instantly see whether latency is dominated by vector search or LLM generation — and inspect the inputs and outputs of each.
+    </p>
+
+    <h3 class="text-lg font-semibold text-white mt-8 mb-3">Logging relevance scores</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      Most vector stores return similarity scores alongside chunks. Log them. They're your earliest warning signal for retrieval quality degradation:
+    </p>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden my-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">rag_pipeline.py</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${relevanceScoreCode}</code></pre>
+    </div>
+
+    <p class="text-gray-300 leading-relaxed mb-6">
+      Now in your Nexus trace inspector, you can filter for queries where <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">low_relevance &gt; 0</code> — these are the queries most likely to produce hallucinations. Review them manually to understand the gap in your knowledge base.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Tracing multi-turn RAG agents</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      When your RAG system is part of a multi-turn agent (plan → retrieve → reason → answer), you want a single trace per session with spans for each reasoning step:
+    </p>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden my-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">rag_agent.py</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${agentCode}</code></pre>
+    </div>
+
+    <p class="text-gray-300 leading-relaxed mb-4">
+      The trace waterfall in Nexus will show the plan-retrieve loop as repeated spans, making it immediately visible when an agent is spinning (retrieving without making progress) versus converging toward an answer.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What a healthy RAG trace looks like</h2>
+    <pre class="bg-gray-900 border border-gray-700 rounded-xl p-4 overflow-x-auto text-sm text-gray-200 leading-relaxed mb-6"><code>rag-query                     [0ms, success]
+  vector-retrieval             [0ms, 87ms]   chunk_count=5, avg_score=0.83
+  llm-generation               [87ms, 1.2s]  context_tokens=1840, answer_length=312</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">A degraded trace looks like:</p>
+    <pre class="bg-gray-900 border border-gray-700 rounded-xl p-4 overflow-x-auto text-sm text-gray-200 leading-relaxed mb-6"><code>rag-query                     [0ms, success]   ← "success" but answer is wrong
+  vector-retrieval             [0ms, 340ms]  chunk_count=5, avg_score=0.51, low_relevance=4
+  llm-generation               [340ms, 2.1s] context_tokens=3200, answer_length=89</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-6">
+      Low <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">avg_score</code>, high <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">low_relevance</code>, high <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">context_tokens</code>, short <code class="bg-gray-900 text-indigo-300 px-1.5 rounded text-sm font-mono">answer_length</code>. The LLM received bad context and gave a hedging non-answer. You can find every trace matching this pattern before users file bug reports.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Integration guides</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">
+      If you're using a RAG framework, see the specific integration guide for your stack:
+    </p>
+    <ul class="text-gray-300 space-y-2 mb-6 pl-4">
+      <li>• <a href="/docs/llamaindex" class="text-indigo-400 hover:text-indigo-300">LlamaIndex integration guide</a> — callback-based auto-tracing for query engines and agents</li>
+      <li>• <a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a> — trace RAG chains and retrieval QA</li>
+      <li>• <a href="/docs/dspy" class="text-indigo-400 hover:text-indigo-300">DSPy integration guide</a> — trace DSPy RAGModule and optimizers</li>
+      <li>• <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Full SDK docs</a> — manual instrumentation for any framework</li>
+    </ul>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring RAG Pipelines in Production: A Practical Guide — Nexus</title>
+  <meta name="description" content="RAG pipelines fail in subtle ways: bad retrievals, context stuffing, hallucinations from irrelevant chunks. Learn what to monitor and how to trace RAG pipelines with Nexus.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/monitoring-rag-pipelines">
+  <meta property="og:title" content="Monitoring RAG Pipelines in Production: A Practical Guide">
+  <meta property="og:description" content="RAG pipelines fail in subtle ways: bad retrievals, context stuffing, hallucinations from irrelevant chunks. Learn what to monitor and how to trace RAG pipelines with Nexus.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/monitoring-rag-pipelines">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta property="og:site_name" content="Nexus">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Monitoring RAG Pipelines in Production: A Practical Guide">
+  <meta name="twitter:description" content="RAG pipelines fail in subtle ways. Here's what to monitor and how to trace retrieval and generation steps with Nexus.">
+  <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <script type="application/ld+json">${jsonLd}</script>
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main class="max-w-2xl mx-auto px-4 py-12">
+    <!-- Breadcrumb -->
+    <nav class="text-sm text-gray-500 mb-8">
+      <a href="/blog" class="hover:text-gray-300 transition-colors">Blog</a>
+      <span class="mx-2">›</span>
+      <span class="text-gray-400">Monitoring RAG Pipelines</span>
+    </nav>
+
+    <!-- Header -->
+    <header class="mb-10">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-xs text-gray-500">2026-04-07</span>
+        <span class="text-xs text-gray-600">·</span>
+        <span class="text-xs text-gray-500">8 min read</span>
+        <span class="text-xs text-gray-600">·</span>
+        <span class="text-xs text-indigo-400 bg-indigo-950 border border-indigo-800 px-2 py-0.5 rounded-full">RAG Observability</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white leading-tight">
+        Monitoring RAG Pipelines in Production: A Practical Guide
+      </h1>
+    </header>
+
+    <!-- Content -->
+    <div class="prose-custom">
+      ${content}
+    </div>
+
+    <!-- Related -->
+    <div class="mt-12 bg-gray-900 border border-gray-800 rounded-2xl px-6 py-5 mb-8">
+      <h2 class="text-base font-bold text-white mb-3">Related</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs/llamaindex" class="text-indigo-400 hover:text-indigo-300">LlamaIndex integration guide</a> — auto-trace query engines with CallbackManager</li>
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a> — trace chains and retrieval QA</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">How to Monitor AI Agents in Production</a> — agent-level failure modes</li>
+      </ul>
+    </div>
+
+    <!-- CTA -->
+    <div class="mt-8 bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-8 text-center">
+      <h2 class="text-xl font-bold text-white mb-2">Monitor your RAG pipeline free</h2>
+      <p class="text-gray-400 text-sm mb-5">1,000 traces/month, no credit card required.</p>
       <div class="flex flex-col sm:flex-row justify-center gap-3">
         <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors text-sm">
           Start free →

@@ -3,11 +3,12 @@ import type { Env, HonoVariables } from './types'
 import { TAILWIND_CSS } from './generated-styles'
 import * as Sentry from '@sentry/cloudflare'
 import { landingPage } from './pages/landing'
+import { notFoundPage } from './pages/notFound'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
-import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage } from './pages/guides'
+import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
-import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, alternativesPage } from './pages/comparison'
+import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, alternativesPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount, type HourCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
@@ -45,12 +46,17 @@ const SITE_URLS = [
   `${SITE_BASE}/docs/openai-agents`,
   `${SITE_BASE}/docs/autogen`,
   `${SITE_BASE}/docs/pydantic-ai`,
+  `${SITE_BASE}/docs/llamaindex`,
+  `${SITE_BASE}/docs/dspy`,
   `${SITE_BASE}/vs/langfuse`,
   `${SITE_BASE}/vs/langsmith`,
   `${SITE_BASE}/vs/arize-phoenix`,
   `${SITE_BASE}/vs/agentops`,
+  `${SITE_BASE}/vs/helicone`,
+  `${SITE_BASE}/vs/braintrust`,
   `${SITE_BASE}/blog`,
   `${SITE_BASE}/blog/autonomous-agent-observability`,
+  `${SITE_BASE}/blog/monitoring-rag-pipelines`,
   `${SITE_BASE}/blog/monitor-ai-agents-production`,
   `${SITE_BASE}/blog/introducing-nexus`,
   `${SITE_BASE}/changelog`,
@@ -330,12 +336,17 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/docs/openai-agents`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/autogen`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/pydantic-ai`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/llamaindex`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/dspy`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langfuse`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langsmith`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/arize-phoenix`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/agentops`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/helicone`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/braintrust`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/monitoring-rag-pipelines`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/monitor-ai-agents-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
     { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
@@ -421,12 +432,16 @@ app.get('/docs/anthropic-sdk', (c) => c.html(docsAnthropicSDKPage()))
 app.get('/docs/openai-agents', (c) => c.html(docsOpenAIAgentsPage()))
 app.get('/docs/autogen', (c) => c.html(docsAutoGenPage()))
 app.get('/docs/pydantic-ai', (c) => c.html(docsPydanticAIPage()))
+app.get('/docs/llamaindex', (c) => c.html(docsLlamaIndexPage()))
+app.get('/docs/dspy', (c) => c.html(docsDSPyPage()))
 
 // SEO comparison pages
 app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
 app.get('/vs/langsmith', (c) => c.html(vsLangsmithPage()))
 app.get('/vs/arize-phoenix', (c) => c.html(vsArizePhoenixPage()))
 app.get('/vs/agentops', (c) => c.html(vsAgentopsPage()))
+app.get('/vs/helicone', (c) => c.html(vsHeliconePage()))
+app.get('/vs/braintrust', (c) => c.html(vsBraintrustPage()))
 app.get('/alternatives', (c) => c.html(alternativesPage()))
 
 // /register is the public CTA — redirect to signup page
@@ -663,6 +678,11 @@ app.get('/dashboard', async (c) => {
   }
 
   return c.html(dashboardPage(metrics))
+})
+
+// Custom 404 handler — branded page with helpful navigation
+app.notFound((c) => {
+  return c.html(notFoundPage(), 404)
 })
 
 // Sentry options factory — only activates if SENTRY_DSN is set
