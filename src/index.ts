@@ -29,6 +29,35 @@ const BATCH_LIMIT = 1000
 const HEALTH_URL = 'https://nexus.keylightdigital.dev/health'
 const ALERT_TO = 'steve@keylightdigital.dev'
 
+// IndexNow key for Bing/Yandex instant URL submission
+const INDEXNOW_KEY = 'f494b29ff360d40afd2ccf9b2c5a083b'
+
+const SITE_BASE = 'https://nexus.keylightdigital.dev'
+const SITE_URLS = [
+  `${SITE_BASE}/`,
+  `${SITE_BASE}/pricing`,
+  `${SITE_BASE}/demo`,
+  `${SITE_BASE}/alternatives`,
+  `${SITE_BASE}/docs`,
+  `${SITE_BASE}/docs/anthropic-sdk`,
+  `${SITE_BASE}/docs/langchain`,
+  `${SITE_BASE}/docs/crewai`,
+  `${SITE_BASE}/docs/openai-agents`,
+  `${SITE_BASE}/docs/autogen`,
+  `${SITE_BASE}/docs/pydantic-ai`,
+  `${SITE_BASE}/vs/langfuse`,
+  `${SITE_BASE}/vs/langsmith`,
+  `${SITE_BASE}/vs/arize-phoenix`,
+  `${SITE_BASE}/vs/agentops`,
+  `${SITE_BASE}/blog`,
+  `${SITE_BASE}/blog/autonomous-agent-observability`,
+  `${SITE_BASE}/blog/monitor-ai-agents-production`,
+  `${SITE_BASE}/blog/introducing-nexus`,
+  `${SITE_BASE}/changelog`,
+  `${SITE_BASE}/demo/traces/demo-t1`,
+  `${SITE_BASE}/demo/traces/demo-t3`,
+]
+
 async function sendUptimeEmail(env: Env, subject: string, text: string): Promise<void> {
   await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -224,6 +253,56 @@ app.get('/robots.txt', (c) => {
   return new Response(body, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   })
+})
+
+// IndexNow key verification file — required by IndexNow protocol
+app.get(`/${INDEXNOW_KEY}.txt`, (c) => {
+  return new Response(INDEXNOW_KEY, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  })
+})
+
+// Admin: submit all URLs to IndexNow (Bing/Yandex) — auth-protected
+app.get('/admin/indexnow-submit', requireAuth, async (c) => {
+  const payload = {
+    host: 'nexus.keylightdigital.dev',
+    key: INDEXNOW_KEY,
+    keyLocation: `${SITE_BASE}/${INDEXNOW_KEY}.txt`,
+    urlList: SITE_URLS,
+  }
+
+  let status = 0
+  let responseText = ''
+  try {
+    const res = await fetch('https://api.indexnow.org/indexnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(payload),
+    })
+    status = res.status
+    responseText = await res.text()
+    console.log(`[indexnow] Submitted ${SITE_URLS.length} URLs. Status: ${status}. Response: ${responseText}`)
+  } catch (err) {
+    responseText = String(err)
+    console.error(`[indexnow] Submission failed: ${responseText}`)
+  }
+
+  return c.html(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>IndexNow Submit — Nexus Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/styles.css"></head>
+<body class="bg-gray-950 text-gray-100 p-8">
+<h1 class="text-2xl font-bold mb-4">IndexNow Submission</h1>
+<p class="mb-2 text-gray-400">Submitted ${SITE_URLS.length} URLs to api.indexnow.org</p>
+<p class="mb-4">HTTP Status: <span class="font-mono text-indigo-400">${status}</span></p>
+<pre class="bg-gray-900 rounded p-4 text-sm font-mono text-gray-300 overflow-auto">${responseText || '(empty response — 202 is success)'}</pre>
+<h2 class="text-lg font-semibold mt-6 mb-2">URLs submitted:</h2>
+<ul class="space-y-1">${SITE_URLS.map(u => `<li class="font-mono text-sm text-gray-400">${u}</li>`).join('')}</ul>
+<p class="mt-6"><a href="/dashboard" class="text-indigo-400 hover:underline">← Dashboard</a></p>
+</body></html>`)
 })
 
 app.get('/BingSiteAuth.xml', (c) => {
