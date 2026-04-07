@@ -36,6 +36,13 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'debugging-ai-agents-in-production',
+    title: 'How to Debug AI Agents in Production',
+    date: '2026-04-07',
+    excerpt: 'AI agents fail in non-obvious ways: tool call errors that cascade silently, context windows that overflow mid-task, loops that spin without terminating. Here\'s a practical debugging playbook with trace-first strategies and Nexus SDK examples.',
+    readingTime: '9 min read',
+  },
+  {
     slug: 'autonomous-agent-observability',
     title: 'Building an Autonomous AI Agent with Observability — Lessons from Ralph',
     date: '2026-04-08',
@@ -121,6 +128,9 @@ export function blogIndexPage(): string {
 }
 
 export function blogPostPage(slug: string): string | null {
+  if (slug === 'debugging-ai-agents-in-production') {
+    return debuggingAIAgentsPost()
+  }
   if (slug === 'introducing-nexus') {
     return introducingNexusPost()
   }
@@ -1151,6 +1161,344 @@ async def rag_agent_loop(user_query: str):
         </a>
         <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors text-sm">
           View demo
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function debuggingAIAgentsPost(): string {
+  const post = POSTS.find(p => p.slug === 'debugging-ai-agents-in-production')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/debugging-ai-agents-in-production',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const basicInstrumentCode = `from nexus import NexusClient
+
+nexus = NexusClient(api_key="nxs_...", agent_id="my-agent")
+
+async def run_agent(user_input: str):
+    trace = await nexus.start_trace(
+        name="agent-run",
+        metadata={"input": user_input, "agent_version": "1.2.0"}
+    )
+    try:
+        result = await _execute(user_input, trace)
+        await trace.end(status="success", output={"result": result})
+        return result
+    except Exception as e:
+        await trace.end(status="error", output={"error": str(e)})
+        raise`
+
+  const toolCallCode = `# Wrap every tool call in its own span
+async def call_tool(trace, tool_name: str, tool_input: dict):
+    span = await trace.start_span(
+        name="tool-call",
+        metadata={"tool": tool_name}
+    )
+    try:
+        result = await TOOLS[tool_name](**tool_input)
+        await span.end(
+            status="success",
+            output={"tool": tool_name, "result_preview": str(result)[:200]}
+        )
+        return result
+    except Exception as e:
+        await span.end(
+            status="error",
+            output={"tool": tool_name, "error": str(e), "input": tool_input}
+        )
+        raise  # re-raise so the agent loop can handle it`
+
+  const contextWindowCode = `# Track token usage at each LLM call
+llm_span = await trace.start_span(
+    name="llm-call",
+    metadata={"model": "claude-3-5-sonnet", "step": step_number}
+)
+response = await llm.ainvoke(messages)
+await llm_span.end(
+    status="success",
+    output={
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
+        "message_count": len(messages),
+    }
+)
+# Alert if approaching limit
+if response.usage.input_tokens > 150_000:
+    print(f"[WARN] step {step_number}: context at {response.usage.input_tokens} tokens")`
+
+  const loopDetectionCode = `MAX_STEPS = 20
+step_count = 0
+
+while not done:
+    step_count += 1
+    step_span = await trace.start_span(
+        name="agent-step",
+        metadata={"step": step_count}
+    )
+
+    if step_count > MAX_STEPS:
+        await step_span.end(status="error", output={"error": "max steps exceeded"})
+        await trace.end(status="error", output={"error": f"loop: exceeded {MAX_STEPS} steps"})
+        raise RuntimeError(f"Agent loop exceeded {MAX_STEPS} steps")
+
+    action = await llm_decide(messages)
+    await step_span.end(status="success", output={"action": action.type})`
+
+  const replayCode = `# Tag traces so you can find them later
+trace = await nexus.start_trace(
+    name="agent-run",
+    metadata={
+        "input": user_input,
+        "user_id": user_id,
+        "session_id": session_id,    # group multi-turn conversations
+        "environment": "production",
+        "git_sha": os.environ.get("GIT_SHA", "unknown"),
+    }
+)`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Debug AI Agents in Production — Nexus Blog</title>
+  <meta name="description" content="AI agents fail in non-obvious ways. Here's a practical playbook for debugging tool call errors, context overflow, infinite loops, hallucinated actions, and latency spikes using trace-first debugging.">
+  <meta name="keywords" content="debug AI agents, AI agent debugging, LLM agent troubleshooting, agent failure modes, AI observability">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/debugging-ai-agents-in-production">
+  <meta property="og:title" content="How to Debug AI Agents in Production">
+  <meta property="og:description" content="AI agents fail in non-obvious ways. Here's a practical playbook: tool errors, context overflow, loops, hallucinations, latency spikes — and how to trace each one.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/debugging-ai-agents-in-production">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Debug AI Agents in Production">
+  <meta name="twitter:description" content="A practical debugging playbook for AI agents: tool errors, context overflow, infinite loops, and how to trace each failure mode.">
+  <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="application/ld+json">${jsonLd}</script>
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <header class="mb-10">
+      <div class="flex items-center gap-3 mb-4 text-sm text-gray-500">
+        <span>${post.date}</span>
+        <span>·</span>
+        <span>${post.readingTime}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">How to Debug AI Agents in Production</h1>
+      <p class="text-lg text-gray-400 leading-relaxed">${post.excerpt}</p>
+    </header>
+
+    <article class="prose-custom space-y-8 text-gray-300 leading-relaxed">
+
+      <p>
+        You deployed your AI agent. It worked fine in testing. Then it started failing in production — and you have no idea why.
+        The LLM call returned something. A tool threw an error. Or maybe it just… stopped responding. You can see the output (or lack of one),
+        but the reasoning steps, intermediate state, and tool calls that led there are gone.
+      </p>
+      <p>
+        This is the central challenge of AI agent debugging: failures are non-deterministic, the state space is enormous, and without instrumentation,
+        you're debugging blind. Here's how to fix that.
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">The 5 Common Agent Failure Modes</h2>
+
+      <p>Before diving into debugging strategies, it helps to know what you're looking for. These are the five failure modes that cause the most production pain:</p>
+
+      <div class="space-y-6 my-8">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-2">1. Tool Call Errors</h3>
+          <p class="text-sm text-gray-400">The agent calls a tool with malformed arguments, the tool throws, and the agent either silently retries with the same bad input or gives up without explanation. Common cause: LLM hallucinates argument names or formats not in the schema.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-2">2. Context Window Overflow</h3>
+          <p class="text-sm text-gray-400">Long-running agents accumulate conversation history until they hit the context limit. The LLM starts truncating or ignoring earlier instructions, causing degraded performance or outright errors — often silently.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-2">3. Infinite Loops</h3>
+          <p class="text-sm text-gray-400">The agent decides to call a tool, the tool returns an unexpected result, the agent decides to call the same tool again, and so on. Without a step limit and tracing, these can run until they hit a timeout or run up a large API bill.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-2">4. Hallucinated Actions</h3>
+          <p class="text-sm text-gray-400">The LLM invents tool names that don't exist, invents valid-looking arguments with wrong values, or generates plausible-sounding reasoning that leads to a completely wrong action. Hard to catch without input/output logging at each step.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-2">5. Latency Spikes</h3>
+          <p class="text-sm text-gray-400">An agent that usually takes 2 seconds suddenly takes 30. Is it the LLM? A slow tool? Retry backoff? Network? Without per-span timing, you can't tell which step is the bottleneck — and users just see a hang.</p>
+        </div>
+      </div>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Strategy 1: Trace-First Debugging</h2>
+
+      <p>
+        The single biggest upgrade you can make to your debugging process is adding structured tracing before you start debugging.
+        Trying to debug an uninstrumented agent is like debugging a web service with no request logs — technically possible, but painful.
+      </p>
+      <p>
+        The minimum viable instrumentation: one trace per agent run, one span per LLM call, one span per tool call.
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>${basicInstrumentCode}</code></pre>
+
+      <p>
+        With this in place, every agent run produces a trace you can inspect in <a href="/demo" class="text-indigo-400 hover:text-indigo-300">Nexus</a>.
+        You can see exact start/end times, inputs, outputs, and status for each step. When something goes wrong, you open the trace and
+        immediately know <em>which span failed</em>, not just "the agent errored."
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Strategy 2: Instrument Every Tool Call</h2>
+
+      <p>
+        Tool call failures are the most common agent failure mode, but they're invisible without span-level logging.
+        The pattern: wrap every tool call in its own span, capturing input, output, and any exception.
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>${toolCallCode}</code></pre>
+
+      <p>
+        This gives you a clear record of: what tool was called, with what arguments, what it returned, and whether it failed.
+        When the agent hallucinates a tool argument, you'll see it in the span input. When a tool throws, you'll see the exact error and input that caused it.
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Strategy 3: Track Token Usage Per Step</h2>
+
+      <p>
+        Context window overflow is sneaky because it degrades performance gradually rather than causing a hard error.
+        The fix is to log token counts at every LLM call so you can see the trend and set alerts.
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>${contextWindowCode}</code></pre>
+
+      <p>
+        With token counts in your spans, you can see exactly when context starts growing,
+        which steps add the most tokens, and whether you're approaching the limit in a given run.
+        Set a warning threshold (e.g., 80% of the context limit) to catch this before it causes failures.
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Strategy 4: Enforce Step Limits with Trace Evidence</h2>
+
+      <p>
+        Every agent loop should have an explicit step limit. But more importantly, when that limit is hit,
+        you want a trace showing <em>exactly</em> what happened in each step — so you can diagnose the loop, not just know it happened.
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>${loopDetectionCode}</code></pre>
+
+      <p>
+        When the limit triggers, the trace will show you the step sequence, the action at each step, and where the loop started.
+        Usually you'll find the same tool being called repeatedly with the same input — which points to the LLM not processing the tool's output correctly.
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Strategy 5: Structured Metadata for Replay</h2>
+
+      <p>
+        To debug a specific failing run, you need to be able to find it. That means tagging traces with enough metadata
+        to filter by: which user, which session, which environment, which code version.
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>${replayCode}</code></pre>
+
+      <p>
+        With consistent metadata tagging, you can filter traces in <a href="/demo" class="text-indigo-400 hover:text-indigo-300">Nexus</a>
+        by user, session, or deploy version. When a user reports a bug, you can find their exact session and inspect every step.
+        When a deploy introduces a regression, you can compare traces from before and after.
+      </p>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Debugging Checklist</h2>
+
+      <p>When an agent run fails and you're starting from scratch, work through this list:</p>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 my-6">
+        <ol class="space-y-3 text-sm">
+          <li class="flex gap-3">
+            <span class="text-indigo-400 font-bold shrink-0">1.</span>
+            <span><strong class="text-white">Open the trace.</strong> Find the failing span. Is it a tool call, an LLM call, or the trace itself? The span status and output tell you what failed.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 font-bold shrink-0">2.</span>
+            <span><strong class="text-white">Read the span input.</strong> Did the LLM hallucinate a tool argument? Did a tool receive malformed input? The span input is the exact data that was passed — no guessing.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 font-bold shrink-0">3.</span>
+            <span><strong class="text-white">Check token counts.</strong> Is the input_tokens climbing step by step? Is any single step adding a large chunk? Context overflow usually shows up as a steady token increase over many steps.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 font-bold shrink-0">4.</span>
+            <span><strong class="text-white">Look at step timing.</strong> Which span took the longest? If one tool call is an outlier, that's your latency bottleneck. If all LLM calls are slow, it's the model or the API.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 font-bold shrink-0">5.</span>
+            <span><strong class="text-white">Count the steps.</strong> How many iterations did the loop run before failing or stopping? If it hit your step limit, look at what the agent was doing in the last 3-5 steps to find the loop pattern.</span>
+          </li>
+        </ol>
+      </div>
+
+      <h2 class="text-2xl font-bold text-white mt-10 mb-4">Getting Started</h2>
+
+      <p>
+        The Nexus SDK is a two-line addition to any agent. Install it, add your API key, and you have structured traces for every run:
+      </p>
+
+      <pre class="bg-gray-900 border border-gray-800 rounded-xl p-4 overflow-x-auto text-sm font-mono text-gray-300 my-6"><code>pip install keylightdigital-nexus</code></pre>
+
+      <p>
+        From there, the <a href="/docs" class="text-indigo-400 hover:text-indigo-300">integration guides</a> cover every major framework:
+        <a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain</a>,
+        <a href="/docs/llamaindex" class="text-indigo-400 hover:text-indigo-300">LlamaIndex</a>,
+        <a href="/docs/dspy" class="text-indigo-400 hover:text-indigo-300">DSPy</a>,
+        <a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI</a>,
+        and the <a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK</a> directly.
+        The <a href="/demo" class="text-indigo-400 hover:text-indigo-300">demo</a> shows what the trace view looks like with real agent data.
+      </p>
+      <p>
+        Add tracing before your next production incident, not after.
+      </p>
+
+    </article>
+
+    <div class="mt-12 pt-8 border-t border-gray-800">
+      <p class="text-sm text-gray-500 mb-6">More from the blog</p>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <a href="/blog/monitoring-rag-pipelines" class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 8 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">Monitoring RAG Pipelines in Production</p>
+        </a>
+        <a href="/blog/monitor-ai-agents-production" class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 6 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">How to Monitor Your AI Agents in Production</p>
         </a>
       </div>
     </div>
