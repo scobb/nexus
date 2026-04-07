@@ -1,3 +1,5 @@
+import { liveRefreshBar, liveRefreshScript } from '../lib/liveRefresh'
+
 export interface AgentHealth {
   id: string
   name: string
@@ -158,6 +160,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <h1 class="text-2xl font-bold">Overview</h1>
       <div class="flex items-center gap-3">
+        ${liveRefreshBar()}
         <a href="/dashboard/traces" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">View all traces &rarr;</a>
         <a href="/dashboard/keys" class="text-sm bg-indigo-600 hover:bg-indigo-500 transition-colors text-white px-3 py-1.5 rounded-lg">+ Create API key</a>
       </div>
@@ -215,6 +218,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
       </div>
     </div>
   </main>
+  ${liveRefreshScript()}
 </body>
 </html>`
 }
