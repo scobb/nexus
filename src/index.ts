@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Env, HonoVariables } from './types'
 import { landingPage } from './pages/landing'
+import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
 import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
@@ -18,6 +19,7 @@ import settingsRoutes from './routes/settings'
 import demoRoutes from './routes/demo'
 import blogRoutes from './routes/blog'
 import testRoutes from './routes/test'
+import otelRoutes from './routes/otel'
 
 const BATCH_LIMIT = 1000
 
@@ -95,6 +97,7 @@ app.get('/sitemap.xml', (c) => {
     { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/pricing`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
     // Sample demo trace detail pages (hardcoded demo IDs with spans)
@@ -149,6 +152,9 @@ app.get('/og-image.png', (c) => {
   })
 })
 
+// Changelog
+app.get('/changelog', (c) => c.html(changelogPage()))
+
 // API documentation and integration guides
 app.get('/docs', (c) => c.html(docsPage()))
 app.get('/docs/langchain', (c) => c.html(docsLangchainPage()))
@@ -182,6 +188,9 @@ app.use('/test/*', async (c, next) => {
   return next()
 })
 app.route('/test', testRoutes)
+
+// OTEL OTLP/HTTP ingestion — standard path POST /v1/traces
+app.route('/v1', otelRoutes)
 
 // API routes (API key authenticated) and webhooks (no auth)
 app.route('/api/webhooks', webhookRoutes)
