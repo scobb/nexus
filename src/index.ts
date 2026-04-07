@@ -2,7 +2,9 @@ import { Hono } from 'hono'
 import type { Env, HonoVariables } from './types'
 import { landingPage } from './pages/landing'
 import { docsPage } from './pages/docs'
-import { vsLangfusePage, vsLangsmithPage } from './pages/comparison'
+import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage } from './pages/guides'
+import { pricingPage } from './pages/pricing'
+import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, alternativesPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
@@ -86,6 +88,13 @@ app.get('/sitemap.xml', (c) => {
     { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/vs/langfuse`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langsmith`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/arize-phoenix`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/agentops`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/alternatives`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${base}/docs/langchain`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/pricing`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
     // Sample demo trace detail pages (hardcoded demo IDs with spans)
@@ -140,12 +149,21 @@ app.get('/og-image.png', (c) => {
   })
 })
 
-// API documentation
+// API documentation and integration guides
 app.get('/docs', (c) => c.html(docsPage()))
+app.get('/docs/langchain', (c) => c.html(docsLangchainPage()))
+app.get('/docs/crewai', (c) => c.html(docsCrewAIPage()))
+
+// Standalone pricing page
+app.get('/pricing', (c) => c.html(pricingPage()))
+app.get('/docs/anthropic-sdk', (c) => c.html(docsAnthropicSDKPage()))
 
 // SEO comparison pages
 app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
 app.get('/vs/langsmith', (c) => c.html(vsLangsmithPage()))
+app.get('/vs/arize-phoenix', (c) => c.html(vsArizePhoenixPage()))
+app.get('/vs/agentops', (c) => c.html(vsAgentopsPage()))
+app.get('/alternatives', (c) => c.html(alternativesPage()))
 
 // /register is the public CTA — serve same login page
 app.get('/register', (c) => c.redirect('/auth/login'))
