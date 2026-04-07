@@ -24,6 +24,8 @@ export function landingPage(deletedMessage?: boolean): string {
   <meta name="twitter:title" content="Nexus — AI Agent Observability for Indie Developers">
   <meta name="twitter:description" content="Simple, affordable AI agent observability. Drop in the SDK. See your traces. Get alerts when agents fail. No self-hosting, no enterprise contracts. $9/mo.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <!-- Google Search Console verification — replace PLACEHOLDER with your actual verification code from https://search.google.com/search-console -->
+  <meta name="google-site-verification" content="PLACEHOLDER_REPLACE_WITH_GOOGLE_VERIFICATION_CODE">
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   [

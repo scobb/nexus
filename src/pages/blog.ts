@@ -114,6 +114,23 @@ export function blogPostPage(slug: string): string | null {
 }
 
 function introducingNexusPost(): string {
+  const post = POSTS.find(p => p.slug === 'introducing-nexus')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/introducing-nexus',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
   const content = `
     <p class="text-lg text-gray-300 leading-relaxed mb-6">
       There's a strange irony in building AI agent infrastructure: the agents doing the work have no way to show you what they did. You get a result (or an error), but the reasoning steps, the LLM calls, the tool uses, the timing — all of it vanishes into the void.
@@ -235,6 +252,7 @@ await trace.end({ status: 'success' })</code></pre>
   <meta name="twitter:title" content="Introducing Nexus — AI Agent Observability Built by an AI Agent">
   <meta name="twitter:description" content="We built Nexus because we needed it. An AI agent (Ralph) needed a way to monitor itself.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <script type="application/ld+json">${jsonLd}</script>
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -268,6 +286,16 @@ await trace.end({ status: 'success' })</code></pre>
       ${content}
     </div>
 
+    <!-- Related -->
+    <div class="mt-12 bg-gray-900 border border-gray-800 rounded-2xl px-6 py-5 mb-8">
+      <h2 class="text-base font-bold text-white mb-3">Related</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK integration guide</a> — instrument Claude agents in 3 lines</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">How to Monitor AI Agents in Production</a> — failure modes and instrumentation patterns</li>
+        <li><a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Nexus vs Langfuse</a> — hosted vs self-hosted comparison</li>
+      </ul>
+    </div>
+
     <!-- CTA -->
     <div class="mt-16 bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-8 text-center">
       <h2 class="text-xl font-bold text-white mb-2">Try Nexus free</h2>
@@ -298,6 +326,23 @@ await trace.end({ status: 'success' })</code></pre>
 }
 
 function monitorAIAgentsProductionPost(): string {
+  const post = POSTS.find(p => p.slug === 'monitor-ai-agents-production')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/monitor-ai-agents-production',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
   const content = `
     <p class="text-lg text-gray-300 leading-relaxed mb-6">
       AI agents fail in production in ways that are invisible without observability. You ship a working agent, it runs great in development, and then one day a user's request triggers a cascade: the LLM returns an unexpected format, the tool parser throws, the agent retries three times silently, and eventually returns an empty response. The user sees nothing. You see nothing.
@@ -442,8 +487,6 @@ async def run_agent(task: str) -> str:
     </p>
   `
 
-  const post = POSTS.find(p => p.slug === 'monitor-ai-agents-production')!
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -457,6 +500,7 @@ async def run_agent(task: str) -> str:
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/monitor-ai-agents-production">
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <script type="application/ld+json">${jsonLd}</script>
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -478,6 +522,16 @@ async def run_agent(task: str) -> str:
 
     <div class="prose prose-invert max-w-none">
       ${content}
+    </div>
+
+    <!-- Related -->
+    <div class="mt-12 bg-gray-900 border border-gray-800 rounded-2xl px-6 py-5 mb-8">
+      <h2 class="text-base font-bold text-white mb-3">Related</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain observability guide</a> — step-by-step tracing for LangChain agents</li>
+        <li><a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">Nexus vs LangSmith</a> — a $30/mo cheaper alternative</li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
+      </ul>
     </div>
 
     <!-- CTA -->
@@ -510,6 +564,23 @@ async def run_agent(task: str) -> str:
 }
 
 function autonomousAgentObservabilityPost(): string {
+  const post = POSTS.find(p => p.slug === 'autonomous-agent-observability')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/autonomous-agent-observability',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
   const content = `
     <p class="text-lg text-gray-300 leading-relaxed mb-6">
       Ralph is an autonomous AI agent that builds software. It reads a product requirements document, picks the next user story, implements it, runs quality checks, commits the code, and reports progress. Then it stops and waits for the next session.
@@ -617,8 +688,6 @@ session-end            [success, 17.8s total]</code></pre>
     </p>
   `
 
-  const post = POSTS.find(p => p.slug === 'autonomous-agent-observability')!
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -632,6 +701,7 @@ session-end            [success, 17.8s total]</code></pre>
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/autonomous-agent-observability">
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <script type="application/ld+json">${jsonLd}</script>
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -653,6 +723,16 @@ session-end            [success, 17.8s total]</code></pre>
 
     <div class="prose prose-invert max-w-none">
       ${content}
+    </div>
+
+    <!-- Related -->
+    <div class="mt-12 bg-gray-900 border border-gray-800 rounded-2xl px-6 py-5 mb-8">
+      <h2 class="text-base font-bold text-white mb-3">Related</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/blog/introducing-nexus" class="text-indigo-400 hover:text-indigo-300">Introducing Nexus</a> — the story of the tool Ralph built to monitor itself</li>
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API reference and quickstart</a> — instrument your agent in 3 lines</li>
+        <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see what Ralph's traces look like</li>
+      </ul>
     </div>
 
     <!-- CTA -->

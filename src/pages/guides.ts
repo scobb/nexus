@@ -1,4 +1,4 @@
-function guideHead(title: string, description: string, canonical: string): string {
+function guideHead(title: string, description: string, canonical: string, jsonLd?: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,6 +17,7 @@ function guideHead(title: string, description: string, canonical: string): strin
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
   <link rel="stylesheet" href="/styles.css">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <!-- Beam Analytics (dogfooding) -->
@@ -57,10 +58,23 @@ function footer(): string {
 }
 
 export function docsAnthropicSDKPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor Claude Agents with Nexus — Anthropic SDK Integration',
+    description: 'How to monitor AI agents built with Anthropic\'s Claude API using Nexus.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install both SDKs', text: 'Run: npm install @keylightdigital/nexus @anthropic-ai/sdk (TypeScript) or pip install keylightdigital-nexus anthropic (Python)' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Add it as NEXUS_API_KEY alongside your ANTHROPIC_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Instrument your Claude agent', text: 'Import NexusClient, create a trace with nexus.startTrace(), add spans for each LLM call and tool use, and end the trace with trace.end().' },
+      { '@type': 'HowToStep', name: 'View agent traces', text: 'Open the Nexus dashboard to see the span waterfall, timing, inputs, outputs, and status for every agent run.' },
+    ],
+  })
   return `${guideHead(
     'Monitor Claude Agents with Nexus — Anthropic SDK Integration',
     'How to monitor AI agents built with Anthropic\'s Claude API using Nexus. TypeScript and Python code examples, tool use tracing, and the meta-narrative: Nexus was built by Claude.',
     'https://nexus.keylightdigital.dev/docs/anthropic-sdk',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -355,6 +369,7 @@ def run_agent(user_message: str) -> str:
         <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
         <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI integration guide</a></li>
         <li><a href="/blog/introducing-nexus" class="text-indigo-400 hover:text-indigo-300">Blog: Introducing Nexus — built by an AI agent</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub — open-source SDK</a></li>
       </ul>
     </section>
@@ -382,10 +397,23 @@ def run_agent(user_message: str) -> str:
 }
 
 export function docsCrewAIPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor CrewAI Multi-Agent Crews with Nexus',
+    description: 'How to monitor your CrewAI multi-agent crews with Nexus.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install the SDK', text: 'Run: pip install keylightdigital-nexus crewai' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Store it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Instrument your crew', text: 'Create a NexusClient, start a trace before kickoff(), add spans for individual agent tasks, and end the trace after crew completes.' },
+      { '@type': 'HowToStep', name: 'View crew traces', text: 'Open the Nexus dashboard to see per-agent span timing, task inputs/outputs, and crew-level status.' },
+    ],
+  })
   return `${guideHead(
     'CrewAI Observability with Nexus — Monitor Multi-Agent Crews',
     'How to monitor your CrewAI multi-agent crews with Nexus. Python code examples showing how to track individual agent performance and inter-agent coordination.',
     'https://nexus.keylightdigital.dev/docs/crewai',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -591,6 +619,8 @@ def run_writer(research: str) -> str:
         <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a></li>
         <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
         <li><a href="/vs/agentops" class="text-indigo-400 hover:text-indigo-300">Nexus vs AgentOps</a> — if you're evaluating alternatives</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">Blog: How to Monitor AI Agents in Production</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus/tree/main/sdk-python" class="text-indigo-400 hover:text-indigo-300">Python SDK source</a></li>
       </ul>
     </section>
@@ -618,10 +648,23 @@ def run_writer(research: str) -> str:
 }
 
 export function docsLangchainPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor LangChain Agents with Nexus',
+    description: 'How to monitor and observe your LangChain agents with Nexus.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install the SDK', text: 'Run: npm install @keylightdigital/nexus langchain (TypeScript) or pip install keylightdigital-nexus langchain (Python)' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Store it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Instrument your LangChain agent', text: 'Wrap your chain or agent executor with Nexus tracing: create a trace, add spans for each chain step, and end the trace on completion.' },
+      { '@type': 'HowToStep', name: 'View traces in the dashboard', text: 'Open the Nexus dashboard to inspect your LangChain chain spans, token usage, and latency per step.' },
+    ],
+  })
   return `${guideHead(
     'LangChain Observability with Nexus — Monitor LangChain Agents',
     'How to monitor and observe your LangChain agents with Nexus. TypeScript and Python code examples, step-by-step integration guide, and trace viewer walkthrough.',
     'https://nexus.keylightdigital.dev/docs/langchain',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -840,6 +883,8 @@ def run_agent(user_query: str):
         <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
         <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
         <li><a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">Nexus vs LangSmith</a> — if you're evaluating alternatives</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">Blog: How to Monitor AI Agents in Production</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
       </ul>
     </section>
@@ -867,10 +912,22 @@ def run_agent(user_query: str):
 }
 
 export function docsOpenAIAgentsPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor OpenAI Agents SDK with Nexus',
+    description: 'How to instrument OpenAI Agents SDK with Nexus tracing.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install both SDKs', text: 'Run: npm install @keylightdigital/nexus openai (TypeScript) or pip install keylightdigital-nexus openai (Python)' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Store it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Instrument your agent', text: 'Wrap your OpenAI Agents SDK runner with Nexus tracing: create a trace, add spans for each agent turn and tool call, and end the trace when the agent finishes.' },
+    ],
+  })
   return `${guideHead(
     'Monitor OpenAI Agents SDK with Nexus — Integration Guide',
     'How to instrument OpenAI Agents SDK with Nexus tracing. TypeScript and Python code examples for tracing agents, tool calls, and handoffs.',
     'https://nexus.keylightdigital.dev/docs/openai-agents',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -1046,6 +1103,8 @@ def run_agent(user_message: str) -> str:
         <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
         <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
         <li><a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK guide</a> — if you use Claude instead</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">Blog: How to Monitor AI Agents in Production</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
       </ul>
     </section>
@@ -1073,10 +1132,22 @@ def run_agent(user_message: str) -> str:
 }
 
 export function docsAutoGenPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor AutoGen Multi-Agent Workflows with Nexus',
+    description: 'How to add Nexus tracing to Microsoft AutoGen multi-agent workflows.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install the SDK', text: 'Run: pip install keylightdigital-nexus pyautogen' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Store it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Wrap your AutoGen workflow', text: 'Create a NexusClient, start a trace before initiating the AutoGen conversation, add spans per agent message, and end the trace when the workflow completes.' },
+    ],
+  })
   return `${guideHead(
     'Monitor AutoGen Multi-Agent Workflows with Nexus — Integration Guide',
     'How to add Nexus tracing to Microsoft AutoGen multi-agent workflows. Python code examples for tracing agents, conversations, and tool calls.',
     'https://nexus.keylightdigital.dev/docs/autogen',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -1280,6 +1351,8 @@ def run_traced_workflow(task: str) -> None:
         <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
         <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
         <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI guide</a> — another multi-agent framework</li>
+        <li><a href="/blog/autonomous-agent-observability" class="text-indigo-400 hover:text-indigo-300">Blog: Building Autonomous Agents with Observability</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
       </ul>
     </section>
@@ -1307,10 +1380,22 @@ def run_traced_workflow(task: str) -> None:
 }
 
 export function docsPydanticAIPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Monitor Pydantic AI Agents with Nexus',
+    description: 'How to add Nexus tracing to Pydantic AI agent applications.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install the SDK', text: 'Run: pip install keylightdigital-nexus pydantic-ai' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Store it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Instrument your Pydantic AI agent', text: 'Create a NexusClient and wrap your pydantic_ai.Agent run calls with trace/span instrumentation to capture inputs, outputs, and tool calls.' },
+    ],
+  })
   return `${guideHead(
     'Monitor Pydantic AI Agents with Nexus — Integration Guide',
     'How to add Nexus tracing to Pydantic AI agent applications. Python code examples with decorators for tracing agent runs, tool calls, and structured outputs.',
     'https://nexus.keylightdigital.dev/docs/pydantic-ai',
+    jsonLd,
   )}
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
@@ -1496,6 +1581,8 @@ async def run_with_tools(task: str) -> str:
         <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
         <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
         <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain guide</a> — another popular Python framework</li>
+        <li><a href="/blog/monitor-ai-agents-production" class="text-indigo-400 hover:text-indigo-300">Blog: How to Monitor AI Agents in Production</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
         <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
       </ul>
     </section>

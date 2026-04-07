@@ -37,6 +37,19 @@ function comparisonHead(title: string, description: string, canonical: string): 
 </head>`
 }
 
+function comparisonRelated(guideHref: string, guideText: string): string {
+  return `
+    <!-- Related content -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-8">
+      <h2 class="text-lg font-bold text-white mb-4">Related</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/alternatives" class="text-indigo-400 hover:text-indigo-300">All AI agent monitoring alternatives</a> — compare every tool side by side</li>
+        <li><a href="${guideHref}" class="text-indigo-400 hover:text-indigo-300">${guideText}</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a> — free plan or $9/mo Pro</li>
+      </ul>
+    </section>`
+}
+
 function ctaSection(): string {
   return `
     <!-- CTA -->
@@ -225,6 +238,8 @@ ${navBar}
       </div>
     </section>
 
+    ${comparisonRelated('/docs/langchain', 'LangChain observability guide — instrument your chains with Nexus')}
+
     ${ctaSection()}
   </div>
 
@@ -386,6 +401,8 @@ ${navBar}
       </div>
     </section>
 
+    ${comparisonRelated('/docs/crewai', 'CrewAI observability guide — monitor multi-agent crews with Nexus')}
+
     ${ctaSection()}
   </div>
 
@@ -544,6 +561,8 @@ ${navBar}
         </p>
       </div>
     </section>
+
+    ${comparisonRelated('/docs/openai-agents', 'OpenAI Agents SDK guide — trace your OpenAI agents with Nexus')}
 
     ${ctaSection()}
   </div>
@@ -704,6 +723,8 @@ ${navBar}
         </p>
       </div>
     </section>
+
+    ${comparisonRelated('/docs/langchain', 'LangChain observability guide — monitor your chains without LangSmith')}
 
     ${ctaSection()}
   </div>

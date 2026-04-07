@@ -71,12 +71,49 @@ app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
 })
 
-// Serve build-time generated Tailwind CSS (no CDN dependency)
+// Cache-Control and performance headers
+app.use('*', async (c, next) => {
+  await next()
+  const path = c.req.path
+
+  // API responses: never cache
+  if (path.startsWith('/api/')) {
+    c.header('Cache-Control', 'no-store')
+    return
+  }
+
+  // Dashboard and auth: private, no cache
+  if (path.startsWith('/dashboard/') || path.startsWith('/auth/')) {
+    c.header('Cache-Control', 'no-store, private')
+    return
+  }
+
+  // Only touch HTML responses below (CSS/images manage their own caching)
+  const ct = c.res.headers.get('Content-Type') ?? ''
+  if (!ct.includes('text/html')) return
+
+  // Preload critical CSS for all HTML pages
+  c.header('Link', '</styles.css>; rel=preload; as=style')
+
+  // Landing page: short browser cache, moderate edge cache
+  if (path === '/') {
+    c.header('Cache-Control', 'public, max-age=300, s-maxage=3600')
+    return
+  }
+
+  // Static content pages: 1-hour browser, 1-day edge
+  const staticPrefixes = ['/blog', '/vs/', '/docs', '/pricing', '/alternatives', '/changelog', '/demo']
+  if (staticPrefixes.some(p => path === p || path.startsWith(p + '/') || path === p.replace('/', ''))) {
+    c.header('Cache-Control', 'public, max-age=3600, s-maxage=86400')
+  }
+})
+
+// Serve build-time generated Tailwind CSS — long-lived immutable cache (content changes only on deploy)
 app.get('/styles.css', (c) => {
   return new Response(TAILWIND_CSS, {
     headers: {
       'Content-Type': 'text/css; charset=utf-8',
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'public, max-age=31536000, immutable',
     },
   })
 })
@@ -121,6 +158,14 @@ app.get('/robots.txt', (c) => {
   ].join('\n')
   return new Response(body, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+})
+
+app.get('/BingSiteAuth.xml', (c) => {
+  // Bing Webmaster Tools verification — replace PLACEHOLDER with actual key from https://www.bing.com/webmasters
+  const xml = `<?xml version="1.0"?>\n<users>\n  <user>PLACEHOLDER_REPLACE_WITH_BING_VERIFICATION_CODE</user>\n</users>`
+  return new Response(xml, {
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   })
 })
 
@@ -226,6 +271,72 @@ app.get('/alternatives', (c) => c.html(alternativesPage()))
 
 // /register is the public CTA — redirect to signup page
 app.get('/register', (c) => c.redirect('/auth/signup'))
+
+// Admin: search console setup instructions — auth-protected
+app.get('/admin/search-console-setup', requireAuth, (c) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Console Setup — Nexus Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body class="bg-gray-950 text-gray-100 antialiased">
+  <nav class="border-b border-gray-800 px-4 py-4">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <span class="text-lg font-bold text-white">Nexus <span class="text-xs text-gray-500 font-normal ml-2">Admin</span></span>
+      <a href="/dashboard" class="text-sm text-gray-400 hover:text-white">← Dashboard</a>
+    </div>
+  </nav>
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <h1 class="text-2xl font-bold text-white mb-2">Search Console Verification</h1>
+    <p class="text-gray-400 mb-8">Follow these steps to verify nexus.keylightdigital.dev in Google Search Console and Bing Webmaster Tools.</p>
+
+    <section class="mb-10">
+      <h2 class="text-lg font-semibold text-white mb-4">Google Search Console</h2>
+      <ol class="space-y-4 text-gray-300 text-sm list-decimal list-inside">
+        <li>Go to <strong class="text-white">https://search.google.com/search-console</strong> and click <em>Add property</em>.</li>
+        <li>Enter <code class="bg-gray-800 px-1 rounded">https://nexus.keylightdigital.dev</code> as the URL-prefix property.</li>
+        <li>Choose <strong class="text-white">HTML tag</strong> verification method.</li>
+        <li>Copy the <code class="bg-gray-800 px-1 rounded">content</code> value from the meta tag Google provides (looks like <code class="bg-gray-800 px-1 rounded">abc123def456...</code>).</li>
+        <li>In <code class="bg-gray-800 px-1 rounded">nexus/src/pages/landing.ts</code>, find the line:<br>
+          <pre class="bg-gray-900 rounded p-3 mt-2 text-xs overflow-x-auto">&lt;meta name="google-site-verification" content="PLACEHOLDER_REPLACE_WITH_GOOGLE_VERIFICATION_CODE"&gt;</pre>
+          Replace <code class="bg-gray-800 px-1 rounded">PLACEHOLDER_REPLACE_WITH_GOOGLE_VERIFICATION_CODE</code> with your actual code.
+        </li>
+        <li>Deploy: run <code class="bg-gray-800 px-1 rounded">npm run deploy</code> from the <code class="bg-gray-800 px-1 rounded">nexus/</code> directory.</li>
+        <li>Return to Search Console and click <strong class="text-white">Verify</strong>.</li>
+        <li>Once verified, go to <strong>Sitemaps</strong> and submit: <code class="bg-gray-800 px-1 rounded">https://nexus.keylightdigital.dev/sitemap.xml</code></li>
+        <li>Click <strong>Request indexing</strong> for the homepage and key pages.</li>
+      </ol>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-lg font-semibold text-white mb-4">Bing Webmaster Tools</h2>
+      <ol class="space-y-4 text-gray-300 text-sm list-decimal list-inside">
+        <li>Go to <strong class="text-white">https://www.bing.com/webmasters</strong> and add your site.</li>
+        <li>Choose <strong class="text-white">XML file</strong> verification method.</li>
+        <li>Bing will give you a verification code (looks like a long alphanumeric string).</li>
+        <li>In <code class="bg-gray-800 px-1 rounded">nexus/src/index.ts</code>, find the <code class="bg-gray-800 px-1 rounded">/BingSiteAuth.xml</code> route and replace <code class="bg-gray-800 px-1 rounded">PLACEHOLDER_REPLACE_WITH_BING_VERIFICATION_CODE</code> with your actual code.</li>
+        <li>Deploy: run <code class="bg-gray-800 px-1 rounded">npm run deploy</code> from the <code class="bg-gray-800 px-1 rounded">nexus/</code> directory.</li>
+        <li>Verify that <code class="bg-gray-800 px-1 rounded">https://nexus.keylightdigital.dev/BingSiteAuth.xml</code> serves the file correctly.</li>
+        <li>Return to Bing Webmaster Tools and click <strong class="text-white">Verify</strong>.</li>
+        <li>Submit your sitemap: <code class="bg-gray-800 px-1 rounded">https://nexus.keylightdigital.dev/sitemap.xml</code></li>
+      </ol>
+    </section>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-400">
+      <p class="font-medium text-white mb-1">Sitemap URL (already in robots.txt)</p>
+      <code class="text-indigo-400">https://nexus.keylightdigital.dev/sitemap.xml</code>
+      <p class="mt-2">The sitemap is automatically referenced in <code class="bg-gray-800 px-1 rounded">/robots.txt</code>. No changes needed there.</p>
+    </section>
+  </main>
+</body>
+</html>`
+  return c.html(html)
+})
 
 // Public shared trace pages — no auth required
 app.route('/public', publicTracesRoutes)
