@@ -17,9 +17,10 @@ function guideHead(title: string, description: string, canonical: string): strin
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>`
 }
 
@@ -846,6 +847,662 @@ def run_agent(user_query: str):
     <!-- CTA -->
     <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
       <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your LangChain agents</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free →
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function docsOpenAIAgentsPage(): string {
+  return `${guideHead(
+    'Monitor OpenAI Agents SDK with Nexus — Integration Guide',
+    'How to instrument OpenAI Agents SDK with Nexus tracing. TypeScript and Python code examples for tracing agents, tool calls, and handoffs.',
+    'https://nexus.keylightdigital.dev/docs/openai-agents',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Breadcrumb -->
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">›</span>
+      <span class="text-gray-400">OpenAI Agents SDK</span>
+    </p>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Integration Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Monitor OpenAI Agents SDK with Nexus</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Instrument agents built with OpenAI\'s Agents SDK. Track every LLM call, tool execution,
+        and agent handoff — in TypeScript or Python.
+      </p>
+    </div>
+
+    <!-- Why Nexus for OpenAI Agents -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Why use Nexus with OpenAI Agents SDK?</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>✓ <strong class="text-white">Agent + tool spans</strong> — every tool call and handoff appears as a span</li>
+        <li>✓ <strong class="text-white">Trace the full loop</strong> — from user input to final response across all turns</li>
+        <li>✓ <strong class="text-white">Error alerts</strong> — get emailed when any agent run fails (Pro)</li>
+        <li>✓ <strong class="text-white">TypeScript + Python</strong> — works with both SDK flavors</li>
+      </ul>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 — Install both SDKs</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <p class="text-sm font-semibold text-gray-400 mb-2">TypeScript</p>
+          ${codeBlock('npm install @keylightdigital/nexus openai', 'bash')}
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-400 mb-2">Python</p>
+          ${codeBlock('pip install keylightdigital-nexus openai', 'bash')}
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Create API Key -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 — Create an API key</h2>
+      <p class="text-gray-400">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>
+        and create a new API key. Add it as <code class="text-indigo-300">NEXUS_API_KEY</code>
+        alongside your <code class="text-indigo-300">OPENAI_API_KEY</code>.
+      </p>
+    </section>
+
+    <!-- Step 3: TypeScript example -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 — Instrument your agent</h2>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-400 mb-2">TypeScript — agent with tool calls</p>
+        ${codeBlock(`import OpenAI from 'openai';
+import { NexusClient } from '@keylightdigital/nexus';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const nexus = new NexusClient({
+  apiKey: process.env.NEXUS_API_KEY!,
+  agentId: 'openai-research-agent',
+});
+
+async function runAgent(userMessage: string) {
+  const trace = await nexus.startTrace({
+    name: \\\`OpenAI agent: \\\${userMessage.slice(0, 60)}\\\`,
+    metadata: { model: 'gpt-4o' },
+  });
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'user', content: userMessage }
+  ];
+
+  try {
+    for (let turn = 1; turn <= 5; turn++) {
+      await trace.addSpan({ name: \\\`llm-call-turn-\\\${turn}\\\`, input: { turn } });
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages,
+      });
+
+      const choice = response.choices[0];
+      await trace.addSpan({
+        name: \\\`llm-response-turn-\\\${turn}\\\`,
+        output: { finish_reason: choice.finish_reason },
+      });
+
+      if (choice.finish_reason === 'stop') {
+        await trace.end({ status: 'success' });
+        return choice.message.content;
+      }
+    }
+    await trace.end({ status: 'error' });
+  } catch (error) {
+    await trace.end({ status: 'error' });
+    throw error;
+  }
+}`, 'typescript')}
+      </div>
+
+      <div>
+        <p class="text-sm font-semibold text-gray-400 mb-2">Python — agent with tool calls</p>
+        ${codeBlock(`from openai import OpenAI
+from nexus_client import NexusClient
+import os
+
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="openai-research-agent",
+)
+
+def run_agent(user_message: str) -> str:
+    trace = nexus.start_trace(
+        name=f"OpenAI agent: {user_message[:60]}",
+        metadata={"model": "gpt-4o"},
+    )
+    messages = [{"role": "user", "content": user_message}]
+
+    try:
+        for turn in range(1, 6):
+            trace.add_span(name=f"llm-call-turn-{turn}", input={"turn": turn})
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+            )
+            choice = response.choices[0]
+            trace.add_span(
+                name=f"llm-response-turn-{turn}",
+                output={"finish_reason": choice.finish_reason},
+            )
+
+            if choice.finish_reason == "stop":
+                trace.end(status="success")
+                return choice.message.content or ""
+
+        trace.end(status="error")
+        return "Max turns reached"
+    except Exception:
+        trace.end(status="error")
+        raise`, 'python')}
+      </div>
+    </section>
+
+    <!-- What you see in Nexus -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">What you\'ll see in Nexus</h2>
+      <ul class="text-sm text-gray-300 space-y-3">
+        <li><strong class="text-white">Trace list</strong> — every agent run as a row with status, duration, and agent name</li>
+        <li><strong class="text-white">Span waterfall</strong> — each LLM call and tool use as a timed bar</li>
+        <li><strong class="text-white">Input/output inspector</strong> — click any span to expand the full prompt and response</li>
+        <li><strong class="text-white">Error alerts</strong> — Pro users get an email when any agent run fails</li>
+      </ul>
+    </section>
+
+    <!-- Next steps -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Next steps</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
+        <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
+        <li><a href="/docs/anthropic-sdk" class="text-indigo-400 hover:text-indigo-300">Anthropic SDK guide</a> — if you use Claude instead</li>
+        <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your OpenAI agents</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free →
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function docsAutoGenPage(): string {
+  return `${guideHead(
+    'Monitor AutoGen Multi-Agent Workflows with Nexus — Integration Guide',
+    'How to add Nexus tracing to Microsoft AutoGen multi-agent workflows. Python code examples for tracing agents, conversations, and tool calls.',
+    'https://nexus.keylightdigital.dev/docs/autogen',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Breadcrumb -->
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">›</span>
+      <span class="text-gray-400">AutoGen</span>
+    </p>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Integration Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Monitor AutoGen Workflows with Nexus</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Add observability to Microsoft AutoGen multi-agent workflows. Track every agent conversation,
+        tool call, and handoff — all in one dashboard.
+      </p>
+    </div>
+
+    <!-- Why Nexus for AutoGen -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Why use Nexus with AutoGen?</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>✓ <strong class="text-white">Per-agent spans</strong> — see each agent\'s contribution in the waterfall</li>
+        <li>✓ <strong class="text-white">Conversation tracing</strong> — one trace per multi-agent conversation</li>
+        <li>✓ <strong class="text-white">Tool call visibility</strong> — function calling and code execution logged as spans</li>
+        <li>✓ <strong class="text-white">Error alerts</strong> — get emailed when any workflow fails (Pro)</li>
+      </ul>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 — Install the SDK</h2>
+      ${codeBlock('pip install keylightdigital-nexus autogen-agentchat', 'bash')}
+    </section>
+
+    <!-- Step 2: Create API Key -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 — Create an API key</h2>
+      <p class="text-gray-400">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>
+        and create a new API key. Store it as <code class="text-indigo-300">NEXUS_API_KEY</code>.
+      </p>
+    </section>
+
+    <!-- Step 3: Instrument -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 — Wrap your AutoGen workflow</h2>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-400 mb-2">Pattern: one trace per conversation, one span per agent turn</p>
+        ${codeBlock(`from autogen import AssistantAgent, UserProxyAgent
+from nexus_client import NexusClient
+import os
+
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="autogen-research-workflow",
+)
+
+config_list = [
+    {
+        "model": "gpt-4o",
+        "api_key": os.environ["OPENAI_API_KEY"],
+    }
+]
+
+# Create AutoGen agents
+assistant = AssistantAgent(
+    name="assistant",
+    llm_config={"config_list": config_list},
+)
+
+user_proxy = UserProxyAgent(
+    name="user_proxy",
+    human_input_mode="NEVER",
+    max_consecutive_auto_reply=5,
+    code_execution_config={"work_dir": "coding", "use_docker": False},
+)
+
+def run_workflow(task: str) -> None:
+    # Start Nexus trace for the full conversation
+    trace = nexus.start_trace(
+        name=f"AutoGen: {task[:60]}",
+        metadata={"task": task, "agents": ["assistant", "user_proxy"]},
+    )
+
+    try:
+        # Track the initiation
+        trace.add_span(
+            name="workflow-start",
+            input={"task": task, "agent_count": 2},
+        )
+
+        # Run the AutoGen conversation
+        user_proxy.initiate_chat(
+            assistant,
+            message=task,
+        )
+
+        # Log conversation summary
+        history = user_proxy.chat_messages.get(assistant, [])
+        trace.add_span(
+            name="workflow-complete",
+            output={
+                "message_count": len(history),
+                "last_role": history[-1]["role"] if history else None,
+            },
+        )
+
+        trace.end(status="success")
+
+    except Exception as e:
+        trace.add_span(
+            name="workflow-error",
+            error=str(e),
+        )
+        trace.end(status="error")
+        raise
+
+
+if __name__ == "__main__":
+    run_workflow("Write and test a Python function that checks if a number is prime")`, 'python')}
+      </div>
+    </section>
+
+    <!-- Advanced: per-turn spans -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Advanced — per-turn spans with a reply hook</h2>
+      <p class="text-gray-400 mb-4">
+        For finer-grained visibility, hook into AutoGen\'s message passing to record each agent turn:
+      </p>
+      ${codeBlock(`from autogen import AssistantAgent, UserProxyAgent, Agent
+from nexus_client import NexusClient, Trace
+import os
+
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="autogen-workflow",
+)
+
+class TracedUserProxy(UserProxyAgent):
+    """UserProxyAgent that records each turn to Nexus."""
+
+    def __init__(self, *args, nexus_trace: Trace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._nexus_trace = nexus_trace
+        self._turn = 0
+
+    def receive(self, message, sender: Agent, request_reply=None, silent=False):
+        self._turn += 1
+        self._nexus_trace.add_span(
+            name=f"turn-{self._turn}-{sender.name}",
+            input={"role": sender.name, "turn": self._turn},
+            output={"content": str(message)[:500]},
+        )
+        return super().receive(message, sender, request_reply, silent)
+
+
+def run_traced_workflow(task: str) -> None:
+    trace = nexus.start_trace(name=f"AutoGen: {task[:60]}")
+
+    assistant = AssistantAgent(
+        name="assistant",
+        llm_config={"config_list": [{"model": "gpt-4o", "api_key": os.environ["OPENAI_API_KEY"]}]},
+    )
+    user_proxy = TracedUserProxy(
+        name="user_proxy",
+        nexus_trace=trace,
+        human_input_mode="NEVER",
+        max_consecutive_auto_reply=5,
+    )
+
+    try:
+        user_proxy.initiate_chat(assistant, message=task)
+        trace.end(status="success")
+    except Exception:
+        trace.end(status="error")
+        raise`, 'python')}
+    </section>
+
+    <!-- What you see in Nexus -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">What you\'ll see in Nexus</h2>
+      <ul class="text-sm text-gray-300 space-y-3">
+        <li><strong class="text-white">Trace list</strong> — every workflow run with status, duration, and agent name</li>
+        <li><strong class="text-white">Turn waterfall</strong> — each agent turn as a timed span in order</li>
+        <li><strong class="text-white">Message inspector</strong> — click any span to see the full message content</li>
+        <li><strong class="text-white">Error alerts</strong> — Pro users get an email when any workflow fails</li>
+      </ul>
+    </section>
+
+    <!-- Next steps -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Next steps</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
+        <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
+        <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI guide</a> — another multi-agent framework</li>
+        <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your AutoGen workflows</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free →
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function docsPydanticAIPage(): string {
+  return `${guideHead(
+    'Monitor Pydantic AI Agents with Nexus — Integration Guide',
+    'How to add Nexus tracing to Pydantic AI agent applications. Python code examples with decorators for tracing agent runs, tool calls, and structured outputs.',
+    'https://nexus.keylightdigital.dev/docs/pydantic-ai',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Breadcrumb -->
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">›</span>
+      <span class="text-gray-400">Pydantic AI</span>
+    </p>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Integration Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Monitor Pydantic AI Agents with Nexus</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Add tracing to AI agents built with Pydantic AI. Track every agent run, tool call,
+        and structured output — with minimal boilerplate.
+      </p>
+    </div>
+
+    <!-- Why Nexus for Pydantic AI -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Why use Nexus with Pydantic AI?</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>✓ <strong class="text-white">Structured output tracing</strong> — log validated Pydantic model outputs as span data</li>
+        <li>✓ <strong class="text-white">Tool call spans</strong> — every <code class="text-indigo-300">@agent.tool</code> appears as a named span</li>
+        <li>✓ <strong class="text-white">Decorator-friendly</strong> — wrap agents and tools with minimal code changes</li>
+        <li>✓ <strong class="text-white">Error alerts</strong> — get emailed when any agent run fails (Pro)</li>
+      </ul>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 — Install the SDK</h2>
+      ${codeBlock('pip install keylightdigital-nexus pydantic-ai', 'bash')}
+    </section>
+
+    <!-- Step 2: Create API Key -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 — Create an API key</h2>
+      <p class="text-gray-400">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>
+        and create a new API key. Store it as <code class="text-indigo-300">NEXUS_API_KEY</code>.
+      </p>
+    </section>
+
+    <!-- Step 3: Instrument -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 — Instrument your Pydantic AI agent</h2>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-400 mb-2">Basic pattern — wrap agent.run() with a Nexus trace</p>
+        ${codeBlock(`from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from nexus_client import NexusClient
+from pydantic import BaseModel
+import os
+
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="pydantic-research-agent",
+)
+
+# Define a structured output model
+class ResearchResult(BaseModel):
+    summary: str
+    key_points: list[str]
+    confidence: float
+
+# Create the Pydantic AI agent
+model = OpenAIModel("gpt-4o", api_key=os.environ["OPENAI_API_KEY"])
+agent = Agent(model, result_type=ResearchResult)
+
+async def run_agent(query: str) -> ResearchResult:
+    trace = nexus.start_trace(
+        name=f"Research: {query[:60]}",
+        metadata={"query": query, "output_type": "ResearchResult"},
+    )
+
+    try:
+        trace.add_span(
+            name="agent-run-start",
+            input={"query": query},
+        )
+
+        result = await agent.run(query)
+
+        trace.add_span(
+            name="agent-run-complete",
+            output={
+                "summary": result.data.summary,
+                "key_point_count": len(result.data.key_points),
+                "confidence": result.data.confidence,
+                "cost": result.cost().total_tokens if result.cost() else None,
+            },
+        )
+
+        trace.end(status="success")
+        return result.data
+
+    except Exception as e:
+        trace.add_span(name="agent-run-error", error=str(e))
+        trace.end(status="error")
+        raise`, 'python')}
+      </div>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-400 mb-2">Tool tracing with @agent.tool decorator</p>
+        ${codeBlock(`from pydantic_ai import Agent, RunContext
+from nexus_client import NexusClient
+import os
+
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="pydantic-tool-agent",
+)
+
+agent = Agent("openai:gpt-4o")
+
+# Shared trace object (set per-run)
+_current_trace = None
+
+@agent.tool
+async def web_search(ctx: RunContext[None], query: str) -> str:
+    """Search the web for current information."""
+    if _current_trace:
+        _current_trace.add_span(
+            name="tool-web_search",
+            input={"query": query},
+            output={"result": f"Search results for: {query}"},
+        )
+    # Your real search implementation here
+    return f"Results for '{query}': [search results]"
+
+@agent.tool
+async def read_file(ctx: RunContext[None], path: str) -> str:
+    """Read a file from the filesystem."""
+    if _current_trace:
+        _current_trace.add_span(
+            name="tool-read_file",
+            input={"path": path},
+        )
+    with open(path) as f:
+        return f.read()
+
+async def run_with_tools(task: str) -> str:
+    global _current_trace
+    _current_trace = nexus.start_trace(
+        name=f"Agent with tools: {task[:60]}",
+    )
+
+    try:
+        result = await agent.run(task)
+        _current_trace.end(status="success")
+        return str(result.data)
+    except Exception as e:
+        _current_trace.add_span(name="error", error=str(e))
+        _current_trace.end(status="error")
+        raise
+    finally:
+        _current_trace = None`, 'python')}
+      </div>
+    </section>
+
+    <!-- What you see in Nexus -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">What you\'ll see in Nexus</h2>
+      <ul class="text-sm text-gray-300 space-y-3">
+        <li><strong class="text-white">Trace list</strong> — every agent run with status, duration, and agent name</li>
+        <li><strong class="text-white">Tool span waterfall</strong> — each <code class="text-indigo-300">@agent.tool</code> call as a timed bar</li>
+        <li><strong class="text-white">Structured output</strong> — Pydantic model fields logged in span output</li>
+        <li><strong class="text-white">Error alerts</strong> — Pro users get an email when validation or runtime errors occur</li>
+      </ul>
+    </section>
+
+    <!-- Next steps -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Next steps</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a> — full REST API documentation</li>
+        <li><a href="/demo" class="text-indigo-400 hover:text-indigo-300">Interactive demo</a> — see sample traces without signing up</li>
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain guide</a> — another popular Python framework</li>
+        <li><a href="https://github.com/scobb/nexus" class="text-indigo-400 hover:text-indigo-300">GitHub</a> — open-source SDK</li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your Pydantic AI agents</h2>
       <p class="text-gray-400 mb-6 max-w-lg mx-auto">
         Free plan: 1,000 traces/month. No credit card needed.
       </p>

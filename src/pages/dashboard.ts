@@ -37,7 +37,7 @@ export interface DashboardMetrics {
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -258,10 +258,13 @@ export function dashboardPage(metrics: DashboardMetrics): string {
   }).join('') : `
     <div class="col-span-full text-center py-10">
       <p class="text-gray-400 mb-2">No agents yet.</p>
-      <p class="text-sm text-gray-500">
+      <p class="text-sm text-gray-500 mb-3">
         Add the SDK to your agent to start tracking.
-        <a href="/dashboard/keys" class="text-indigo-400 hover:underline ml-1">Create an API key</a> to get started.
       </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-3 mt-2">
+        <a href="/docs" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors">Read the docs →</a>
+        <a href="/dashboard/keys" class="inline-block bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors">Create an API key</a>
+      </div>
     </div>`
 
   const usageBanner = usagePct >= 80 ? `
@@ -276,7 +279,8 @@ export function dashboardPage(metrics: DashboardMetrics): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   <nav class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
@@ -349,7 +353,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
 
     <!-- 24-hour trace volume (hourly chart) -->
     <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
-      <p class="text-sm font-medium text-gray-300 mb-4">Traces — last 24 hours</p>
+      <p class="text-sm font-medium text-gray-300 mb-4">Traces — last 24 hours <span class="text-xs text-gray-500 font-normal">(UTC)</span></p>
       ${hourlyBarChart(metrics.hourlyVolume)}
     </div>
 

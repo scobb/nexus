@@ -10,7 +10,7 @@ export interface AgentRow {
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -96,11 +96,14 @@ export function agentsListPage(
 
   const emptyState = agents.length === 0 ? `
     <div class="text-center py-16">
-      <p class="text-gray-400 text-lg mb-2">No agents yet.</p>
-      <p class="text-sm text-gray-500">
-        Agents are created automatically when your first trace arrives.
-        <a href="/dashboard/keys" class="text-indigo-400 hover:underline ml-1">Create an API key</a> to get started.
+      <p class="text-gray-400 text-lg mb-3">No agents yet.</p>
+      <p class="text-sm text-gray-500 mb-4">
+        Agents are created automatically when your first trace arrives via the API.
       </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <a href="/docs" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">Read the docs →</a>
+        <a href="/dashboard/keys" class="inline-block bg-gray-800 hover:bg-gray-700 text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">Create an API key</a>
+      </div>
     </div>` : ''
 
   const table = agents.length > 0 ? `
@@ -125,7 +128,8 @@ export function agentsListPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agents — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email)}
@@ -208,7 +212,8 @@ export function agentTracesPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(agent.name)} — Agents — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email)}

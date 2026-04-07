@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import type { Env, HonoVariables } from './types'
+import { TAILWIND_CSS } from './generated-styles'
+import * as Sentry from '@sentry/cloudflare'
 import { landingPage } from './pages/landing'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
-import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage } from './pages/guides'
+import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
 import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, alternativesPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount, type HourCount } from './pages/dashboard'
@@ -61,6 +63,48 @@ async function runRetention(env: Env): Promise<void> {
 
 const app = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
+// Security headers on all responses
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+})
+
+// Serve build-time generated Tailwind CSS (no CDN dependency)
+app.get('/styles.css', (c) => {
+  return new Response(TAILWIND_CSS, {
+    headers: {
+      'Content-Type': 'text/css; charset=utf-8',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  })
+})
+
+// Favicon — indigo circuit-board node representing agent observability
+const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#4f46e5"/>
+  <circle cx="16" cy="16" r="4" fill="#fff"/>
+  <circle cx="16" cy="6" r="2.5" fill="#c7d2fe"/>
+  <circle cx="16" cy="26" r="2.5" fill="#c7d2fe"/>
+  <circle cx="6" cy="16" r="2.5" fill="#c7d2fe"/>
+  <circle cx="26" cy="16" r="2.5" fill="#c7d2fe"/>
+  <line x1="16" y1="12" x2="16" y2="8.5" stroke="#c7d2fe" stroke-width="1.5"/>
+  <line x1="16" y1="20" x2="16" y2="23.5" stroke="#c7d2fe" stroke-width="1.5"/>
+  <line x1="12" y1="16" x2="8.5" y2="16" stroke="#c7d2fe" stroke-width="1.5"/>
+  <line x1="20" y1="16" x2="23.5" y2="16" stroke="#c7d2fe" stroke-width="1.5"/>
+</svg>`
+
+app.get('/favicon.svg', (c) => {
+  return new Response(FAVICON_SVG, {
+    headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=604800' },
+  })
+})
+
+app.get('/favicon.ico', (c) => {
+  return c.redirect('/favicon.svg', 301)
+})
+
 app.get('/health', (c) => {
   return c.json({ status: 'ok', version: '0.1.0' })
 })
@@ -98,9 +142,14 @@ app.get('/sitemap.xml', (c) => {
     { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/pricing`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/openai-agents`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/autogen`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/pydantic-ai`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/blog/monitor-ai-agents-production`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
     // Sample demo trace detail pages (hardcoded demo IDs with spans)
     { loc: `${base}/demo/traces/demo-t1`, priority: '0.7', changefreq: 'monthly' },
     { loc: `${base}/demo/traces/demo-t3`, priority: '0.7', changefreq: 'monthly' },
@@ -164,6 +213,9 @@ app.get('/docs/crewai', (c) => c.html(docsCrewAIPage()))
 // Standalone pricing page
 app.get('/pricing', (c) => c.html(pricingPage()))
 app.get('/docs/anthropic-sdk', (c) => c.html(docsAnthropicSDKPage()))
+app.get('/docs/openai-agents', (c) => c.html(docsOpenAIAgentsPage()))
+app.get('/docs/autogen', (c) => c.html(docsAutoGenPage()))
+app.get('/docs/pydantic-ai', (c) => c.html(docsPydanticAIPage()))
 
 // SEO comparison pages
 app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
@@ -172,8 +224,8 @@ app.get('/vs/arize-phoenix', (c) => c.html(vsArizePhoenixPage()))
 app.get('/vs/agentops', (c) => c.html(vsAgentopsPage()))
 app.get('/alternatives', (c) => c.html(alternativesPage()))
 
-// /register is the public CTA — serve same login page
-app.get('/register', (c) => c.redirect('/auth/login'))
+// /register is the public CTA — redirect to signup page
+app.get('/register', (c) => c.redirect('/auth/signup'))
 
 // Public shared trace pages — no auth required
 app.route('/public', publicTracesRoutes)
@@ -216,15 +268,28 @@ app.route('/dashboard/traces', tracesRoutes)
 app.route('/dashboard/agents', agentsRoutes)
 app.route('/dashboard/billing', billingRoutes)
 app.route('/dashboard/settings', settingsRoutes)
-app.get('/dashboard', async (c) => {
-  const userId = c.get('userId')
-  const db = c.env.NEXUS_DB
+// Cached dashboard metrics shape stored in KV
+interface DashboardStatsCache {
+  statsRow: { total: number; errors: number; avg_ms: number | null }
+  agentRows: { id: string; name: string; last_status: string | null; last_trace_at: string | null; errors_24h: number; total_24h: number }[]
+  volumeRows: { day: string; count: number }[]
+  hourlyRows: { hour: string; total: number; errors: number }[]
+}
 
-  const [userRow, planRow, statsRow, agentCountRow, agentRows, volumeRows, hourlyRows, apiKeyRow, traceRow, onboardingDismissedVal] = await Promise.all([
-    db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>(),
-    db.prepare(
-      "SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1"
-    ).bind(userId).first<{ plan: string }>(),
+const DASHBOARD_STATS_TTL = 300 // 5 minutes
+
+async function getDashboardStats(db: D1Database, kv: KVNamespace, userId: string): Promise<DashboardStatsCache> {
+  const cacheKey = `dashboard_stats:${userId}`
+  const cached = await kv.get(cacheKey)
+  if (cached) {
+    try {
+      return JSON.parse(cached) as DashboardStatsCache
+    } catch {
+      // Fall through to fetch fresh
+    }
+  }
+
+  const [statsRow, agentRows, volumeRows, hourlyRows] = await Promise.all([
     db.prepare(`
       SELECT
         COUNT(*) as total,
@@ -235,7 +300,6 @@ app.get('/dashboard', async (c) => {
       FROM traces
       WHERE user_id = ? AND started_at >= datetime('now','start of month')
     `).bind(userId).first<{ total: number; errors: number; avg_ms: number | null }>(),
-    db.prepare('SELECT COUNT(*) as count FROM agents WHERE user_id = ?').bind(userId).first<{ count: number }>(),
     db.prepare(`
       SELECT a.id, a.name,
         t.status as last_status,
@@ -244,7 +308,7 @@ app.get('/dashboard', async (c) => {
           WHERE t2.agent_id = a.id AND t2.status IN ('error','timeout')
             AND t2.started_at >= datetime('now','-24 hours')) as errors_24h,
         (SELECT COUNT(*) FROM traces t2
-          WHERE t2.agent_id = a.id
+          WHERE t2.agent_id = a.id AND t2.status IN ('success','error','timeout')
             AND t2.started_at >= datetime('now','-24 hours')) as total_24h
       FROM agents a
       LEFT JOIN traces t ON t.id = (
@@ -269,14 +333,40 @@ app.get('/dashboard', async (c) => {
       GROUP BY strftime('%H', started_at)
       ORDER BY hour ASC
     `).bind(userId).all<{ hour: string; total: number; errors: number }>(),
+  ])
+
+  const result: DashboardStatsCache = {
+    statsRow: statsRow ?? { total: 0, errors: 0, avg_ms: null },
+    agentRows: agentRows.results ?? [],
+    volumeRows: volumeRows.results ?? [],
+    hourlyRows: hourlyRows.results ?? [],
+  }
+
+  // Cache result — fire-and-forget, don't block response
+  kv.put(cacheKey, JSON.stringify(result), { expirationTtl: DASHBOARD_STATS_TTL }).catch(() => {})
+
+  return result
+}
+
+app.get('/dashboard', async (c) => {
+  const userId = c.get('userId')
+  const db = c.env.NEXUS_DB
+
+  const [userRow, planRow, apiKeyRow, traceRow, onboardingDismissedVal, statsCache] = await Promise.all([
+    db.prepare('SELECT email, plan FROM users WHERE id = ?').bind(userId).first<{ email: string; plan: string }>(),
+    db.prepare(
+      "SELECT plan FROM subscriptions WHERE user_id = ? AND status IN ('active','trialing') ORDER BY created_at DESC LIMIT 1"
+    ).bind(userId).first<{ plan: string }>(),
     db.prepare("SELECT 1 FROM api_keys WHERE user_id = ? AND deleted_at IS NULL LIMIT 1").bind(userId).first<{ '1': number }>(),
     db.prepare("SELECT 1 FROM traces WHERE user_id = ? LIMIT 1").bind(userId).first<{ '1': number }>(),
     c.env.NEXUS_KV.get(`onboarding_dismissed:${userId}`),
+    getDashboardStats(db, c.env.NEXUS_KV, userId),
   ])
 
-  const plan: 'free' | 'pro' = planRow?.plan === 'pro' ? 'pro' : 'free'
-  const total = statsRow?.total ?? 0
-  const errors = statsRow?.errors ?? 0
+  // Plan: check subscriptions first, fall back to users.plan field set by webhook
+  const plan: 'free' | 'pro' = (planRow?.plan === 'pro' || userRow?.plan === 'pro') ? 'pro' : 'free'
+  const total = statsCache.statsRow.total ?? 0
+  const errors = statsCache.statsRow.errors ?? 0
 
   const metrics: DashboardMetrics = {
     email: userRow?.email ?? '',
@@ -284,9 +374,9 @@ app.get('/dashboard', async (c) => {
     tracesThisMonth: total,
     totalThisMonth: total,
     errorsThisMonth: errors,
-    avgDurationMs: statsRow?.avg_ms ?? null,
-    agentCount: agentCountRow?.count ?? 0,
-    agents: (agentRows.results ?? []).map(a => ({
+    avgDurationMs: statsCache.statsRow.avg_ms ?? null,
+    agentCount: statsCache.agentRows.length,
+    agents: statsCache.agentRows.map(a => ({
       id: a.id,
       name: a.name,
       lastStatus: a.last_status,
@@ -294,8 +384,8 @@ app.get('/dashboard', async (c) => {
       errors24h: a.errors_24h,
       total24h: a.total_24h,
     } satisfies AgentHealth)),
-    weeklyVolume: (volumeRows.results ?? []).map(r => ({ day: r.day, count: r.count } satisfies DayCount)),
-    hourlyVolume: (hourlyRows.results ?? []).map(r => ({ hour: r.hour, total: r.total, errors: r.errors } satisfies HourCount)),
+    weeklyVolume: statsCache.volumeRows.map(r => ({ day: r.day, count: r.count } satisfies DayCount)),
+    hourlyVolume: statsCache.hourlyRows.map(r => ({ hour: r.hour, total: r.total, errors: r.errors } satisfies HourCount)),
     hasApiKey: apiKeyRow != null,
     hasTrace: traceRow != null,
     onboardingDismissed: onboardingDismissedVal != null,
@@ -304,9 +394,37 @@ app.get('/dashboard', async (c) => {
   return c.html(dashboardPage(metrics))
 })
 
-export default {
+// Sentry options factory — only activates if SENTRY_DSN is set
+function sentryOptions(env: unknown) {
+  const e = env as Env
+  return {
+    dsn: e.SENTRY_DSN ?? '',
+    environment: e.ENVIRONMENT ?? 'development',
+    tracesSampleRate: 0.1,
+    // Scrub PII from Sentry events before sending
+    beforeSend(event: Sentry.ErrorEvent) {
+      if (!event.request) return event
+      // Remove Authorization header (contains API keys)
+      if (event.request.headers) {
+        const h = event.request.headers as Record<string, string>
+        delete h['Authorization']
+        delete h['Cookie']
+      }
+      // Scrub query strings that might contain tokens
+      if (event.request.query_string) {
+        event.request.query_string = '[scrubbed]'
+      }
+      return event
+    },
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const workerHandler: ExportedHandler<any> = {
   fetch: app.fetch,
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runRetention(env))
   },
 }
+
+export default Sentry.withSentry(sentryOptions, workerHandler)

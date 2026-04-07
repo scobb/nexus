@@ -7,6 +7,7 @@ export interface Env {
   STRIPE_PRICE_ID: string
   SESSION_SECRET: string
   ENVIRONMENT: string
+  SENTRY_DSN?: string
 }
 
 export type HonoVariables = {

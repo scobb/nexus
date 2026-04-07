@@ -6,37 +6,59 @@ import type { TraceRow } from '../pages/traces'
 const router = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
 const PAGE_SIZE = 20
+const AGENTS_LIST_TTL = 3600 // 1 hour
+
+export function agentsListCacheKey(userId: string): string {
+  return `agents_list:${userId}`
+}
+
+async function getAgentsList(db: D1Database, kv: KVNamespace, userId: string): Promise<AgentRow[]> {
+  const cacheKey = agentsListCacheKey(userId)
+  const cached = await kv.get(cacheKey)
+  if (cached) {
+    try {
+      return JSON.parse(cached) as AgentRow[]
+    } catch {
+      // Fall through to fetch fresh
+    }
+  }
+
+  const agentRows = await db.prepare(`
+    SELECT
+      a.id,
+      a.name,
+      a.created_at,
+      t.status as last_status,
+      t.started_at as last_trace_at,
+      (SELECT COUNT(*) FROM traces t2
+        WHERE t2.agent_id = a.id
+          AND t2.started_at >= datetime('now','-24 hours')) as trace_count_24h
+    FROM agents a
+    LEFT JOIN traces t ON t.id = (
+      SELECT id FROM traces WHERE agent_id = a.id ORDER BY started_at DESC LIMIT 1
+    )
+    WHERE a.user_id = ?
+    ORDER BY a.created_at ASC
+  `).bind(userId).all<AgentRow>()
+
+  const agents = agentRows.results ?? []
+  kv.put(cacheKey, JSON.stringify(agents), { expirationTtl: AGENTS_LIST_TTL }).catch(() => {})
+  return agents
+}
 
 router.get('/', async (c) => {
   const userId = c.get('userId')
   const db = c.env.NEXUS_DB
 
-  const [userRow, planRow, agentRows] = await Promise.all([
+  const [userRow, planRow, agents] = await Promise.all([
     db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>(),
     db.prepare(
       "SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1"
     ).bind(userId).first<{ plan: string }>(),
-    db.prepare(`
-      SELECT
-        a.id,
-        a.name,
-        a.created_at,
-        t.status as last_status,
-        t.started_at as last_trace_at,
-        (SELECT COUNT(*) FROM traces t2
-          WHERE t2.agent_id = a.id
-            AND t2.started_at >= datetime('now','-24 hours')) as trace_count_24h
-      FROM agents a
-      LEFT JOIN traces t ON t.id = (
-        SELECT id FROM traces WHERE agent_id = a.id ORDER BY started_at DESC LIMIT 1
-      )
-      WHERE a.user_id = ?
-      ORDER BY a.created_at ASC
-    `).bind(userId).all<AgentRow>(),
+    getAgentsList(db, c.env.NEXUS_KV, userId),
   ])
 
   const plan: 'free' | 'pro' = planRow?.plan === 'pro' ? 'pro' : 'free'
-  const agents = agentRows.results ?? []
 
   return c.html(agentsListPage(userRow?.email ?? '', agents, plan))
 })

@@ -1,7 +1,7 @@
 import type { TraceRow, SpanRow } from './traces'
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -146,8 +146,9 @@ export function publicTracePage(trace: TraceRow, spans: SpanRow[]): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(trace.name)} — Nexus</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="description" content="Shared agent trace: ${escHtml(trace.name)} — monitored by Nexus">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   <!-- Public header -->

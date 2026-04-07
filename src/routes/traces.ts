@@ -4,6 +4,7 @@ import { tracesListPage, traceDetailPage, type TraceRow, type SpanRow, type Agen
 
 interface TraceWithShare extends TraceRow {
   share_token: string | null
+  metadata: string | null
 }
 
 const router = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
@@ -112,7 +113,7 @@ router.get('/:id', async (c) => {
   ).bind(userId).first<{ email: string }>()
 
   const trace = await c.env.NEXUS_DB.prepare(`
-    SELECT t.id, t.name, a.name as agent_name, a.id as agent_id, t.status, t.started_at, t.ended_at, t.share_token
+    SELECT t.id, t.name, a.name as agent_name, a.id as agent_id, t.status, t.started_at, t.ended_at, t.share_token, t.metadata
     FROM traces t
     JOIN agents a ON t.agent_id = a.id
     WHERE t.id = ? AND t.user_id = ?
@@ -129,7 +130,7 @@ router.get('/:id', async (c) => {
     ORDER BY started_at ASC
   `).bind(traceId).all<SpanRow>()
 
-  return c.html(traceDetailPage(user?.email ?? '', trace, spansResult.results, trace.share_token))
+  return c.html(traceDetailPage(user?.email ?? '', trace, spansResult.results, trace.share_token, trace.metadata))
 })
 
 router.post('/:id/share', async (c) => {

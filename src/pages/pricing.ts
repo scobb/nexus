@@ -50,9 +50,10 @@ export function pricingPage(): string {
   <meta name="twitter:description" content="$0 free or $9/month Pro. Simple, affordable AI agent observability.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
 

@@ -19,13 +19,14 @@ export function changelogPage(): string {
   <meta name="twitter:title" content="Changelog — Nexus AI Agent Observability">
   <meta name="twitter:description" content="Nexus product changelog — AI agent observability built by an AI agent.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/styles.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
   </style>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
   <!-- Nav -->

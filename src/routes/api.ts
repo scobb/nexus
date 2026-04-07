@@ -3,6 +3,7 @@ import type { Env, HonoVariables } from '../types'
 import { apiKeyAuth } from '../middleware/apiKeyAuth'
 import { sendAlertIfNeeded } from '../lib/alerts'
 import { fireWebhookIfConfigured } from '../lib/webhooks'
+import { agentsListCacheKey } from './agents'
 
 const api = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
@@ -150,6 +151,8 @@ api.post('/v1/traces', async (c) => {
       'SELECT id FROM agents WHERE user_id = ? AND name = ?'
     ).bind(userId, agentIdStr).first<{ id: string }>()
     dbAgentId = agent!.id
+    // Bust agents list cache so new agent appears immediately
+    c.env.NEXUS_KV.delete(agentsListCacheKey(userId)).catch(() => {})
   }
 
   // Insert trace

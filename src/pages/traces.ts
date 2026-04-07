@@ -35,7 +35,7 @@ export interface SpanRow {
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -115,11 +115,12 @@ export function tracesListPage(
         <p class="text-gray-400 text-lg mb-2">No traces match your filters.</p>
         <p class="text-sm text-gray-500">Try adjusting the status, agent, date range, or search term above.</p>
       ` : `
-        <p class="text-gray-400 text-lg mb-2">No traces yet.</p>
-        <p class="text-sm text-gray-500">
-          Add the SDK to your agent to start tracking.
-          <a href="/dashboard/keys" class="text-indigo-400 hover:underline ml-1">Create an API key</a> to get started.
-        </p>
+        <p class="text-gray-400 text-lg mb-3">No traces yet.</p>
+        <p class="text-sm text-gray-500 mb-4">Add the SDK to your agent to start tracking.</p>
+        <div class="flex flex-col sm:flex-row justify-center gap-3">
+          <a href="/docs" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">Read the docs →</a>
+          <a href="/dashboard/keys" class="inline-block bg-gray-800 hover:bg-gray-700 text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">Create an API key</a>
+        </div>
       `}
     </div>` : ''
 
@@ -169,7 +170,7 @@ export function tracesListPage(
   const selectCls = 'bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500'
 
   const filterBar = `
-    <form method="GET" action="/dashboard/traces" class="mb-6">
+    <form id="trace-filters" method="GET" action="/dashboard/traces" class="mb-6">
       <div class="flex items-center gap-2 mb-3">
         <input type="text" name="q" value="${escHtml(filters.search)}"
           placeholder="Search by trace name, agent, or metadata…"
@@ -178,22 +179,21 @@ export function tracesListPage(
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Search</button>
       </div>
       <div class="flex items-center gap-3 flex-wrap">
-        <select name="status" class="${selectCls}">
+        <select name="status" class="${selectCls}" onchange="this.form.submit()">
           <option value="all" ${filters.status === 'all' ? 'selected' : ''}>All statuses</option>
           <option value="ok" ${filters.status === 'ok' ? 'selected' : ''}>Success</option>
           <option value="error" ${filters.status === 'error' ? 'selected' : ''}>Error / Timeout</option>
         </select>
-        <select name="agent" class="${selectCls}">
+        <select name="agent" class="${selectCls}" onchange="this.form.submit()">
           <option value="all" ${filters.agent === 'all' ? 'selected' : ''}>All agents</option>
           ${agentOptions}
         </select>
-        <select name="range" class="${selectCls}">
+        <select name="range" class="${selectCls}" onchange="this.form.submit()">
           <option value="today" ${filters.range === 'today' ? 'selected' : ''}>Today</option>
           <option value="7d" ${filters.range === '7d' ? 'selected' : ''}>Last 7 days</option>
           <option value="30d" ${filters.range === '30d' ? 'selected' : ''}>Last 30 days</option>
           <option value="all" ${filters.range === 'all' ? 'selected' : ''}>All time</option>
         </select>
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Filter</button>
         ${isFiltered ? `<a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-gray-300 transition-colors">Clear</a>` : ''}
       </div>
     </form>
@@ -205,7 +205,8 @@ export function tracesListPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Traces — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
   ${liveRefreshStyle()}
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
@@ -238,7 +239,8 @@ export function traceDetailPage(
   email: string,
   trace: TraceRow,
   spans: SpanRow[],
-  shareToken: string | null = null
+  shareToken: string | null = null,
+  metadata: string | null = null
 ): string {
   // --- Timeline calculation ---
   const toMs = (iso: string) => new Date(iso.endsWith('Z') ? iso : iso + 'Z').getTime()
@@ -300,12 +302,13 @@ export function traceDetailPage(
           <div class="text-xs text-gray-500 mb-1 font-medium">Output</div>
           <pre class="bg-gray-800 rounded p-2 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(s.output))}</pre>
         </div>` : ''
-    const errorSec = s.error ? `
+    const hasError = s.error && s.error !== 'null'
+    const errorSec = hasError ? `
         <div class="mb-2">
           <div class="text-xs text-red-400 mb-1 font-medium">Error</div>
-          <pre class="bg-red-950 border border-red-900 rounded p-2 text-xs text-red-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(s.error)}</pre>
+          <pre class="bg-red-950 border border-red-900 rounded p-2 text-xs text-red-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(s.error!)}</pre>
         </div>` : ''
-    const hasDetails = !!(s.input || s.output || s.error)
+    const hasDetails = !!(s.input || s.output || hasError)
 
     return `
     <div>
@@ -331,14 +334,20 @@ export function traceDetailPage(
           </div>
         </div>
       </div>
-      <div id="${detailId}" class="hidden border-b border-gray-800/50 bg-gray-900/50 px-6 py-3">
+      <div id="${detailId}" class="${hasDetails ? '' : 'hidden '}border-b border-gray-800/50 bg-gray-900/50 px-6 py-3">
         ${hasDetails ? inputSec + outputSec + errorSec : '<span class="text-xs text-gray-600">No input, output, or error recorded.</span>'}
       </div>
     </div>`
   }).join('')
 
   const emptySpans = spans.length === 0 ? `
-    <div class="text-center py-8 text-gray-500 text-sm">No spans recorded for this trace.</div>` : ''
+    <div class="text-center py-10">
+      <p class="text-gray-400 mb-2">No spans recorded for this trace.</p>
+      <p class="text-sm text-gray-500">
+        Use <code class="bg-gray-900 text-indigo-300 px-1.5 rounded">trace.addSpan()</code> in your agent to capture individual steps.
+        <a href="/docs#spans" class="text-indigo-400 hover:underline ml-1">See the docs →</a>
+      </p>
+    </div>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -346,7 +355,8 @@ export function traceDetailPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(trace.name)} — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
@@ -385,6 +395,11 @@ export function traceDetailPage(
         ${trace.ended_at ? `<span>Ended: <span class="text-gray-400">${formatDate(trace.ended_at)}</span></span>` : ''}
         <span>Spans: <span class="text-gray-400">${spans.length}</span></span>
       </div>
+      ${metadata && metadata !== 'null' ? `
+      <div class="mt-4 pt-4 border-t border-gray-800">
+        <div class="text-xs text-gray-500 mb-2 font-medium">Metadata</div>
+        <pre class="bg-gray-800 rounded p-3 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(metadata))}</pre>
+      </div>` : ''}
     </div>
 
     <!-- Span waterfall -->

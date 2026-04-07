@@ -1,5 +1,5 @@
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -230,9 +230,10 @@ export function demoOverviewPage(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Demo — Nexus AI Agent Observability</title>
   <meta name="description" content="See Nexus in action — browse sample AI agent traces, spans, and a live dashboard. No sign-up required.">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${DEMO_BANNER}
@@ -327,7 +328,7 @@ export function demoTraceDetailPage(traceId: string): string {
   if (!trace) {
     return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Not Found — Nexus</title><script src="https://cdn.tailwindcss.com"></script></head>
+<head><meta charset="UTF-8"><title>Not Found — Nexus</title><link rel="stylesheet" href="/styles.css"></head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
   <div class="text-center">
     <p class="text-gray-400 mb-4">Trace not found.</p>
@@ -380,9 +381,10 @@ export function demoTraceDetailPage(traceId: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(trace.name)} — Nexus Demo</title>
   <meta name="description" content="Sample trace: ${escHtml(trace.name)} from ${escHtml(trace.agent_name)}. See how Nexus visualizes AI agent traces and spans.">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${DEMO_BANNER}

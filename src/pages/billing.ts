@@ -5,10 +5,11 @@ export interface BillingData {
   subscriptionStatus: string | null
   currentPeriodEnd: string | null
   successMessage?: string
+  errorMessage?: string
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function formatDate(iso: string): string {
@@ -17,7 +18,7 @@ function formatDate(iso: string): string {
 }
 
 export function billingPage(data: BillingData): string {
-  const { email, plan, tracesThisMonth, subscriptionStatus, currentPeriodEnd, successMessage } = data
+  const { email, plan, tracesThisMonth, subscriptionStatus, currentPeriodEnd, successMessage, errorMessage } = data
   const limit = plan === 'pro' ? 50000 : 1000
   const limitLabel = plan === 'pro' ? '50,000' : '1,000'
   const usagePct = Math.min(Math.round((tracesThisMonth / limit) * 100), 100)
@@ -27,6 +28,13 @@ export function billingPage(data: BillingData): string {
   <div class="bg-green-950 border border-green-700 rounded-xl px-5 py-4 mb-6 flex items-center gap-3">
     <span class="text-green-400 text-lg">✓</span>
     <p class="text-green-300 text-sm font-medium">${escHtml(successMessage)}</p>
+  </div>` : ''
+
+  const errorBanner = errorMessage ? `
+  <div class="bg-red-950 border border-red-700 rounded-xl px-5 py-4 mb-6">
+    <p class="text-red-400 text-sm font-medium mb-1">Billing error</p>
+    <p class="text-red-300 text-sm">${escHtml(errorMessage)}</p>
+    <p class="text-red-400 text-xs mt-2">If this persists, email <a href="mailto:ralph@keylightdigital.dev" class="underline">ralph@keylightdigital.dev</a></p>
   </div>` : ''
 
   const planBadge = plan === 'pro'
@@ -84,7 +92,8 @@ export function billingPage(data: BillingData): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Billing — Nexus</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   <nav class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
@@ -109,6 +118,7 @@ export function billingPage(data: BillingData): string {
     <h1 class="text-2xl font-bold mb-6">Billing</h1>
 
     ${successBanner}
+    ${errorBanner}
 
     <!-- Current plan card -->
     <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">

@@ -65,13 +65,14 @@ export function landingPage(deletedMessage?: boolean): string {
     }
   ]
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/styles.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
   </style>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
   ${deletedBanner}
@@ -245,8 +246,8 @@ export function landingPage(deletedMessage?: boolean): string {
             <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Trace viewer</li>
             <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Community support</li>
           </ul>
-          <a href="/register" class="block text-center bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors text-sm">
-            Get started
+          <a href="/register" class="block text-center bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-medium transition-colors text-sm">
+            Start free — no card required
           </a>
         </div>
 
@@ -270,11 +271,12 @@ export function landingPage(deletedMessage?: boolean): string {
             <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Team access (up to 5)</li>
             <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Priority support</li>
           </ul>
-          <a href="/register" class="block text-center bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-medium transition-colors text-sm">
-            Start free, upgrade anytime
+          <a href="/register" class="block text-center bg-gray-800 hover:bg-gray-700 border border-indigo-600 text-indigo-300 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm">
+            Start free · upgrade to Pro anytime →
           </a>
         </div>
       </div>
+      <p class="text-center text-sm text-gray-500 mt-6">Start with the free tier. Upgrade when you need more traces, more agents, or email alerts.</p>
     </div>
   </section>
 

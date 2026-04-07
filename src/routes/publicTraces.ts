@@ -18,7 +18,7 @@ router.get('/traces/:shareToken', async (c) => {
   if (!trace) {
     return c.html(`<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Not Found — Nexus</title><script src="https://cdn.tailwindcss.com"></script></head>
+<head><meta charset="UTF-8"><title>Not Found — Nexus</title><link rel="stylesheet" href="/styles.css"></head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
   <div class="text-center">
     <p class="text-gray-400 mb-4">This shared trace link is invalid or has been removed.</p>

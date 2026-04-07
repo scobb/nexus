@@ -6,9 +6,10 @@ export function docsPage(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Documentation — Nexus</title>
   <meta name="description" content="Nexus REST API reference. Trace ingestion, span creation, authentication, rate limits, and SDK quickstarts for TypeScript and Python.">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Beam Analytics (dogfooding) -->
+  <script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
 

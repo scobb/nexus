@@ -33,12 +33,26 @@ billing.get('/', async (c) => {
 
   const plan: 'free' | 'pro' = subRow?.plan === 'pro' ? 'pro' : 'free'
 
+  // Surface error from redirect (e.g. after failed Stripe call)
+  const errorCode = c.req.query('error')
+  let errorMessage: string | undefined
+  if (errorCode === 'stripe_customer_failed') {
+    errorMessage = 'Failed to create a Stripe customer. Please check that STRIPE_SECRET_KEY is correctly configured.'
+  } else if (errorCode === 'stripe_session_failed') {
+    errorMessage = 'Failed to create a Stripe Checkout session. Please check that STRIPE_PRICE_ID is set correctly.'
+  } else if (errorCode === 'portal_failed') {
+    errorMessage = 'Failed to open the billing portal. Please try again or contact support.'
+  } else if (errorCode) {
+    errorMessage = `An error occurred: ${errorCode}`
+  }
+
   return c.html(billingPage({
     email: userRow?.email ?? '',
     plan,
     tracesThisMonth: statsRow?.total ?? 0,
     subscriptionStatus: subRow?.status ?? null,
     currentPeriodEnd: subRow?.current_period_end ?? null,
+    errorMessage,
   }))
 })
 
@@ -72,6 +86,12 @@ billing.post('/checkout', async (c) => {
   const userId = c.get('userId')
   const db = c.env.NEXUS_DB
 
+  // Guard: STRIPE_SECRET_KEY must be set
+  if (!c.env.STRIPE_SECRET_KEY) {
+    console.error('Stripe checkout failed: STRIPE_SECRET_KEY is not set')
+    return c.redirect('/dashboard/billing?error=stripe_customer_failed')
+  }
+
   const userRow = await db.prepare(
     'SELECT email, stripe_customer_id FROM users WHERE id = ?'
   ).bind(userId).first<{ email: string; stripe_customer_id: string | null }>()
@@ -86,6 +106,7 @@ billing.post('/checkout', async (c) => {
   if (!customerId) {
     const customer = await stripePost('customers', { email: userRow.email }, c.env.STRIPE_SECRET_KEY)
     if (typeof customer.id !== 'string') {
+      console.error('Stripe customer creation failed:', JSON.stringify(customer))
       return c.redirect('/dashboard/billing?error=stripe_customer_failed')
     }
     customerId = customer.id
@@ -105,6 +126,7 @@ billing.post('/checkout', async (c) => {
   }, c.env.STRIPE_SECRET_KEY)
 
   if (typeof session.url !== 'string') {
+    console.error('Stripe checkout session creation failed:', JSON.stringify(session))
     return c.redirect('/dashboard/billing?error=stripe_session_failed')
   }
 

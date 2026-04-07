@@ -4,18 +4,22 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build:css && wrangler deploy",
+    "build:css": "tailwindcss --input tailwind/input.css --output tailwind/output.css --content 'src/**/*.ts' --minify && node scripts/embed-css.js",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\"",
     "test:smoke": "playwright test",
     "migrations:local": "wrangler d1 migrations apply nexus-db --local"
   },
   "dependencies": {
+    "@sentry/cloudflare": "^10.47.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241022.0",
     "@playwright/test": "^1.59.1",
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.5.0",
     "wrangler": "^3.80.0"
   }
