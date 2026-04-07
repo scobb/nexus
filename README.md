@@ -83,9 +83,12 @@ Nexus is that tool. Built on Cloudflare — near-zero latency globally, no serve
 
 ## Features
 
-- **Trace viewer** — Waterfall view of every span: inputs, outputs, errors, timing
-- **Agent health dashboard** — Error rate, avg latency, 7-day volume sparkline
+- **Trace viewer** — Waterfall timeline of every span: inputs, outputs, errors, timing
+- **Agent health dashboard** — Error rate, avg latency, 7-day volume sparkline with live auto-refresh
+- **Trace filtering & search** — Filter by status, agent, date range; search by trace name or metadata
 - **Email alerts** — Notified when an agent trace ends with `error` or `timeout` (Pro)
+- **OpenTelemetry compatible** — Point any OTEL exporter at `/v1/traces` — no code changes needed
+- **Public trace API** — `GET /api/v1/traces` for custom dashboards, Slack bots, CI/CD integrations
 - **Open-source SDKs** — TypeScript and Python, non-throwing, minimal dependencies
 - **Multi-agent** — Track as many agents as you want (Pro), or start with 1 (Free)
 - **Privacy-aware** — Cloudflare-native, data stays in your D1 database
