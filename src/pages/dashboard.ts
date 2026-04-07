@@ -283,25 +283,45 @@ export function dashboardPage(metrics: DashboardMetrics): string {
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
-  <nav class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-    <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
-    <div class="flex items-center gap-4 flex-wrap">
-      <a href="/dashboard" class="text-sm text-white font-medium">Overview</a>
-      <a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-white transition-colors">Traces</a>
-      <a href="/dashboard/agents" class="text-sm text-gray-400 hover:text-white transition-colors">Agents</a>
-      <a href="/dashboard/keys" class="text-sm text-gray-400 hover:text-white transition-colors">API Keys</a>
-      <a href="/dashboard/billing" class="text-sm text-gray-400 hover:text-white transition-colors">Billing</a>
-      <a href="/dashboard/settings" class="text-sm text-gray-400 hover:text-white transition-colors">Settings</a>
-      <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
-      <span class="text-gray-600">|</span>
-      <span class="text-sm text-gray-400">${escHtml(metrics.email)}</span>
-      <form method="POST" action="/auth/logout">
-        <button type="submit" class="text-sm text-gray-400 hover:text-white transition-colors">Sign out</button>
-      </form>
+  <nav class="border-b border-gray-800 px-4 py-3">
+    <div class="flex items-center justify-between">
+      <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
+      <div class="hidden md:flex items-center gap-4 flex-wrap">
+        <a href="/dashboard" class="text-sm text-white font-medium">Overview</a>
+        <a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-white transition-colors">Traces</a>
+        <a href="/dashboard/agents" class="text-sm text-gray-400 hover:text-white transition-colors">Agents</a>
+        <a href="/dashboard/keys" class="text-sm text-gray-400 hover:text-white transition-colors">API Keys</a>
+        <a href="/dashboard/billing" class="text-sm text-gray-400 hover:text-white transition-colors">Billing</a>
+        <a href="/dashboard/settings" class="text-sm text-gray-400 hover:text-white transition-colors">Settings</a>
+        <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
+        <span class="text-gray-600">|</span>
+        <span class="text-sm text-gray-400">${escHtml(metrics.email)}</span>
+        <form method="POST" action="/auth/logout">
+          <button type="submit" class="text-sm text-gray-400 hover:text-white transition-colors">Sign out</button>
+        </form>
+      </div>
+      <button onclick="var m=document.getElementById('mnav');m.classList.toggle('hidden')" class="md:hidden p-2 text-gray-400 hover:text-white transition-colors" aria-label="Open navigation menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div id="mnav" class="hidden md:hidden border-t border-gray-800 mt-3 pt-2 pb-1 space-y-0.5">
+      <a href="/dashboard" class="block px-2 py-2.5 text-sm text-white font-medium bg-gray-800 rounded-lg">Overview</a>
+      <a href="/dashboard/traces" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Traces</a>
+      <a href="/dashboard/agents" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Agents</a>
+      <a href="/dashboard/keys" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">API Keys</a>
+      <a href="/dashboard/billing" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Billing</a>
+      <a href="/dashboard/settings" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Settings</a>
+      <a href="/docs" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Docs</a>
+      <div class="border-t border-gray-800 mt-2 pt-2">
+        <span class="block px-2 py-1.5 text-xs text-gray-500 truncate">${escHtml(metrics.email)}</span>
+        <form method="POST" action="/auth/logout">
+          <button type="submit" class="block w-full text-left px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Sign out</button>
+        </form>
+      </div>
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <h1 class="text-2xl font-bold">Overview</h1>
       <div class="flex items-center gap-3">

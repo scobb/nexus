@@ -82,12 +82,23 @@ export function landingPage(deletedMessage?: boolean): string {
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-5xl mx-auto flex items-center justify-between">
       <span class="text-lg font-bold text-white">Nexus</span>
-      <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-3">
         <a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a>
         <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
         <a href="/auth/login" class="text-sm text-gray-400 hover:text-white transition-colors">Sign in</a>
         <a href="/register" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Start free</a>
       </div>
+      <div class="flex sm:hidden items-center gap-2">
+        <a href="/register" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">Start free</a>
+        <button onclick="var m=document.getElementById('land-mnav');m.classList.toggle('hidden')" class="p-2 text-gray-400 hover:text-white transition-colors" aria-label="Open navigation menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="land-mnav" class="hidden sm:hidden max-w-5xl mx-auto border-t border-gray-800 mt-3 pt-2 pb-1 space-y-0.5">
+      <a href="/blog" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Blog</a>
+      <a href="/docs" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Docs</a>
+      <a href="/auth/login" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Sign in</a>
     </div>
   </nav>
 

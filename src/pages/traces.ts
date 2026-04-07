@@ -68,22 +68,44 @@ function statusBadge(status: string): string {
 function navBar(email: string, activePage: 'traces' | 'keys' | 'dashboard' | 'agents' | 'billing' | 'settings'): string {
   const link = (href: string, label: string, active: boolean) =>
     `<a href="${href}" class="text-sm ${active ? 'text-white font-medium' : 'text-gray-400 hover:text-white transition-colors'}">${label}</a>`
+  const mobileLink = (href: string, label: string, active: boolean) =>
+    `<a href="${href}" class="block px-2 py-2.5 text-sm rounded-lg transition-colors ${active ? 'text-white font-medium bg-gray-800' : 'text-gray-300 hover:text-white hover:bg-gray-800'}">${label}</a>`
   return `
-  <nav class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-    <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
-    <div class="flex items-center gap-4 flex-wrap">
-      ${link('/dashboard', 'Overview', activePage === 'dashboard')}
-      ${link('/dashboard/traces', 'Traces', activePage === 'traces')}
-      ${link('/dashboard/agents', 'Agents', activePage === 'agents')}
-      ${link('/dashboard/keys', 'API Keys', activePage === 'keys')}
-      ${link('/dashboard/billing', 'Billing', activePage === 'billing')}
-      ${link('/dashboard/settings', 'Settings', activePage === 'settings')}
-      <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
-      <span class="text-gray-600">|</span>
-      <span class="text-sm text-gray-400">${escHtml(email)}</span>
-      <form method="POST" action="/auth/logout">
-        <button type="submit" class="text-sm text-gray-400 hover:text-white transition-colors">Sign out</button>
-      </form>
+  <nav class="border-b border-gray-800 px-4 py-3">
+    <div class="flex items-center justify-between">
+      <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
+      <div class="hidden md:flex items-center gap-4 flex-wrap">
+        ${link('/dashboard', 'Overview', activePage === 'dashboard')}
+        ${link('/dashboard/traces', 'Traces', activePage === 'traces')}
+        ${link('/dashboard/agents', 'Agents', activePage === 'agents')}
+        ${link('/dashboard/keys', 'API Keys', activePage === 'keys')}
+        ${link('/dashboard/billing', 'Billing', activePage === 'billing')}
+        ${link('/dashboard/settings', 'Settings', activePage === 'settings')}
+        <a href="/docs" class="text-sm text-gray-400 hover:text-white transition-colors">Docs</a>
+        <span class="text-gray-600">|</span>
+        <span class="text-sm text-gray-400">${escHtml(email)}</span>
+        <form method="POST" action="/auth/logout">
+          <button type="submit" class="text-sm text-gray-400 hover:text-white transition-colors">Sign out</button>
+        </form>
+      </div>
+      <button onclick="var m=document.getElementById('mnav');m.classList.toggle('hidden')" class="md:hidden p-2 text-gray-400 hover:text-white transition-colors" aria-label="Open navigation menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div id="mnav" class="hidden md:hidden border-t border-gray-800 mt-3 pt-2 pb-1 space-y-0.5">
+      ${mobileLink('/dashboard', 'Overview', activePage === 'dashboard')}
+      ${mobileLink('/dashboard/traces', 'Traces', activePage === 'traces')}
+      ${mobileLink('/dashboard/agents', 'Agents', activePage === 'agents')}
+      ${mobileLink('/dashboard/keys', 'API Keys', activePage === 'keys')}
+      ${mobileLink('/dashboard/billing', 'Billing', activePage === 'billing')}
+      ${mobileLink('/dashboard/settings', 'Settings', activePage === 'settings')}
+      <a href="/docs" class="block px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Docs</a>
+      <div class="border-t border-gray-800 mt-2 pt-2">
+        <span class="block px-2 py-1.5 text-xs text-gray-500 truncate">${escHtml(email)}</span>
+        <form method="POST" action="/auth/logout">
+          <button type="submit" class="block w-full text-left px-2 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">Sign out</button>
+        </form>
+      </div>
     </div>
   </nav>`
 }
@@ -212,7 +234,7 @@ export function tracesListPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <div>
         <h1 class="text-2xl font-bold mb-1">Traces</h1>
@@ -361,7 +383,7 @@ export function traceDetailPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-6">
       <nav class="text-sm text-gray-500">
         <a href="/dashboard/agents" class="hover:text-indigo-400 transition-colors">Agents</a>
@@ -409,20 +431,24 @@ export function traceDetailPage(
     </div>
 
     <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-      ${spans.length > 0 ? `
-      <!-- Timeline header -->
-      <div class="flex items-end border-b border-gray-700 py-2">
-        <div class="flex-shrink-0" style="width:${LABEL_COL}px">
-          <span class="text-xs text-gray-500 font-medium pl-2">Span</span>
+      <div class="overflow-x-auto" style="min-width:0">
+        ${spans.length > 0 ? `
+        <div style="min-width:${LABEL_COL + 200}px">
+        <!-- Timeline header -->
+        <div class="flex items-end border-b border-gray-700 py-2">
+          <div class="flex-shrink-0" style="width:${LABEL_COL}px">
+            <span class="text-xs text-gray-500 font-medium pl-2">Span</span>
+          </div>
+          <div class="flex-1 relative" style="height:20px">
+            ${ticks}
+          </div>
         </div>
-        <div class="flex-1 relative" style="height:20px">
-          ${ticks}
+        <!-- Rows -->
+        ${spanBars}
         </div>
+        ` : ''}
+        ${emptySpans}
       </div>
-      <!-- Rows -->
-      ${spanBars}
-      ` : ''}
-      ${emptySpans}
     </div>
   </main>
 </body>
