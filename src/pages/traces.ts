@@ -1,3 +1,5 @@
+import { liveRefreshBar, liveRefreshStyle, liveRefreshScript } from '../lib/liveRefresh'
+
 export interface TraceRow {
   id: string
   name: string
@@ -6,6 +8,17 @@ export interface TraceRow {
   status: string
   started_at: string
   ended_at: string | null
+}
+
+export interface AgentOption {
+  id: string
+  name: string
+}
+
+export interface FilterState {
+  status: string   // 'all' | 'ok' | 'error'
+  agent: string    // 'all' | agent UUID
+  range: string    // 'today' | '7d' | '30d' | 'all'
 }
 
 export interface SpanRow {
@@ -78,10 +91,13 @@ export function tracesListPage(
   email: string,
   traces: TraceRow[],
   page: number,
-  hasMore: boolean
+  hasMore: boolean,
+  totalCount: number,
+  filters: FilterState,
+  agents: AgentOption[]
 ): string {
   const rows = traces.length > 0 ? traces.map(t => `
-    <tr class="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
+    <tr data-trace-id="${escHtml(t.id)}" class="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
       <td class="py-3 pr-4">
         <a href="/dashboard/traces/${escHtml(t.id)}" class="text-indigo-400 hover:text-indigo-300 transition-colors font-medium text-sm">${escHtml(t.name)}</a>
       </td>
@@ -91,23 +107,40 @@ export function tracesListPage(
       <td class="py-3 text-sm text-gray-500">${formatDate(t.started_at)}</td>
     </tr>`).join('') : ''
 
+  const isFiltered = filters.status !== 'all' || filters.agent !== 'all' || filters.range !== '7d'
   const emptyState = traces.length === 0 ? `
     <div class="text-center py-16">
-      <p class="text-gray-400 text-lg mb-2">No traces yet.</p>
-      <p class="text-sm text-gray-500">
-        Add the SDK to your agent to start tracking.
-        <a href="/dashboard/keys" class="text-indigo-400 hover:underline ml-1">Create an API key</a> to get started.
-      </p>
+      ${isFiltered ? `
+        <p class="text-gray-400 text-lg mb-2">No traces match your filters.</p>
+        <p class="text-sm text-gray-500">Try adjusting the status, agent, or date range filters above.</p>
+      ` : `
+        <p class="text-gray-400 text-lg mb-2">No traces yet.</p>
+        <p class="text-sm text-gray-500">
+          Add the SDK to your agent to start tracking.
+          <a href="/dashboard/keys" class="text-indigo-400 hover:underline ml-1">Create an API key</a> to get started.
+        </p>
+      `}
     </div>` : ''
 
-  const pagination = traces.length > 0 ? `
+  // Build query string preserving filters for pagination
+  function filterQS(extra: Record<string, string | number> = {}): string {
+    const p: Record<string, string> = {}
+    if (filters.status !== 'all') p['status'] = filters.status
+    if (filters.agent !== 'all') p['agent'] = filters.agent
+    if (filters.range !== '7d') p['range'] = filters.range
+    Object.assign(p, Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v)])))
+    const qs = new URLSearchParams(p).toString()
+    return qs ? '?' + qs : ''
+  }
+
+  const pagination = traces.length > 0 || page > 1 ? `
     <div class="flex items-center justify-between mt-6">
       <div>
-        ${page > 1 ? `<a href="/dashboard/traces?page=${page - 1}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">&larr; Previous</a>` : '<span class="text-sm text-gray-600">&larr; Previous</span>'}
+        ${page > 1 ? `<a href="/dashboard/traces${filterQS({ page: page - 1 })}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">&larr; Previous</a>` : '<span class="text-sm text-gray-600">&larr; Previous</span>'}
       </div>
       <span class="text-sm text-gray-500">Page ${page}</span>
       <div>
-        ${hasMore ? `<a href="/dashboard/traces?page=${page + 1}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">Next &rarr;</a>` : '<span class="text-sm text-gray-600">Next &rarr;</span>'}
+        ${hasMore ? `<a href="/dashboard/traces${filterQS({ page: page + 1 })}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">Next &rarr;</a>` : '<span class="text-sm text-gray-600">Next &rarr;</span>'}
       </div>
     </div>` : ''
 
@@ -127,6 +160,34 @@ export function tracesListPage(
       </table>
     </div>` : ''
 
+  const agentOptions = agents.map(a =>
+    `<option value="${escHtml(a.id)}" ${filters.agent === a.id ? 'selected' : ''}>${escHtml(a.name)}</option>`
+  ).join('')
+
+  const selectCls = 'bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500'
+
+  const filterBar = `
+    <form method="GET" action="/dashboard/traces" class="flex items-center gap-3 flex-wrap mb-6">
+      <select name="status" class="${selectCls}">
+        <option value="all" ${filters.status === 'all' ? 'selected' : ''}>All statuses</option>
+        <option value="ok" ${filters.status === 'ok' ? 'selected' : ''}>Success</option>
+        <option value="error" ${filters.status === 'error' ? 'selected' : ''}>Error / Timeout</option>
+      </select>
+      <select name="agent" class="${selectCls}">
+        <option value="all" ${filters.agent === 'all' ? 'selected' : ''}>All agents</option>
+        ${agentOptions}
+      </select>
+      <select name="range" class="${selectCls}">
+        <option value="today" ${filters.range === 'today' ? 'selected' : ''}>Today</option>
+        <option value="7d" ${filters.range === '7d' ? 'selected' : ''}>Last 7 days</option>
+        <option value="30d" ${filters.range === '30d' ? 'selected' : ''}>Last 30 days</option>
+        <option value="all" ${filters.range === 'all' ? 'selected' : ''}>All time</option>
+      </select>
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Filter</button>
+      ${isFiltered ? `<a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-gray-300 transition-colors">Clear</a>` : ''}
+    </form>
+    <div class="text-sm text-gray-500 mb-4">${totalCount === 0 ? 'No traces' : `${totalCount.toLocaleString()} trace${totalCount === 1 ? '' : 's'}`} found</div>`
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,15 +195,21 @@ export function tracesListPage(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Traces — Nexus</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  ${liveRefreshStyle()}
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
   <main class="max-w-6xl mx-auto px-6 py-8">
-    <div class="mb-8">
-      <h1 class="text-2xl font-bold mb-1">Traces</h1>
-      <p class="text-gray-400 text-sm">Recent agent traces across all your agents.</p>
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-bold mb-1">Traces</h1>
+        <p class="text-gray-400 text-sm">Agent traces across all your agents.</p>
+      </div>
+      ${liveRefreshBar()}
     </div>
+
+    ${filterBar}
 
     <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
       ${table}
@@ -151,6 +218,7 @@ export function tracesListPage(
 
     ${pagination}
   </main>
+  ${liveRefreshScript()}
 </body>
 </html>`
 }
@@ -160,35 +228,100 @@ export function traceDetailPage(
   trace: TraceRow,
   spans: SpanRow[]
 ): string {
-  const spanRows = spans.map((s, i) => {
-    const indent = s.parent_span_id ? 'pl-8' : 'pl-0'
-    const inputSection = s.input ? `
-      <details class="mt-2">
-        <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors select-none">Input</summary>
-        <pre class="mt-1 bg-gray-800 rounded p-2 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(s.input))}</pre>
-      </details>` : ''
-    const outputSection = s.output ? `
-      <details class="mt-2">
-        <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors select-none">Output</summary>
-        <pre class="mt-1 bg-gray-800 rounded p-2 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(s.output))}</pre>
-      </details>` : ''
-    const errorSection = s.error ? `
-      <details class="mt-2" open>
-        <summary class="text-xs text-red-400 cursor-pointer hover:text-red-300 transition-colors select-none">Error</summary>
-        <pre class="mt-1 bg-red-950 border border-red-900 rounded p-2 text-xs text-red-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(s.error)}</pre>
-      </details>` : ''
+  // --- Timeline calculation ---
+  const toMs = (iso: string) => new Date(iso.endsWith('Z') ? iso : iso + 'Z').getTime()
+  const traceStart = toMs(trace.started_at)
+  const traceEndRaw = trace.ended_at ? toMs(trace.ended_at) : null
+  const spanEnds = spans.filter(s => s.ended_at).map(s => toMs(s.ended_at!))
+  const maxSpanEnd = spanEnds.length > 0 ? Math.max(...spanEnds) : traceStart + 1
+  const traceEnd = traceEndRaw ? Math.max(traceEndRaw, maxSpanEnd) : maxSpanEnd
+  const totalDuration = Math.max(traceEnd - traceStart, 1)
 
-    const hasDetails = s.input || s.output || s.error
+  // --- Depth map (parent-child nesting) ---
+  const depthMap = new Map<string, number>()
+  for (const s of spans) {
+    if (!s.parent_span_id) depthMap.set(s.id, 0)
+  }
+  for (let pass = 0; pass < 10; pass++) {
+    for (const s of spans) {
+      if (s.parent_span_id && !depthMap.has(s.id)) {
+        const pd = depthMap.get(s.parent_span_id)
+        if (pd !== undefined) depthMap.set(s.id, pd + 1)
+      }
+    }
+  }
+
+  // --- Timeline tick labels (5 markers) ---
+  const LABEL_COL = 192 // px for span name column
+  const ticks = [0, 25, 50, 75, 100].map((pct, i, arr) => {
+    const ms = Math.round(totalDuration * pct / 100)
+    const label = ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
+    const transform = i === 0 ? 'translateX(0)' : i === arr.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)'
+    return `<span class="absolute text-xs text-gray-500 select-none" style="left:${pct}%;transform:${transform}">${label}</span>`
+  }).join('')
+
+  const tickLines = [0, 25, 50, 75, 100].map(pct =>
+    `<div class="absolute inset-y-0 border-l border-gray-800/60" style="left:${pct}%"></div>`
+  ).join('')
+
+  // --- Span bar rows ---
+  const spanBars = spans.map((s, i) => {
+    const depth = depthMap.get(s.id) ?? 0
+    const indent = depth * 16
+    const spanStartMs = toMs(s.started_at)
+    const spanEndMs = s.ended_at ? toMs(s.ended_at) : traceEnd
+    const leftPct = Math.max(0, ((spanStartMs - traceStart) / totalDuration) * 100)
+    const rawWidthPct = ((spanEndMs - spanStartMs) / totalDuration) * 100
+    const widthPct = Math.max(0.3, Math.min(rawWidthPct, 100 - leftPct))
+
+    const barColor = s.status === 'ok' ? '#22c55e' : s.status === 'error' ? '#ef4444' : '#6b7280'
+    const dur = formatDuration(s.started_at, s.ended_at)
+    const detailId = `sd-${i}`
+
+    const inputSec = s.input ? `
+        <div class="mb-2">
+          <div class="text-xs text-gray-500 mb-1 font-medium">Input</div>
+          <pre class="bg-gray-800 rounded p-2 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(s.input))}</pre>
+        </div>` : ''
+    const outputSec = s.output ? `
+        <div class="mb-2">
+          <div class="text-xs text-gray-500 mb-1 font-medium">Output</div>
+          <pre class="bg-gray-800 rounded p-2 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(tryPretty(s.output))}</pre>
+        </div>` : ''
+    const errorSec = s.error ? `
+        <div class="mb-2">
+          <div class="text-xs text-red-400 mb-1 font-medium">Error</div>
+          <pre class="bg-red-950 border border-red-900 rounded p-2 text-xs text-red-300 overflow-x-auto whitespace-pre-wrap break-words">${escHtml(s.error)}</pre>
+        </div>` : ''
+    const hasDetails = !!(s.input || s.output || s.error)
 
     return `
-    <div class="border border-gray-800 rounded-lg p-4 ${indent} ${i > 0 ? 'mt-3' : ''}">
-      <div class="flex items-center gap-3 flex-wrap">
-        <span class="font-medium text-sm text-white">${escHtml(s.name)}</span>
-        ${statusBadge(s.status)}
-        <span class="text-xs text-gray-500 font-mono">${formatDuration(s.started_at, s.ended_at)}</span>
-        ${s.parent_span_id ? '<span class="text-xs text-gray-600">nested</span>' : ''}
+    <div>
+      <div class="flex items-center hover:bg-gray-800/40 transition-colors cursor-pointer border-b border-gray-800/50 py-1"
+           onclick="(function(el){el.classList.toggle('hidden')})(document.getElementById('${detailId}'))"
+           title="Click to ${hasDetails ? 'view details' : 'expand'}">
+        <!-- Label column -->
+        <div class="flex-shrink-0 flex items-center gap-1.5 overflow-hidden pr-2" style="width:${LABEL_COL}px;padding-left:${indent + 8}px">
+          ${depth > 0 ? `<span class="text-gray-700 text-xs flex-shrink-0">└</span>` : ''}
+          <span class="text-xs text-white truncate">${escHtml(s.name)}</span>
+          <span class="flex-shrink-0 inline-block text-xs font-medium px-1.5 py-0.5 rounded border ${
+            s.status === 'ok' ? 'bg-green-900 text-green-300 border-green-700' :
+            s.status === 'error' ? 'bg-red-900 text-red-300 border-red-700' :
+            'bg-gray-800 text-gray-400 border-gray-700'
+          }">${escHtml(s.status)}</span>
+        </div>
+        <!-- Timeline bar -->
+        <div class="flex-1 relative" style="height:26px">
+          ${tickLines}
+          <div class="absolute top-1/2 rounded flex items-center px-1 overflow-hidden"
+               style="left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:18px;background:${barColor};transform:translateY(-50%);min-width:4px">
+            <span class="text-white text-xs font-mono whitespace-nowrap overflow-hidden leading-none" style="text-overflow:ellipsis;font-size:10px">${dur}</span>
+          </div>
+        </div>
       </div>
-      ${hasDetails ? `<div class="mt-1">${inputSection}${outputSection}${errorSection}</div>` : ''}
+      <div id="${detailId}" class="hidden border-b border-gray-800/50 bg-gray-900/50 px-6 py-3">
+        ${hasDetails ? inputSec + outputSec + errorSec : '<span class="text-xs text-gray-600">No input, output, or error recorded.</span>'}
+      </div>
     </div>`
   }).join('')
 
@@ -206,7 +339,7 @@ export function traceDetailPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
-  <main class="max-w-4xl mx-auto px-6 py-8">
+  <main class="max-w-6xl mx-auto px-6 py-8">
     <div class="mb-6">
       <nav class="text-sm text-gray-500">
         <a href="/dashboard/agents" class="hover:text-indigo-400 transition-colors">Agents</a>
@@ -236,13 +369,26 @@ export function traceDetailPage(
       </div>
     </div>
 
-    <!-- Spans waterfall -->
-    <div class="mb-4">
-      <h2 class="text-base font-semibold text-gray-300">Spans</h2>
+    <!-- Span waterfall -->
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-300">Span Waterfall</h2>
+      <span class="text-xs text-gray-600">Click a row to view span details</span>
     </div>
 
-    <div>
-      ${spanRows}
+    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      ${spans.length > 0 ? `
+      <!-- Timeline header -->
+      <div class="flex items-end border-b border-gray-700 py-2">
+        <div class="flex-shrink-0" style="width:${LABEL_COL}px">
+          <span class="text-xs text-gray-500 font-medium pl-2">Span</span>
+        </div>
+        <div class="flex-1 relative" style="height:20px">
+          ${ticks}
+        </div>
+      </div>
+      <!-- Rows -->
+      ${spanBars}
+      ` : ''}
       ${emptySpans}
     </div>
   </main>
