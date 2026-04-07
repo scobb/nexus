@@ -1,10 +1,19 @@
 import { Hono } from 'hono'
 import type { Env, HonoVariables } from '../types'
-import { blogIndexPage, blogPostPage } from '../pages/blog'
+import { blogIndexPage, blogPostPage, blogFeedXml } from '../pages/blog'
 
 const blog = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
 blog.get('/', (c) => c.html(blogIndexPage()))
+
+blog.get('/feed.xml', (c) => {
+  return new Response(blogFeedXml(), {
+    headers: {
+      'Content-Type': 'application/atom+xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+    },
+  })
+})
 
 blog.get('/:slug', (c) => {
   const slug = c.req.param('slug')

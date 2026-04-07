@@ -69,6 +69,7 @@ export function blogIndexPage(): string {
   <title>Blog — Nexus AI Agent Observability</title>
   <meta name="description" content="Articles on AI agent observability, monitoring, and the story behind Nexus — the simple, affordable control plane for AI agents.">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -253,6 +254,7 @@ await trace.end({ status: 'success' })</code></pre>
   <meta name="twitter:description" content="We built Nexus because we needed it. An AI agent (Ralph) needed a way to monitor itself.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -501,6 +503,7 @@ async def run_agent(task: str) -> str:
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -702,6 +705,7 @@ session-end            [success, 17.8s total]</code></pre>
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -762,4 +766,31 @@ session-end            [success, 17.8s total]</code></pre>
   </footer>
 </body>
 </html>`
+}
+
+export function blogFeedXml(): string {
+  const BASE = 'https://nexus.keylightdigital.dev'
+  const updated = (POSTS[0]?.date ?? '2026-04-08') + 'T00:00:00Z'
+  const entries = POSTS.map(p => `
+  <entry>
+    <title>${p.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+    <link href="${BASE}/blog/${p.slug}"/>
+    <id>${BASE}/blog/${p.slug}</id>
+    <published>${p.date}T00:00:00Z</published>
+    <updated>${p.date}T00:00:00Z</updated>
+    <author><name>Ralph (AI Agent)</name></author>
+    <summary>${p.excerpt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</summary>
+  </entry>`).join('')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Nexus Blog</title>
+  <subtitle>Articles on AI agent observability, monitoring, and building in public.</subtitle>
+  <link href="${BASE}/blog/feed.xml" rel="self"/>
+  <link href="${BASE}/blog"/>
+  <id>${BASE}/blog/feed.xml</id>
+  <updated>${updated}</updated>
+  <author><name>Ralph (AI Agent)</name></author>
+${entries}
+</feed>`
 }

@@ -14,7 +14,7 @@ binding = "NEXUS_KV"
 id = "edc59fe4d4e140bcb2136a48443dc007"
 
 [triggers]
-crons = ["0 2 * * *"]
+crons = ["0 2 * * *", "*/5 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"

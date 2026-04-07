@@ -26,6 +26,71 @@ import publicTracesRoutes from './routes/publicTraces'
 
 const BATCH_LIMIT = 1000
 
+const HEALTH_URL = 'https://nexus.keylightdigital.dev/health'
+const ALERT_TO = 'steve@keylightdigital.dev'
+
+async function sendUptimeEmail(env: Env, subject: string, text: string): Promise<void> {
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Ralph <ralph@keylightdigital.com>',
+      to: ALERT_TO,
+      subject,
+      text,
+    }),
+  })
+}
+
+async function runUptimeCheck(env: Env): Promise<void> {
+  const now = new Date().toISOString()
+  let isHealthy = false
+
+  try {
+    const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(10000) })
+    if (res.ok) {
+      const body = await res.json<{ status?: string }>()
+      isHealthy = body?.status === 'ok'
+    }
+  } catch {
+    isHealthy = false
+  }
+
+  const lastStatus = await env.NEXUS_KV.get('uptime:last_status')
+  await env.NEXUS_KV.put('uptime:last_checked', now)
+
+  if (!isHealthy) {
+    await env.NEXUS_KV.put('uptime:last_status', 'down')
+    // Only send email on first failure (not repeated down checks)
+    if (lastStatus !== 'down') {
+      await sendUptimeEmail(
+        env,
+        'Nexus production is DOWN',
+        `Nexus health check failed at ${now}.\n\nURL checked: ${HEALTH_URL}\n\nPlease investigate at https://dash.cloudflare.com`
+      )
+      console.log(`[uptime] DOWN — alert sent to ${ALERT_TO}`)
+    } else {
+      console.log('[uptime] DOWN — alert already sent, skipping')
+    }
+  } else {
+    await env.NEXUS_KV.put('uptime:last_status', 'ok')
+    // Send recovery email only if we were previously down
+    if (lastStatus === 'down') {
+      await sendUptimeEmail(
+        env,
+        'Nexus production recovered',
+        `Nexus health check recovered at ${now}.\n\nURL checked: ${HEALTH_URL}\n\nService is back online.`
+      )
+      console.log(`[uptime] RECOVERED — alert sent to ${ALERT_TO}`)
+    } else {
+      console.log('[uptime] OK')
+    }
+  }
+}
+
 async function runRetention(env: Env): Promise<void> {
   let totalDeleted = 0
 
@@ -169,39 +234,38 @@ app.get('/BingSiteAuth.xml', (c) => {
   })
 })
 
-app.get('/sitemap.xml', (c) => {
+app.get('/sitemap.xml', async (c) => {
   const base = 'https://nexus.keylightdigital.dev'
   const today = new Date().toISOString().split('T')[0]
 
-  // Public pages
+  // Public pages (dynamically generated from all known routes)
   const urls = [
     { loc: `${base}/`, priority: '1.0', changefreq: 'weekly' },
-    { loc: `${base}/docs`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/pricing`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${base}/alternatives`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${base}/docs`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/langchain`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/openai-agents`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/autogen`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/pydantic-ai`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langfuse`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/langsmith`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/arize-phoenix`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/agentops`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/alternatives`, priority: '0.9', changefreq: 'monthly' },
-    { loc: `${base}/docs/langchain`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/pricing`, priority: '0.9', changefreq: 'monthly' },
-    { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/docs/openai-agents`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/docs/autogen`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/docs/pydantic-ai`, priority: '0.8', changefreq: 'monthly' },
-    { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
-    { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/blog/monitor-ai-agents-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
-    // Sample demo trace detail pages (hardcoded demo IDs with spans)
-    { loc: `${base}/demo/traces/demo-t1`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/demo/traces/demo-t3`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/demo/traces/demo-t5`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/demo/traces/demo-t7`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/demo/traces/demo-t8`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${base}/demo/traces/demo-t10`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/blog/monitor-ai-agents-production`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
+    { loc: `${base}/demo/traces/demo-t1`, priority: '0.6', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t3`, priority: '0.6', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t5`, priority: '0.6', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t7`, priority: '0.6', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t8`, priority: '0.6', changefreq: 'monthly' },
+    { loc: `${base}/demo/traces/demo-t10`, priority: '0.6', changefreq: 'monthly' },
   ]
 
   const urlEntries = urls.map(u =>
@@ -210,8 +274,25 @@ app.get('/sitemap.xml', (c) => {
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries}\n</urlset>`
 
+  // Ping search engines at most once per day (KV-backed dedup)
+  const pingKey = `sitemap:last_ping:${today}`
+  const alreadyPinged = await c.env.NEXUS_KV.get(pingKey)
+  if (!alreadyPinged) {
+    const sitemapUrl = encodeURIComponent(`${base}/sitemap.xml`)
+    c.executionCtx.waitUntil(
+      Promise.all([
+        fetch(`https://www.google.com/ping?sitemap=${sitemapUrl}`).catch(() => {}),
+        fetch(`https://www.bing.com/ping?sitemap=${sitemapUrl}`).catch(() => {}),
+        c.env.NEXUS_KV.put(pingKey, '1', { expirationTtl: 86400 }),
+      ])
+    )
+  }
+
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+    },
   })
 })
 
@@ -533,8 +614,12 @@ function sentryOptions(env: unknown) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const workerHandler: ExportedHandler<any> = {
   fetch: app.fetch,
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runRetention(env))
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (controller.cron === '*/5 * * * *') {
+      ctx.waitUntil(runUptimeCheck(env))
+    } else {
+      ctx.waitUntil(runRetention(env))
+    }
   },
 }
 
