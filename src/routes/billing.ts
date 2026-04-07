@@ -27,7 +27,7 @@ billing.get('/', async (c) => {
       "SELECT plan, status, current_period_end FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
     ).bind(userId).first<{ plan: string; status: string; current_period_end: string }>(),
     db.prepare(
-      "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= datetime('now','start of month')"
+      "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','start of month')"
     ).bind(userId).first<{ total: number }>(),
   ])
 
@@ -66,7 +66,7 @@ billing.get('/success', async (c) => {
       "SELECT plan, status, current_period_end FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
     ).bind(userId).first<{ plan: string; status: string; current_period_end: string }>(),
     db.prepare(
-      "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= datetime('now','start of month')"
+      "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','start of month')"
     ).bind(userId).first<{ total: number }>(),
   ])
 

@@ -1,4 +1,4 @@
-const CF_ANALYTICS = `<link rel="icon" type="image/svg+xml" href="/favicon.svg"><!-- Beam Analytics (dogfooding) --><script defer src="https://beam.keylightdigital.dev/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>`
+const CF_ANALYTICS = `<link rel="icon" type="image/svg+xml" href="/favicon.svg"><!-- Beam Analytics (dogfooding) --><script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>`
 
 const NAV = `
   <nav class="border-b border-gray-800 px-4 py-4">

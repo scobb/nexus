@@ -151,7 +151,7 @@ async function runRetention(env: Env): Promise<void> {
       `DELETE FROM traces
        WHERE id IN (
          SELECT id FROM traces
-         WHERE user_id = ? AND started_at < datetime('now', '-${retentionDays} days')
+         WHERE user_id = ? AND started_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-${retentionDays} days')
          LIMIT ?
        )`
     ).bind(user.id, remaining).run()
@@ -586,7 +586,7 @@ async function getDashboardStats(db: D1Database, kv: KVNamespace, userId: string
           THEN (julianday(ended_at) - julianday(started_at)) * 86400000
           ELSE NULL END) as avg_ms
       FROM traces
-      WHERE user_id = ? AND started_at >= datetime('now','start of month')
+      WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','start of month')
     `).bind(userId).first<{ total: number; errors: number; avg_ms: number | null }>(),
     db.prepare(`
       SELECT a.id, a.name,
@@ -594,10 +594,10 @@ async function getDashboardStats(db: D1Database, kv: KVNamespace, userId: string
         t.started_at as last_trace_at,
         (SELECT COUNT(*) FROM traces t2
           WHERE t2.agent_id = a.id AND t2.status IN ('error','timeout')
-            AND t2.started_at >= datetime('now','-24 hours')) as errors_24h,
+            AND t2.started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-24 hours')) as errors_24h,
         (SELECT COUNT(*) FROM traces t2
           WHERE t2.agent_id = a.id AND t2.status IN ('success','error','timeout')
-            AND t2.started_at >= datetime('now','-24 hours')) as total_24h
+            AND t2.started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-24 hours')) as total_24h
       FROM agents a
       LEFT JOIN traces t ON t.id = (
         SELECT id FROM traces WHERE agent_id = a.id ORDER BY started_at DESC LIMIT 1
@@ -608,7 +608,7 @@ async function getDashboardStats(db: D1Database, kv: KVNamespace, userId: string
     db.prepare(`
       SELECT date(started_at) as day, COUNT(*) as count
       FROM traces
-      WHERE user_id = ? AND started_at >= datetime('now','-6 days')
+      WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-6 days')
       GROUP BY date(started_at)
       ORDER BY day ASC
     `).bind(userId).all<{ day: string; count: number }>(),
@@ -617,7 +617,7 @@ async function getDashboardStats(db: D1Database, kv: KVNamespace, userId: string
              COUNT(*) as total,
              SUM(CASE WHEN status IN ('error','timeout') THEN 1 ELSE 0 END) as errors
       FROM traces
-      WHERE user_id = ? AND started_at >= datetime('now','-24 hours')
+      WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-24 hours')
       GROUP BY strftime('%H', started_at)
       ORDER BY hour ASC
     `).bind(userId).all<{ hour: string; total: number; errors: number }>(),

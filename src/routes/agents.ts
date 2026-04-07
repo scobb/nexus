@@ -32,7 +32,7 @@ async function getAgentsList(db: D1Database, kv: KVNamespace, userId: string): P
       t.started_at as last_trace_at,
       (SELECT COUNT(*) FROM traces t2
         WHERE t2.agent_id = a.id
-          AND t2.started_at >= datetime('now','-24 hours')) as trace_count_24h
+          AND t2.started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-24 hours')) as trace_count_24h
     FROM agents a
     LEFT JOIN traces t ON t.id = (
       SELECT id FROM traces WHERE agent_id = a.id ORDER BY started_at DESC LIMIT 1
