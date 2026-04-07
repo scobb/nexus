@@ -110,8 +110,10 @@ function hourlyBarChart(hourlyVolume: HourCount[]): string {
   for (const h of hourlyVolume) {
     hourMap.set(h.hour, { total: h.total, errors: h.errors })
   }
+  // Rolling 24h window: start from (currentHour + 1) so the rightmost bar is "now"
+  const currentHour = new Date().getUTCHours()
   const hours = Array.from({ length: 24 }, (_, i) => {
-    const h = i.toString().padStart(2, '0')
+    const h = ((currentHour + 1 + i) % 24).toString().padStart(2, '0')
     return { hour: h, ...(hourMap.get(h) ?? { total: 0, errors: 0 }) }
   })
 
