@@ -1,4 +1,4 @@
-# nexus-agent
+# keylightdigital-nexus
 
 Python SDK for [Nexus](https://nexus.keylightdigital.dev) — simple, affordable AI agent observability.  
 *The Plausible of AI agents. $9/month. No self-hosting.*
@@ -6,7 +6,7 @@ Python SDK for [Nexus](https://nexus.keylightdigital.dev) — simple, affordable
 ## Install
 
 ```bash
-pip install nexus-agent
+pip install keylightdigital-nexus
 ```
 
 No dependencies beyond the Python standard library.

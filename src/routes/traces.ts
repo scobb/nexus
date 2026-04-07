@@ -2,6 +2,10 @@ import { Hono } from 'hono'
 import type { Env, HonoVariables } from '../types'
 import { tracesListPage, traceDetailPage, type TraceRow, type SpanRow, type AgentOption, type FilterState } from '../pages/traces'
 
+interface TraceWithShare extends TraceRow {
+  share_token: string | null
+}
+
 const router = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
 const PAGE_SIZE = 20
@@ -31,11 +35,13 @@ router.get('/', async (c) => {
   const statusParam = c.req.query('status') ?? 'all'
   const agentParam = c.req.query('agent') ?? 'all'
   const rangeParam = c.req.query('range') ?? '7d'
+  const searchParam = (c.req.query('q') ?? '').trim()
 
   const filters: FilterState = {
     status: ['all', 'ok', 'error'].includes(statusParam) ? statusParam : 'all',
     agent: agentParam,
     range: ['today', '7d', '30d', 'all'].includes(rangeParam) ? rangeParam : '7d',
+    search: searchParam,
   }
 
   // Build WHERE clause dynamically
@@ -57,6 +63,12 @@ router.get('/', async (c) => {
   if (sinceISO) {
     whereParts.push('t.started_at >= ?')
     params.push(sinceISO)
+  }
+
+  if (filters.search) {
+    const like = `%${filters.search}%`
+    whereParts.push('(t.name LIKE ? OR a.name LIKE ? OR t.metadata LIKE ?)')
+    params.push(like, like, like)
   }
 
   const whereClause = whereParts.join(' AND ')
@@ -100,11 +112,11 @@ router.get('/:id', async (c) => {
   ).bind(userId).first<{ email: string }>()
 
   const trace = await c.env.NEXUS_DB.prepare(`
-    SELECT t.id, t.name, a.name as agent_name, a.id as agent_id, t.status, t.started_at, t.ended_at
+    SELECT t.id, t.name, a.name as agent_name, a.id as agent_id, t.status, t.started_at, t.ended_at, t.share_token
     FROM traces t
     JOIN agents a ON t.agent_id = a.id
     WHERE t.id = ? AND t.user_id = ?
-  `).bind(traceId, userId).first<TraceRow>()
+  `).bind(traceId, userId).first<TraceWithShare>()
 
   if (!trace) {
     return c.text('Trace not found', 404)
@@ -117,7 +129,34 @@ router.get('/:id', async (c) => {
     ORDER BY started_at ASC
   `).bind(traceId).all<SpanRow>()
 
-  return c.html(traceDetailPage(user?.email ?? '', trace, spansResult.results))
+  return c.html(traceDetailPage(user?.email ?? '', trace, spansResult.results, trace.share_token))
+})
+
+router.post('/:id/share', async (c) => {
+  const userId = c.get('userId')
+  const traceId = c.req.param('id')
+
+  // Verify ownership
+  const trace = await c.env.NEXUS_DB.prepare(
+    'SELECT id, share_token FROM traces WHERE id = ? AND user_id = ?'
+  ).bind(traceId, userId).first<{ id: string; share_token: string | null }>()
+
+  if (!trace) {
+    return c.text('Trace not found', 404)
+  }
+
+  // Return existing token or generate a new one
+  let token = trace.share_token
+  if (!token) {
+    const bytes = new Uint8Array(16)
+    crypto.getRandomValues(bytes)
+    token = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+    await c.env.NEXUS_DB.prepare(
+      'UPDATE traces SET share_token = ? WHERE id = ?'
+    ).bind(token, traceId).run()
+  }
+
+  return c.redirect(`/dashboard/traces/${traceId}`)
 })
 
 export default router

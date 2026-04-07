@@ -14,6 +14,12 @@ export interface DayCount {
   count: number
 }
 
+export interface HourCount {
+  hour: string  // '00' to '23'
+  total: number
+  errors: number
+}
+
 export interface DashboardMetrics {
   email: string
   plan: 'free' | 'pro'
@@ -24,6 +30,10 @@ export interface DashboardMetrics {
   agentCount: number
   agents: AgentHealth[]
   weeklyVolume: DayCount[]
+  hourlyVolume: HourCount[]
+  hasApiKey: boolean
+  hasTrace: boolean
+  onboardingDismissed: boolean
 }
 
 function escHtml(s: string): string {
@@ -81,6 +91,131 @@ function weeklyBarChart(weeklyVolume: DayCount[]): string {
   return `<div class="flex items-end gap-1">${bars}</div>`
 }
 
+function formatHourLabel(hour: string): string {
+  const h = parseInt(hour, 10)
+  if (h === 0) return '12am'
+  if (h < 12) return `${h}am`
+  if (h === 12) return '12pm'
+  return `${h - 12}pm`
+}
+
+function hourlyBarChart(hourlyVolume: HourCount[]): string {
+  const totalTraces = hourlyVolume.reduce((sum, h) => sum + h.total, 0)
+
+  if (totalTraces === 0) {
+    return `<div class="flex items-center justify-center h-20 text-gray-500 text-sm">No trace data yet in the last 24 hours</div>`
+  }
+
+  const hourMap = new Map<string, { total: number; errors: number }>()
+  for (const h of hourlyVolume) {
+    hourMap.set(h.hour, { total: h.total, errors: h.errors })
+  }
+  const hours = Array.from({ length: 24 }, (_, i) => {
+    const h = i.toString().padStart(2, '0')
+    return { hour: h, ...(hourMap.get(h) ?? { total: 0, errors: 0 }) }
+  })
+
+  const maxTotal = Math.max(...hours.map(h => h.total), 1)
+
+  const svgW = 720
+  const svgH = 130
+  const mL = 32
+  const mR = 4
+  const mT = 8
+  const mB = 22
+  const chartW = svgW - mL - mR
+  const chartH = svgH - mT - mB
+  const slotW = chartW / 24
+  const barW = Math.max(slotW - 4, 2)
+  const bottomY = mT + chartH
+
+  // Y-axis guide lines + labels at 0, midpoint, max
+  const yLevels = [0, Math.round(maxTotal / 2), maxTotal]
+  const yGuides = yLevels.map(val => {
+    const y = bottomY - (val / maxTotal) * chartH
+    return `<line x1="${mL}" y1="${y.toFixed(1)}" x2="${(svgW - mR).toFixed(1)}" y2="${y.toFixed(1)}" stroke="#374151" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text x="${(mL - 4).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#6b7280">${val}</text>`
+  }).join('\n')
+
+  // Bars (green = success at bottom, red = errors stacked on top)
+  const bars = hours.map(({ total, errors }, i) => {
+    if (total === 0) return ''
+    const x = mL + i * slotW + (slotW - barW) / 2
+    const totalH = (total / maxTotal) * chartH
+    const errorH = errors > 0 ? (errors / maxTotal) * chartH : 0
+    const successH = totalH - errorH
+    const parts: string[] = []
+    if (successH > 0.5) {
+      parts.push(`<rect x="${x.toFixed(1)}" y="${(bottomY - successH).toFixed(1)}" width="${barW.toFixed(1)}" height="${successH.toFixed(1)}" fill="#22c55e" rx="1"/>`)
+    }
+    if (errorH > 0.5) {
+      parts.push(`<rect x="${x.toFixed(1)}" y="${(bottomY - totalH).toFixed(1)}" width="${barW.toFixed(1)}" height="${errorH.toFixed(1)}" fill="#ef4444" rx="1"/>`)
+    }
+    const hourLabel = formatHourLabel(hours[i]?.hour ?? i.toString().padStart(2, '0'))
+    return `<g><title>${total} trace${total !== 1 ? 's' : ''}${errors > 0 ? ` (${errors} error${errors !== 1 ? 's' : ''})` : ''} at ${hourLabel}</title>${parts.join('')}</g>`
+  }).join('\n')
+
+  // X-axis labels every 3 hours
+  const xLabels = Array.from({ length: 8 }, (_, i) => {
+    const idx = i * 3
+    const x = mL + idx * slotW + slotW / 2
+    const hEntry = hours[idx]
+    const label = hEntry ? formatHourLabel(hEntry.hour) : formatHourLabel(idx.toString().padStart(2, '0'))
+    return `<text x="${x.toFixed(1)}" y="${(svgH - 4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#6b7280">${label}</text>`
+  }).join('\n')
+
+  return `
+    <div class="flex items-center gap-4 mb-2 text-xs text-gray-500">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-green-500"></span>Success</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-red-500"></span>Error</span>
+    </div>
+    <div class="w-full">
+      <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="${svgH}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        ${yGuides}
+        ${bars}
+        ${xLabels}
+      </svg>
+    </div>`
+}
+
+function onboardingChecklist(hasApiKey: boolean, hasTrace: boolean): string {
+  const step = (num: number, done: boolean, title: string, desc: string, href?: string) => {
+    const circle = done
+      ? `<div class="flex-shrink-0 w-7 h-7 rounded-full bg-green-600 flex items-center justify-center text-white text-sm">✓</div>`
+      : `<div class="flex-shrink-0 w-7 h-7 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-400 text-sm font-medium">${num}</div>`
+    const titleEl = href
+      ? `<a href="${escHtml(href)}" class="font-medium ${done ? 'text-gray-400 line-through' : 'text-white hover:text-indigo-300 transition-colors'}">${title}</a>`
+      : `<p class="font-medium ${done ? 'text-gray-400 line-through' : 'text-white'}">${title}</p>`
+    return `
+      <div class="flex items-start gap-3">
+        ${circle}
+        <div>
+          ${titleEl}
+          <p class="text-sm text-gray-500 mt-0.5">${desc}</p>
+        </div>
+      </div>`
+  }
+
+  return `
+    <div class="bg-gray-900 rounded-xl border border-indigo-900 p-5 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-base font-semibold text-white">Get started with Nexus</h2>
+          <p class="text-sm text-gray-400 mt-0.5">Complete these steps to start monitoring your agents</p>
+        </div>
+        <form method="POST" action="/dashboard/onboarding/dismiss">
+          <button type="submit" class="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none" aria-label="Dismiss onboarding">&times;</button>
+        </form>
+      </div>
+      <div class="space-y-4">
+        ${step(1, hasApiKey, 'Create an API key', 'Generate a key to authenticate your agents with Nexus', '/dashboard/keys')}
+        ${step(2, false, 'Install the SDK', 'Run: <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">npm install @keylightdigital/nexus</code> or <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">pip install keylightdigital-nexus</code>')}
+        ${step(3, hasTrace, 'Send your first trace', 'Instrument your agent and call <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">client.startTrace()</code>', '/docs')}
+        ${step(4, false, 'Explore your data', 'View traces, spans, and agent health in your dashboard', '/dashboard/traces')}
+      </div>
+    </div>`
+}
+
 export function dashboardPage(metrics: DashboardMetrics): string {
   const limit = metrics.plan === 'pro' ? 50000 : 1000
   const limitLabel = metrics.plan === 'pro' ? '50,000' : '1,000'
@@ -94,26 +229,32 @@ export function dashboardPage(metrics: DashboardMetrics): string {
     : '—'
 
   const agentCards = metrics.agents.length > 0 ? metrics.agents.map(a => {
-    const errorRate24h = a.total24h > 0
-      ? `${Math.round((a.errors24h / a.total24h) * 100)}%`
-      : '—'
+    const errorRatePct = a.total24h > 0 ? Math.round((a.errors24h / a.total24h) * 100) : 0
+    const successRatePct = a.total24h > 0 ? (100 - errorRatePct) : null
+    const isUnhealthy = errorRatePct > 10
+    const borderClass = isUnhealthy ? 'border-red-700 border-l-4' : 'border-gray-800'
+    const tracesUrl = `/dashboard/traces?agent=${encodeURIComponent(a.id)}`
     return `
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+      <a href="${escHtml(tracesUrl)}" class="block bg-gray-900 rounded-xl border ${borderClass} p-5 hover:bg-gray-800/60 transition-colors">
         <div class="flex items-start justify-between mb-3">
-          <a href="/dashboard/agents/${escHtml(a.id)}" class="font-semibold text-white hover:text-indigo-300 transition-colors">${escHtml(a.name)}</a>
+          <span class="font-semibold text-white">${escHtml(a.name)}</span>
           ${a.lastStatus ? statusBadge(a.lastStatus) : '<span class="text-xs text-gray-500">no traces</span>'}
         </div>
-        <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="grid grid-cols-3 gap-2 text-sm">
           <div>
-            <p class="text-xs text-gray-500 mb-0.5">Last trace</p>
-            <p class="text-gray-300">${a.lastTraceAt ? formatDate(a.lastTraceAt) : '—'}</p>
+            <p class="text-xs text-gray-500 mb-0.5">Traces (24h)</p>
+            <p class="text-gray-300">${a.total24h}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-500 mb-0.5">24h error rate</p>
-            <p class="${a.errors24h > 0 ? 'text-red-400' : 'text-gray-300'}">${errorRate24h}</p>
+            <p class="text-xs text-gray-500 mb-0.5">Success rate</p>
+            <p class="${isUnhealthy ? 'text-red-400' : 'text-gray-300'}">${successRatePct !== null ? successRatePct + '%' : '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Last active</p>
+            <p class="text-gray-300 text-xs">${a.lastTraceAt ? formatDate(a.lastTraceAt) : '—'}</p>
           </div>
         </div>
-      </div>`
+      </a>`
   }).join('') : `
     <div class="col-span-full text-center py-10">
       <p class="text-gray-400 mb-2">No agents yet.</p>
@@ -168,6 +309,8 @@ export function dashboardPage(metrics: DashboardMetrics): string {
 
     ${usageBanner}
 
+    ${(!metrics.onboardingDismissed && !(metrics.hasApiKey && metrics.hasTrace)) ? onboardingChecklist(metrics.hasApiKey, metrics.hasTrace) : ''}
+
     <!-- Summary stat cards -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
@@ -202,6 +345,12 @@ export function dashboardPage(metrics: DashboardMetrics): string {
         <div class="${usageBarColor} h-2.5 rounded-full transition-all" style="width:${usagePct}%"></div>
       </div>
       ${usagePct >= 80 ? `<p class="text-xs text-red-400 mt-1.5"><a href="/dashboard/billing" class="hover:underline">Upgrade to Pro</a> for 50,000 traces/month.</p>` : ''}
+    </div>
+
+    <!-- 24-hour trace volume (hourly chart) -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
+      <p class="text-sm font-medium text-gray-300 mb-4">Traces — last 24 hours</p>
+      ${hourlyBarChart(metrics.hourlyVolume)}
     </div>
 
     <!-- 7-day trace volume -->

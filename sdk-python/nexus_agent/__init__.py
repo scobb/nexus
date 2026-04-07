@@ -1,5 +1,5 @@
 """
-nexus-agent — Python SDK for Nexus agent observability
+keylightdigital-nexus — Python SDK for Nexus agent observability
 https://nexus.keylightdigital.dev
 """
 

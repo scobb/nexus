@@ -19,6 +19,7 @@ export interface FilterState {
   status: string   // 'all' | 'ok' | 'error'
   agent: string    // 'all' | agent UUID
   range: string    // 'today' | '7d' | '30d' | 'all'
+  search: string   // free-text search term
 }
 
 export interface SpanRow {
@@ -107,12 +108,12 @@ export function tracesListPage(
       <td class="py-3 text-sm text-gray-500">${formatDate(t.started_at)}</td>
     </tr>`).join('') : ''
 
-  const isFiltered = filters.status !== 'all' || filters.agent !== 'all' || filters.range !== '7d'
+  const isFiltered = filters.status !== 'all' || filters.agent !== 'all' || filters.range !== '7d' || filters.search !== ''
   const emptyState = traces.length === 0 ? `
     <div class="text-center py-16">
       ${isFiltered ? `
         <p class="text-gray-400 text-lg mb-2">No traces match your filters.</p>
-        <p class="text-sm text-gray-500">Try adjusting the status, agent, or date range filters above.</p>
+        <p class="text-sm text-gray-500">Try adjusting the status, agent, date range, or search term above.</p>
       ` : `
         <p class="text-gray-400 text-lg mb-2">No traces yet.</p>
         <p class="text-sm text-gray-500">
@@ -128,6 +129,7 @@ export function tracesListPage(
     if (filters.status !== 'all') p['status'] = filters.status
     if (filters.agent !== 'all') p['agent'] = filters.agent
     if (filters.range !== '7d') p['range'] = filters.range
+    if (filters.search !== '') p['q'] = filters.search
     Object.assign(p, Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v)])))
     const qs = new URLSearchParams(p).toString()
     return qs ? '?' + qs : ''
@@ -167,24 +169,33 @@ export function tracesListPage(
   const selectCls = 'bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500'
 
   const filterBar = `
-    <form method="GET" action="/dashboard/traces" class="flex items-center gap-3 flex-wrap mb-6">
-      <select name="status" class="${selectCls}">
-        <option value="all" ${filters.status === 'all' ? 'selected' : ''}>All statuses</option>
-        <option value="ok" ${filters.status === 'ok' ? 'selected' : ''}>Success</option>
-        <option value="error" ${filters.status === 'error' ? 'selected' : ''}>Error / Timeout</option>
-      </select>
-      <select name="agent" class="${selectCls}">
-        <option value="all" ${filters.agent === 'all' ? 'selected' : ''}>All agents</option>
-        ${agentOptions}
-      </select>
-      <select name="range" class="${selectCls}">
-        <option value="today" ${filters.range === 'today' ? 'selected' : ''}>Today</option>
-        <option value="7d" ${filters.range === '7d' ? 'selected' : ''}>Last 7 days</option>
-        <option value="30d" ${filters.range === '30d' ? 'selected' : ''}>Last 30 days</option>
-        <option value="all" ${filters.range === 'all' ? 'selected' : ''}>All time</option>
-      </select>
-      <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Filter</button>
-      ${isFiltered ? `<a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-gray-300 transition-colors">Clear</a>` : ''}
+    <form method="GET" action="/dashboard/traces" class="mb-6">
+      <div class="flex items-center gap-2 mb-3">
+        <input type="text" name="q" value="${escHtml(filters.search)}"
+          placeholder="Search by trace name, agent, or metadata…"
+          class="flex-1 bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
+        />
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Search</button>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <select name="status" class="${selectCls}">
+          <option value="all" ${filters.status === 'all' ? 'selected' : ''}>All statuses</option>
+          <option value="ok" ${filters.status === 'ok' ? 'selected' : ''}>Success</option>
+          <option value="error" ${filters.status === 'error' ? 'selected' : ''}>Error / Timeout</option>
+        </select>
+        <select name="agent" class="${selectCls}">
+          <option value="all" ${filters.agent === 'all' ? 'selected' : ''}>All agents</option>
+          ${agentOptions}
+        </select>
+        <select name="range" class="${selectCls}">
+          <option value="today" ${filters.range === 'today' ? 'selected' : ''}>Today</option>
+          <option value="7d" ${filters.range === '7d' ? 'selected' : ''}>Last 7 days</option>
+          <option value="30d" ${filters.range === '30d' ? 'selected' : ''}>Last 30 days</option>
+          <option value="all" ${filters.range === 'all' ? 'selected' : ''}>All time</option>
+        </select>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Filter</button>
+        ${isFiltered ? `<a href="/dashboard/traces" class="text-sm text-gray-400 hover:text-gray-300 transition-colors">Clear</a>` : ''}
+      </div>
     </form>
     <div class="text-sm text-gray-500 mb-4">${totalCount === 0 ? 'No traces' : `${totalCount.toLocaleString()} trace${totalCount === 1 ? '' : 's'}`} found</div>`
 
@@ -226,7 +237,8 @@ export function tracesListPage(
 export function traceDetailPage(
   email: string,
   trace: TraceRow,
-  spans: SpanRow[]
+  spans: SpanRow[],
+  shareToken: string | null = null
 ): string {
   // --- Timeline calculation ---
   const toMs = (iso: string) => new Date(iso.endsWith('Z') ? iso : iso + 'Z').getTime()
@@ -357,9 +369,15 @@ export function traceDetailPage(
           <h1 class="text-xl font-bold mb-1">${escHtml(trace.name)}</h1>
           <p class="text-sm text-gray-400">Agent: <span class="text-gray-300">${escHtml(trace.agent_name)}</span></p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
           ${statusBadge(trace.status)}
           <span class="text-sm text-gray-400 font-mono">${formatDuration(trace.started_at, trace.ended_at)}</span>
+          ${shareToken
+            ? `<a href="/public/traces/${escHtml(shareToken)}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium bg-indigo-900 text-indigo-300 border border-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-800 transition-colors">&#128279; Public link</a>`
+            : `<form method="POST" action="/dashboard/traces/${escHtml(trace.id)}/share">
+                <button type="submit" class="inline-flex items-center gap-1.5 text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors">&#128279; Share</button>
+               </form>`
+          }
         </div>
       </div>
       <div class="mt-4 pt-4 border-t border-gray-800 flex gap-6 text-sm text-gray-500 flex-wrap">

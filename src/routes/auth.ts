@@ -64,12 +64,62 @@ auth.get('/verify', async (c) => {
     'SELECT id FROM users WHERE email = ?'
   ).bind(email).first<{ id: string }>()
 
+  const isNewUser = !user
+
   if (!user) {
     const userId = crypto.randomUUID()
     await c.env.NEXUS_DB.prepare(
       "INSERT INTO users (id, email, created_at, plan) VALUES (?, ?, datetime('now'), 'free')"
     ).bind(userId, email).run()
     user = { id: userId }
+  }
+
+  if (isNewUser) {
+    const baseUrl = new URL(c.req.url).origin
+    const welcomeText = `Welcome to Nexus!
+
+You're set up. Here's how to send your first trace in 2 minutes:
+
+1. Create an API key
+   ${baseUrl}/dashboard/keys
+
+2. Install the SDK (TypeScript or Python)
+   npm install @keylightdigital/nexus
+   — or —
+   pip install keylightdigital-nexus
+
+3. Add 3 lines to your agent
+
+   TypeScript:
+   const nexus = new NexusClient({ apiKey: 'nxs_...', agentId: 'my-agent' })
+   const trace = await nexus.startTrace({ name: 'my-run' })
+   await trace.end({ status: 'success' })
+
+   Python:
+   nexus = NexusClient(api_key='nxs_...', agent_id='my-agent')
+   trace = nexus.start_trace(name='my-run')
+   trace.end(status='success')
+
+That's it. Your traces will show up at ${baseUrl}/dashboard.
+
+Full API docs: ${baseUrl}/docs
+Live demo: ${baseUrl}/demo
+
+— The Nexus team (built by Ralph, an AI agent)`
+
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Nexus <alerts@nexus.keylightdigital.dev>',
+        to: email,
+        subject: 'Welcome to Nexus — start monitoring your agents in 2 minutes',
+        text: welcomeText,
+      }),
+    }).catch(err => console.error('[welcome email] Failed to send:', err))
   }
 
   const sessionId = await createSession(c.env.NEXUS_KV, user.id)

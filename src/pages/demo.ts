@@ -185,21 +185,28 @@ export function demoOverviewPage(): string {
   const avgDuration = avgMs < 1000 ? `${avgMs}ms` : `${(avgMs / 1000).toFixed(2)}s`
 
   const agentCards = DEMO_AGENT_CARDS.map(a => {
-    const errRate24h = a.total24h > 0 ? `${Math.round((a.errors24h / a.total24h) * 100)}%` : '—'
+    const errorRatePct = a.total24h > 0 ? Math.round((a.errors24h / a.total24h) * 100) : 0
+    const successRatePct = a.total24h > 0 ? (100 - errorRatePct) : null
+    const isUnhealthy = errorRatePct > 10
+    const borderClass = isUnhealthy ? 'border-red-700 border-l-4' : 'border-gray-800'
     return `
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+      <div class="bg-gray-900 rounded-xl border ${borderClass} p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="font-semibold text-white">${escHtml(a.name)}</span>
           ${statusBadge(a.lastStatus ?? '')}
         </div>
-        <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="grid grid-cols-3 gap-2 text-sm">
           <div>
-            <p class="text-xs text-gray-500 mb-0.5">Last trace</p>
-            <p class="text-gray-300">${formatDate(a.lastTraceAt)}</p>
+            <p class="text-xs text-gray-500 mb-0.5">Traces (24h)</p>
+            <p class="text-gray-300">${a.total24h}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-500 mb-0.5">24h error rate</p>
-            <p class="${a.errors24h > 0 ? 'text-red-400' : 'text-gray-300'}">${errRate24h}</p>
+            <p class="text-xs text-gray-500 mb-0.5">Success rate</p>
+            <p class="${isUnhealthy ? 'text-red-400' : 'text-gray-300'}">${successRatePct !== null ? successRatePct + '%' : '—'}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Last active</p>
+            <p class="text-gray-300 text-xs">${formatDate(a.lastTraceAt)}</p>
           </div>
         </div>
       </div>`
@@ -224,6 +231,8 @@ export function demoOverviewPage(): string {
   <title>Live Demo — Nexus AI Agent Observability</title>
   <meta name="description" content="See Nexus in action — browse sample AI agent traces, spans, and a live dashboard. No sign-up required.">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Cloudflare Web Analytics -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${DEMO_BANNER}
@@ -372,6 +381,8 @@ export function demoTraceDetailPage(traceId: string): string {
   <title>${escHtml(trace.name)} — Nexus Demo</title>
   <meta name="description" content="Sample trace: ${escHtml(trace.name)} from ${escHtml(trace.agent_name)}. See how Nexus visualizes AI agent traces and spans.">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Cloudflare Web Analytics -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${DEMO_BANNER}

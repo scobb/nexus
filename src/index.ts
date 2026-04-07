@@ -6,7 +6,7 @@ import { docsPage } from './pages/docs'
 import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
 import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, alternativesPage } from './pages/comparison'
-import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount } from './pages/dashboard'
+import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount, type HourCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
 import keysRoutes from './routes/keys'
@@ -20,6 +20,7 @@ import demoRoutes from './routes/demo'
 import blogRoutes from './routes/blog'
 import testRoutes from './routes/test'
 import otelRoutes from './routes/otel'
+import publicTracesRoutes from './routes/publicTraces'
 
 const BATCH_LIMIT = 1000
 
@@ -174,6 +175,9 @@ app.get('/alternatives', (c) => c.html(alternativesPage()))
 // /register is the public CTA — serve same login page
 app.get('/register', (c) => c.redirect('/auth/login'))
 
+// Public shared trace pages — no auth required
+app.route('/public', publicTracesRoutes)
+
 // Demo page — no auth required
 app.route('/demo', demoRoutes)
 
@@ -201,6 +205,12 @@ app.route('/auth', authRoutes)
 
 // Protected dashboard
 app.use('/dashboard/*', requireAuth)
+app.post('/dashboard/onboarding/dismiss', async (c) => {
+  const userId = c.get('userId')
+  await c.env.NEXUS_KV.put(`onboarding_dismissed:${userId}`, '1')
+  return c.redirect('/dashboard')
+})
+
 app.route('/dashboard/keys', keysRoutes)
 app.route('/dashboard/traces', tracesRoutes)
 app.route('/dashboard/agents', agentsRoutes)
@@ -210,7 +220,7 @@ app.get('/dashboard', async (c) => {
   const userId = c.get('userId')
   const db = c.env.NEXUS_DB
 
-  const [userRow, planRow, statsRow, agentCountRow, agentRows, volumeRows] = await Promise.all([
+  const [userRow, planRow, statsRow, agentCountRow, agentRows, volumeRows, hourlyRows, apiKeyRow, traceRow, onboardingDismissedVal] = await Promise.all([
     db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>(),
     db.prepare(
       "SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1"
@@ -250,6 +260,18 @@ app.get('/dashboard', async (c) => {
       GROUP BY date(started_at)
       ORDER BY day ASC
     `).bind(userId).all<{ day: string; count: number }>(),
+    db.prepare(`
+      SELECT strftime('%H', started_at) as hour,
+             COUNT(*) as total,
+             SUM(CASE WHEN status IN ('error','timeout') THEN 1 ELSE 0 END) as errors
+      FROM traces
+      WHERE user_id = ? AND started_at >= datetime('now','-24 hours')
+      GROUP BY strftime('%H', started_at)
+      ORDER BY hour ASC
+    `).bind(userId).all<{ hour: string; total: number; errors: number }>(),
+    db.prepare("SELECT 1 FROM api_keys WHERE user_id = ? AND deleted_at IS NULL LIMIT 1").bind(userId).first<{ '1': number }>(),
+    db.prepare("SELECT 1 FROM traces WHERE user_id = ? LIMIT 1").bind(userId).first<{ '1': number }>(),
+    c.env.NEXUS_KV.get(`onboarding_dismissed:${userId}`),
   ])
 
   const plan: 'free' | 'pro' = planRow?.plan === 'pro' ? 'pro' : 'free'
@@ -273,6 +295,10 @@ app.get('/dashboard', async (c) => {
       total24h: a.total_24h,
     } satisfies AgentHealth)),
     weeklyVolume: (volumeRows.results ?? []).map(r => ({ day: r.day, count: r.count } satisfies DayCount)),
+    hourlyVolume: (hourlyRows.results ?? []).map(r => ({ hour: r.hour, total: r.total, errors: r.errors } satisfies HourCount)),
+    hasApiKey: apiKeyRow != null,
+    hasTrace: traceRow != null,
+    onboardingDismissed: onboardingDismissedVal != null,
   }
 
   return c.html(dashboardPage(metrics))

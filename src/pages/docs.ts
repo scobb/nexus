@@ -7,6 +7,8 @@ export function docsPage(): string {
   <title>API Documentation — Nexus</title>
   <meta name="description" content="Nexus REST API reference. Trace ingestion, span creation, authentication, rate limits, and SDK quickstarts for TypeScript and Python.">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Cloudflare Web Analytics -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "REPLACE_WITH_CF_ANALYTICS_TOKEN"}'></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
 
@@ -476,7 +478,7 @@ Content-Type: application/json
               <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
               <span class="text-xs text-gray-400 ml-2">terminal</span>
             </div>
-            <pre class="px-5 py-4 text-sm font-mono text-gray-200">pip install nexus-agent</pre>
+            <pre class="px-5 py-4 text-sm font-mono text-gray-200">pip install keylightdigital-nexus</pre>
           </div>
 
           <h3 class="text-base font-semibold text-white mb-3">Quickstart</h3>

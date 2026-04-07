@@ -4,6 +4,11 @@ export interface SettingsData {
   email: string
   plan: 'free' | 'pro'
   keys: ApiKeyRow[]
+  webhookUrl?: string | null
+  webhookSaved?: boolean
+  webhookError?: string
+  webhookTestSent?: boolean
+  webhookTestError?: string
   newKey?: { name: string; plaintext: string }
   keyError?: string
   deleteError?: string
@@ -39,7 +44,7 @@ function navBar(email: string): string {
 }
 
 export function settingsPage(data: SettingsData): string {
-  const { email, plan, keys, newKey, keyError, deleteError } = data
+  const { email, plan, keys, webhookUrl, webhookSaved, webhookError, webhookTestSent, webhookTestError, newKey, keyError, deleteError } = data
 
   const planBadge = plan === 'pro'
     ? `<span class="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-900 text-indigo-300 border border-indigo-700">Pro</span>`
@@ -168,6 +173,64 @@ export function settingsPage(data: SettingsData): string {
           </button>
         </form>
       </div>
+    </div>
+
+    <!-- Webhook Notifications -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+      <h2 class="text-base font-semibold mb-1">Webhook Notifications</h2>
+      <p class="text-sm text-gray-400 mb-4">Receive a POST request when a trace errors. Use this to connect Slack, Discord, PagerDuty, or any custom integration.</p>
+
+      ${webhookSaved ? `
+      <div class="bg-green-950 border border-green-700 rounded-xl p-3 mb-4">
+        <p class="text-green-400 text-sm">Webhook URL saved.</p>
+      </div>` : ''}
+      ${webhookError ? `
+      <div class="bg-red-950 border border-red-700 rounded-xl p-3 mb-4">
+        <p class="text-red-400 text-sm">${escHtml(webhookError)}</p>
+      </div>` : ''}
+      ${webhookTestSent ? `
+      <div class="bg-green-950 border border-green-700 rounded-xl p-3 mb-4">
+        <p class="text-green-400 text-sm">Test payload sent to your webhook URL.</p>
+      </div>` : ''}
+      ${webhookTestError ? `
+      <div class="bg-red-950 border border-red-700 rounded-xl p-3 mb-4">
+        <p class="text-red-400 text-sm">${escHtml(webhookTestError)}</p>
+      </div>` : ''}
+
+      <form method="POST" action="/dashboard/settings/webhook" class="mb-4">
+        <label for="webhookUrl" class="block text-sm text-gray-400 mb-1">Webhook URL</label>
+        <div class="flex gap-3 items-center flex-wrap">
+          <input type="url" id="webhookUrl" name="webhook_url"
+                 placeholder="https://hooks.slack.com/services/..."
+                 value="${escHtml(webhookUrl ?? '')}"
+                 class="flex-1 min-w-64 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+          <button type="submit"
+                  class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+            Save
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-1.5">Must start with <span class="font-mono">https://</span>. Leave blank to disable.</p>
+      </form>
+
+      ${webhookUrl ? `
+      <form method="POST" action="/dashboard/settings/webhook/test">
+        <button type="submit"
+                class="text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-lg">
+          Send test payload
+        </button>
+      </form>
+
+      <div class="mt-4 bg-gray-800 rounded-lg p-4">
+        <p class="text-xs text-gray-400 font-semibold mb-2">Example payload</p>
+        <pre class="text-xs text-gray-300 font-mono overflow-x-auto">${escHtml(JSON.stringify({
+          event: 'trace.error',
+          trace_id: 'abc123',
+          agent_name: 'my-agent',
+          error_message: 'LLM call timed out after 30s',
+          started_at: '2026-04-06T12:00:00.000Z',
+          dashboard_url: 'https://nexus.keylightdigital.dev/dashboard/traces/abc123',
+        }, null, 2))}</pre>
+      </div>` : ''}
     </div>
 
     <!-- Danger zone -->

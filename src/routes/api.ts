@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { Env, HonoVariables } from '../types'
 import { apiKeyAuth } from '../middleware/apiKeyAuth'
 import { sendAlertIfNeeded } from '../lib/alerts'
+import { fireWebhookIfConfigured } from '../lib/webhooks'
 
 const api = new Hono<{ Bindings: Env; Variables: HonoVariables }>()
 
@@ -179,6 +180,21 @@ api.post('/v1/traces', async (c) => {
     metadata: metadataStr,
   }).catch(err => console.error('sendAlertIfNeeded error:', err))
 
+  // Fire webhook if trace is an error (non-blocking, waitUntil if available)
+  if (statusStr === 'error' || statusStr === 'timeout') {
+    const errorMessage = metadataStr
+      ? (() => { try { return (JSON.parse(metadataStr) as Record<string, unknown>).error as string ?? '' } catch { return '' } })()
+      : ''
+    fireWebhookIfConfigured({
+      env: c.env,
+      userId,
+      traceId,
+      agentName: agentIdStr,
+      errorMessage: errorMessage || `Trace ${statusStr}`,
+      startedAt: startedAtStr,
+    }).catch(err => console.error('fireWebhookIfConfigured error:', err))
+  }
+
   return c.json({ trace_id: traceId }, 201)
 })
 
@@ -187,8 +203,8 @@ api.patch('/v1/traces/:id', async (c) => {
   const traceId = c.req.param('id')
 
   const trace = await c.env.NEXUS_DB.prepare(
-    'SELECT id, name, agent_id, metadata FROM traces WHERE id = ? AND user_id = ?'
-  ).bind(traceId, userId).first<{ id: string; name: string; agent_id: string; metadata: string | null }>()
+    'SELECT id, name, agent_id, metadata, started_at FROM traces WHERE id = ? AND user_id = ?'
+  ).bind(traceId, userId).first<{ id: string; name: string; agent_id: string; metadata: string | null; started_at: string }>()
 
   if (!trace) {
     return c.json({ error: 'Trace not found' }, 404)
@@ -246,22 +262,37 @@ api.patch('/v1/traces/:id', async (c) => {
     `UPDATE traces SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...params).run()
 
-  // Send alert if the new status is a failure
+  // Send alert and webhook if the new status is a failure
   if (status === 'error' || status === 'timeout') {
     const agent = await c.env.NEXUS_DB.prepare(
       'SELECT name FROM agents WHERE id = ?'
     ).bind(trace.agent_id).first<{ name: string }>()
 
+    const agentName = agent?.name ?? 'unknown'
+
     sendAlertIfNeeded({
       env: c.env,
       userId,
       agentId: trace.agent_id,
-      agentName: agent?.name ?? 'unknown',
+      agentName,
       traceId,
       traceName: trace.name,
       traceStatus: status as string,
       metadata: trace.metadata,
     }).catch(err => console.error('sendAlertIfNeeded error:', err))
+
+    const errorMessage = trace.metadata
+      ? (() => { try { return (JSON.parse(trace.metadata) as Record<string, unknown>).error as string ?? '' } catch { return '' } })()
+      : ''
+
+    fireWebhookIfConfigured({
+      env: c.env,
+      userId,
+      traceId,
+      agentName,
+      errorMessage: errorMessage || `Trace ${status as string}`,
+      startedAt: trace.started_at,
+    }).catch(err => console.error('fireWebhookIfConfigured error:', err))
   }
 
   return c.json({ trace_id: traceId })

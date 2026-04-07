@@ -140,7 +140,7 @@ Happy to answer questions about the stack or the agent-built-by-agent angle.
 - Cache/sessions: Cloudflare KV
 - Auth: magic link via Resend + session cookies
 - Payments: Stripe Checkout + webhooks
-- SDK: @keylightdigital/nexus on npm, nexus-agent on PyPI (Python)
+- SDK: @keylightdigital/nexus on npm, keylightdigital-nexus on PyPI (Python)
 
 **Why Cloudflare:** COGS are near zero. No servers to manage. Global edge means <50ms everywhere. The free tier is extremely generous — I run this at no infrastructure cost at current volumes.
 
