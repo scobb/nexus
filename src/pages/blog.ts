@@ -36,6 +36,20 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'ai-agent-metrics',
+    title: '5 Metrics Every AI Agent Team Should Track',
+    date: '2026-04-09',
+    excerpt: 'Most teams monitoring AI agents track the wrong things. Here are the five metrics that actually predict production problems — latency percentiles, token cost per request, error rate by tool, trace completion rate, and context utilization — with Nexus SDK examples.',
+    readingTime: '8 min read',
+  },
+  {
+    slug: 'ai-observability-tools-compared',
+    title: 'AI Observability Tools Compared: The 2026 Guide',
+    date: '2026-04-09',
+    excerpt: 'Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, or Nexus? A practical breakdown of every major AI agent observability tool — what each one does best, where it falls short, and how to choose.',
+    readingTime: '11 min read',
+  },
+  {
     slug: 'debugging-ai-agents-in-production',
     title: 'How to Debug AI Agents in Production',
     date: '2026-04-07',
@@ -128,6 +142,12 @@ export function blogIndexPage(): string {
 }
 
 export function blogPostPage(slug: string): string | null {
+  if (slug === 'ai-agent-metrics') {
+    return aiAgentMetricsPost()
+  }
+  if (slug === 'ai-observability-tools-compared') {
+    return aiObservabilityToolsComparedPost()
+  }
   if (slug === 'debugging-ai-agents-in-production') {
     return debuggingAIAgentsPost()
   }
@@ -144,6 +164,518 @@ export function blogPostPage(slug: string): string | null {
     return autonomousAgentObservabilityPost()
   }
   return null
+}
+
+function aiAgentMetricsPost(): string {
+  const post = POSTS.find(p => p.slug === 'ai-agent-metrics')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/ai-agent-metrics',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const code1 = `const nexus = new NexusClient({ apiKey: 'nxs_...', agentId: 'invoice-processor' })
+
+const trace = await nexus.startTrace({ name: 'process-invoice' })
+
+// Span timing is captured automatically
+const span = await trace.addSpan({
+  name: 'gpt-4o-extraction',
+  input: { prompt: 'Extract fields from...', tokens: 1200 },
+})
+
+// ... your LLM call ...
+
+await span.end({
+  output: { result: extracted, tokens: 800 },
+  status: 'ok',
+})
+await trace.end({ status: 'success' })`
+
+  const code2 = `// Log token cost as metadata on each span
+await trace.addSpan({
+  name: 'gpt-4o-extraction',
+  input: { tokens_in: 1200, estimated_cost_usd: 0.0036 },
+  output: { tokens_out: 800, estimated_cost_usd: 0.0024 },
+  status: 'ok',
+})`
+
+  const code3 = `// Track tool call errors in span metadata
+const toolSpan = await trace.addSpan({
+  name: 'search-web',
+  input: { query: userQuery },
+  status: 'error',
+  error: 'Timeout after 5s — search API unavailable',
+})`
+
+  const code4 = `// Mark trace completion explicitly
+// If end() is not called, trace stays 'running' — easy to spot abandoned runs
+await trace.end({ status: 'success' }) // or 'error', 'timeout'`
+
+  const code5 = `// Log context window utilization as span metadata
+const contextSpan = await trace.addSpan({
+  name: 'llm-call',
+  input: {
+    prompt_tokens: 15000,
+    context_limit: 16384,
+    utilization_pct: Math.round((15000 / 16384) * 100), // 91%
+  },
+  status: 'ok',
+})`
+
+  const codeBlock = (code: string) =>
+    `<div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden mb-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">TypeScript</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+    </div>`
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      Most teams start monitoring AI agents with a single metric: did it work? That's a good start, but it tells you almost nothing about why failures happen, where time is spent, or when you're approaching a cliff edge in costs or context limits.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      Here are the five metrics that actually matter — what they measure, why they predict problems, and how to track them with the Nexus SDK.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">1. Latency (p50, p95, p99)</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Why it matters:</strong> Average latency lies. An agent that completes in 2s average but 45s at p99 will produce terrible user experiences 1% of the time — which is unacceptable if you're processing thousands of requests. Percentile latency tells you the shape of your distribution.
+    </p>
+
+    <ul class="list-disc list-inside text-gray-400 space-y-2 mb-4 ml-4">
+      <li><strong class="text-gray-300">p50 (median):</strong> Most users experience this. Use for capacity planning.</li>
+      <li><strong class="text-gray-300">p95:</strong> The slow tail. If this is 10× your p50, you have a high-variance problem.</li>
+      <li><strong class="text-gray-300">p99:</strong> The cliff edge. Spikes here often indicate timeouts, retries, or cold start issues.</li>
+    </ul>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Nexus captures trace duration automatically from <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">startTrace</code> to <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">trace.end()</code>. Span timing is also captured per-step, so you can identify which step is slow.
+    </p>
+
+    ${codeBlock(code1)}
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      In the Nexus dashboard, the trace list shows duration for each trace. For p50/p95/p99 analysis, export trace data or use the D1 database directly: <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">SELECT percentile(duration_ms, 95) FROM traces WHERE agent_id = ?</code>.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">2. Token cost per request</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Why it matters:</strong> LLM APIs charge per token. An agent that processes 10,000 requests/day at $0.01 each costs $100/day. If token usage grows unexpectedly (longer prompts, more retries, context accumulation), costs compound fast. Track cost per request, not total cost — so you catch per-request inflation early.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      The Nexus SDK doesn't have built-in token counting (we don't know which model you're using), but you can log it as span metadata:
+    </p>
+
+    ${codeBlock(code2)}
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      <strong class="text-gray-300">Alert trigger:</strong> Set a budget alert when average cost per trace exceeds your target. For a $9/mo product, most teams target under $0.05 per agent run.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">3. Error rate by tool and agent</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Why it matters:</strong> Aggregate error rate hides the real problem. A 5% error rate might mean one tool (web search, a flaky API, a database query) is failing 30% of the time while everything else is fine. Error rate by tool tells you where to look.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Instrument tool calls as spans with <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">status: 'error'</code> and an error message:
+    </p>
+
+    ${codeBlock(code3)}
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      In the Nexus trace viewer, span status is color-coded (red = error, green = ok). You can scan a trace's span waterfall and immediately see which step failed. Query across traces: <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">SELECT name, COUNT(*) as errors FROM spans WHERE status = 'error' GROUP BY name ORDER BY errors DESC</code>.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">4. Trace completion rate</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Why it matters:</strong> An agent that starts a task but never finishes — no error, no success, just running forever — is invisible without this metric. Incomplete traces indicate runaway loops, infinite retries, or crashed processes that didn't clean up.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Completion rate = traces with status <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">success</code> or <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">error</code> / total traces. Traces stuck at <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">running</code> are abandoned runs.
+    </p>
+
+    ${codeBlock(code4)}
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Nexus marks traces <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">running</code> until you call <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">trace.end()</code>. The dashboard shows running traces with a yellow status dot — any trace still running after 10 minutes warrants investigation.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      <strong class="text-gray-300">Tip:</strong> Wrap your entire agent run in a <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">try/finally</code> block to ensure <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">trace.end()</code> always fires, even on uncaught exceptions.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">5. Context window utilization</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Why it matters:</strong> Context overflow is one of the most common causes of agent degradation. When you approach the context limit, models start hallucinating, losing track of earlier instructions, or truncating tool results silently. Tracking utilization lets you catch this before it causes failures.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Log utilization as a percentage in span metadata:
+    </p>
+
+    ${codeBlock(code5)}
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      <strong class="text-gray-300">Alert threshold:</strong> Flag any span where <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">utilization_pct &gt; 85</code>. At 90%+, you're in the danger zone where model behavior degrades noticeably for most providers.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Setting up the dashboard</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      These five metrics give you a complete picture of agent health: speed, cost, reliability, throughput, and capacity. Start with all five instrumented from day one — it's far easier to add logging before problems appear than to debug retrospectively from logs alone.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      See how this looks in practice on the <a href="/demo" class="text-indigo-400 hover:text-indigo-300">Nexus demo</a>, or read more in <a href="/docs" class="text-indigo-400 hover:text-indigo-300">the docs</a>. If you're using LangChain, LlamaIndex, or DSPy, check the <a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">framework-specific guides</a>.
+    </p>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5 Metrics Every AI Agent Team Should Track | Nexus</title>
+  <meta name="description" content="The five metrics that predict AI agent problems: latency percentiles, token cost per request, error rate by tool, trace completion rate, and context utilization. With code examples.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/ai-agent-metrics">
+  <meta property="og:title" content="5 Metrics Every AI Agent Team Should Track">
+  <meta property="og:description" content="The five metrics that predict AI agent problems: latency percentiles, token cost per request, error rate by tool, trace completion rate, and context utilization.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/ai-agent-metrics">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="5 Metrics Every AI Agent Team Should Track">
+  <meta name="twitter:description" content="Latency percentiles, token cost, error rate by tool, completion rate, and context utilization — with Nexus SDK examples.">
+  <script type="application/ld+json">${jsonLd}</script>
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+  <main class="max-w-4xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
+      </div>
+      <h1 class="text-4xl font-bold text-white mb-4 leading-tight">5 Metrics Every AI Agent Team Should Track</h1>
+      <div class="flex items-center gap-4 text-sm text-gray-500">
+        <span>${post.date}</span>
+        <span>·</span>
+        <span>${post.readingTime}</span>
+      </div>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+
+    <div class="mt-12 p-6 bg-gray-900 border border-indigo-800 rounded-xl">
+      <h3 class="text-lg font-bold text-white mb-2">Start tracking these metrics</h3>
+      <p class="text-gray-400 text-sm mb-4">Nexus makes it easy — free tier, 1,000 traces/month, no infrastructure. Install the SDK and start in 5 minutes.</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Start free →</a>
+        <a href="/docs" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Read the docs</a>
+      </div>
+    </div>
+
+    <div class="mt-8 border-t border-gray-800 pt-8">
+      <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">More articles</h3>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <a href="/blog/debugging-ai-agents-in-production" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 9 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">How to Debug AI Agents in Production</p>
+        </a>
+        <a href="/blog/ai-observability-tools-compared" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-09 · 11 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">AI Observability Tools Compared: The 2026 Guide</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function aiObservabilityToolsComparedPost(): string {
+  const post = POSTS.find(p => p.slug === 'ai-observability-tools-compared')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/ai-observability-tools-compared',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const toolRow = (name: string, pricing: string, bestFor: string, weakness: string, link: string) =>
+    `<tr class="border-b border-gray-800">
+      <td class="py-3 pr-4 font-medium text-white whitespace-nowrap">${link ? `<a href="${link}" class="text-indigo-400 hover:text-indigo-300">${name}</a>` : name}</td>
+      <td class="py-3 pr-4 text-gray-400 text-sm">${pricing}</td>
+      <td class="py-3 pr-4 text-gray-400 text-sm">${bestFor}</td>
+      <td class="py-3 text-gray-400 text-sm">${weakness}</td>
+    </tr>`
+
+  const tableRows = [
+    toolRow('Langfuse', 'Free self-host / $39+/mo cloud', 'Self-hosted OSS, LangChain native', 'Ops overhead; cloud tier expensive', '/vs/langfuse'),
+    toolRow('LangSmith', '$39/mo base (usage-based)', 'Deep LangChain/LangGraph integration', 'Requires LangChain; pricing scales fast', '/vs/langsmith'),
+    toolRow('Helicone', 'Free / $120/mo first paid tier', 'OpenAI proxy logging, no-code setup', 'Proxy model adds latency; not agent-native', '/vs/helicone'),
+    toolRow('Braintrust', 'Usage-based per log', 'Eval-first: run experiments on datasets', 'Not observability-focused; different use case', '/vs/braintrust'),
+    toolRow('Arize Phoenix', 'Free OSS / paid cloud', 'OTEL-native, ML fairness + drift', 'Complex setup; ML-team focus', '/vs/arize-phoenix'),
+    toolRow('AgentOps', 'Free / $49/mo Pro', 'Agent-native SDK, session replays', 'Smaller ecosystem; newer product', '/vs/agentops'),
+    toolRow('Nexus', 'Free / $9/mo Pro', 'Simple agent tracing, no infra burden', 'Newer; smaller ecosystem than Langfuse', ''),
+  ].join('')
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      If you're building AI agents in 2026, you have more observability options than ever — and less clarity about which one to use. This guide cuts through the noise: what each major tool does, who it's for, where it breaks down, and how to decide.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      We cover seven tools: <strong class="text-gray-300">Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, and Nexus</strong>. We built Nexus ourselves, so take our comparisons of it with appropriate skepticism — but we've tried to be honest about tradeoffs.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Quick comparison</h2>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-800 mb-8">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-900">
+          <tr class="border-b border-gray-700">
+            <th class="py-3 pr-4 text-left text-gray-400 font-medium pl-4">Tool</th>
+            <th class="py-3 pr-4 text-left text-gray-400 font-medium">Pricing</th>
+            <th class="py-3 pr-4 text-left text-gray-400 font-medium">Best for</th>
+            <th class="py-3 text-left text-gray-400 font-medium">Weakness</th>
+          </tr>
+        </thead>
+        <tbody class="bg-gray-950 pl-4">
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Langfuse — the OSS standard</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Langfuse</a> is the default choice for teams that need self-hosted observability with an open-source codebase they can audit, fork, and run on their own infrastructure. With over 21,000 GitHub stars and active development, it has the most mature ecosystem.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Teams with a DevOps culture who want full control over their data, a rich UI, and don't mind managing a Postgres instance. Strong LangChain integration. Good Python and TypeScript SDKs.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> Self-hosting adds ops burden (Docker Compose, Postgres, migrations). The cloud tier starts at $39/mo and gets expensive as usage grows. LLM cost tracking is the primary UX focus — agent session tracing is secondary.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">LangSmith — if you're already in LangChain</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">LangSmith</a> is LangChain's commercial observability offering. If your stack is LangChain or LangGraph, the integration is seamless — one environment variable and you have traces. The trace UI is well-designed and the evaluation features (annotating runs, comparing prompts) are strong.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Python teams already using LangChain or LangGraph. The native integration is the killer feature — there's nothing to instrument, you just enable it.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> Tightly coupled to LangChain. If you use OpenAI SDK, Anthropic SDK, or raw API calls, the integration is manual and loses value. Pricing is $39/mo base plus usage — costs can surprise.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Helicone — the no-code option</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/helicone" class="text-indigo-400 hover:text-indigo-300">Helicone</a> takes a fundamentally different approach: it's a proxy, not an SDK. You change one base URL and every OpenAI call gets logged. No code changes. No instrumentation. Just instant dashboards.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Quick logging of LLM calls without any code changes. If you call OpenAI directly and want cost tracking and request history in under five minutes, Helicone is the fastest path.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> Proxy model adds a network hop. Not agent-native — you see individual LLM calls, not agent sessions or multi-step traces. The first paid tier jumps to $120/mo. Not useful for agents that don't call OpenAI directly.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Braintrust — evaluation-first</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/braintrust" class="text-indigo-400 hover:text-indigo-300">Braintrust</a> is not primarily an observability tool — it's an evaluation platform. You create test datasets, run LLM experiments against them, and track which prompts/models score best. If you're doing systematic prompt engineering or A/B testing of LLM configurations, it's excellent.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Teams doing systematic prompt evaluation, fine-tuning experiments, or regression testing LLM behavior. The eval tooling is genuinely differentiated.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> This is not production monitoring. If you want to see what's happening with your agents in production right now — error rates, latency, failures — Braintrust isn't designed for that. Pick a different tool for production observability, and potentially Braintrust on top for evals.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Arize Phoenix — OTEL-native ML monitoring</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/arize-phoenix" class="text-indigo-400 hover:text-indigo-300">Arize Phoenix</a> is the open-source offering from Arize AI, an ML monitoring company. It's OpenTelemetry-native, integrates with LlamaIndex and LangChain out of the box, and has strong LLM-specific features: hallucination detection, embedding drift, retrieval quality metrics.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> ML teams who want full OTEL compatibility, retrieval quality metrics, or embedding-level analysis. Strong LlamaIndex integration. Good for RAG pipeline monitoring at scale.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> The setup complexity is real — you need to understand OTEL collectors, spans, and the Phoenix backend. More ML-team-focused than app-developer-focused. Running the Phoenix server adds infrastructure.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">AgentOps — agent-native from day one</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <a href="/vs/agentops" class="text-indigo-400 hover:text-indigo-300">AgentOps</a> was built specifically for AI agents (not LLM calls). Session replays, multi-agent tracing, and agent event timelines are first-class features. The SDK is clean and the integration stories for CrewAI and AutoGen are strong.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Teams using multi-agent frameworks like CrewAI, AutoGen, or custom agent orchestration. The session replay feature (see exactly what the agent did, step-by-step) is genuinely useful.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Watch out for:</strong> Smaller community than Langfuse. Newer product with a smaller ecosystem. Pricing ($49/mo Pro) is reasonable but the free tier has tight limits. Less flexibility for custom event schemas.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Nexus — simple, affordable, Cloudflare-native</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Nexus is our tool — we built it because we needed something simpler and cheaper than the alternatives. It runs on Cloudflare Workers (edge-native, zero infra), stores traces in D1, and offers a clean dashboard for browsing traces and spans. Free plan covers 1,000 traces/month. Pro is $9/mo flat.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-4"><strong class="text-gray-300">Best for:</strong> Solo developers and small teams who want trace-level visibility into their agents without managing infrastructure or paying enterprise prices. Works with any stack — TypeScript, Python, raw API calls.</p>
+
+    <p class="text-gray-400 leading-relaxed mb-6"><strong class="text-gray-300">Honest weaknesses:</strong> Newer product, smaller community. No eval features. No embedding analysis. No native LangChain integration (you wire it up manually with the SDK). If you need Langfuse-level richness or LangSmith's native integration, we're not there yet.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">How to choose</h2>
+
+    <div class="space-y-4 mb-8">
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You're on LangChain or LangGraph</p>
+        <p class="text-sm text-gray-400">Use <a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">LangSmith</a> — native integration wins. Or <a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Langfuse</a> if you want self-hosted.</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You need full data sovereignty / self-hosting</p>
+        <p class="text-sm text-gray-400">Use <a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Langfuse</a> — it's the most mature OSS option with a strong community.</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You want instant logging with zero code changes</p>
+        <p class="text-sm text-gray-400">Use <a href="/vs/helicone" class="text-indigo-400 hover:text-indigo-300">Helicone</a> — change a base URL, get dashboards immediately.</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You're doing systematic prompt evaluation</p>
+        <p class="text-sm text-gray-400">Use <a href="/vs/braintrust" class="text-indigo-400 hover:text-indigo-300">Braintrust</a> — it's purpose-built for evals, not production monitoring.</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You want OTEL-native with ML-level analysis</p>
+        <p class="text-sm text-gray-400">Use <a href="/vs/arize-phoenix" class="text-indigo-400 hover:text-indigo-300">Arize Phoenix</a> — especially if you're monitoring RAG retrieval quality or embeddings.</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+        <p class="text-sm font-medium text-white mb-1">You want simple, cheap, no-infra tracing</p>
+        <p class="text-sm text-gray-400">Use <strong class="text-gray-300">Nexus</strong> — free tier, $9/mo Pro, no servers to manage. <a href="/register" class="text-indigo-400 hover:text-indigo-300">Start free →</a></p>
+      </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Bottom line</h2>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      There's no single "best" AI observability tool. The right choice depends on your stack, your team's operational preferences, and whether you need eval features alongside production monitoring. Use this guide as a starting point, then test the 1-2 that fit your situation.
+    </p>
+
+    <p class="text-gray-400 leading-relaxed mb-6">
+      For individual comparison pages: <a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Nexus vs Langfuse</a> · <a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">Nexus vs LangSmith</a> · <a href="/vs/helicone" class="text-indigo-400 hover:text-indigo-300">Nexus vs Helicone</a> · <a href="/vs/braintrust" class="text-indigo-400 hover:text-indigo-300">Nexus vs Braintrust</a> · <a href="/vs/arize-phoenix" class="text-indigo-400 hover:text-indigo-300">Nexus vs Arize Phoenix</a> · <a href="/vs/agentops" class="text-indigo-400 hover:text-indigo-300">Nexus vs AgentOps</a>
+    </p>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Observability Tools Compared: The 2026 Guide | Nexus</title>
+  <meta name="description" content="Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, or Nexus? A practical breakdown of every major AI agent observability tool — pros, cons, and how to choose.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/ai-observability-tools-compared">
+  <meta property="og:title" content="AI Observability Tools Compared: The 2026 Guide">
+  <meta property="og:description" content="Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, or Nexus? A practical breakdown of every major AI agent observability tool.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/ai-observability-tools-compared">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Observability Tools Compared: The 2026 Guide">
+  <meta name="twitter:description" content="Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, or Nexus? Honest comparison.">
+  <script type="application/ld+json">${jsonLd}</script>
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+  <main class="max-w-4xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
+      </div>
+      <h1 class="text-4xl font-bold text-white mb-4 leading-tight">AI Observability Tools Compared: The 2026 Guide</h1>
+      <div class="flex items-center gap-4 text-sm text-gray-500">
+        <span>${post.date}</span>
+        <span>·</span>
+        <span>${post.readingTime}</span>
+      </div>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+
+    <div class="mt-12 p-6 bg-gray-900 border border-indigo-800 rounded-xl">
+      <h3 class="text-lg font-bold text-white mb-2">Try Nexus free</h3>
+      <p class="text-gray-400 text-sm mb-4">Simple AI agent observability — 1,000 traces/month free, $9/mo Pro. No infrastructure required.</p>
+      <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Start free →</a>
+    </div>
+
+    <div class="mt-8 border-t border-gray-800 pt-8">
+      <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">More articles</h3>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <a href="/blog/debugging-ai-agents-in-production" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 9 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">How to Debug AI Agents in Production</p>
+        </a>
+        <a href="/blog/monitoring-rag-pipelines" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 8 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">Monitoring RAG Pipelines in Production: A Practical Guide</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
 }
 
 function introducingNexusPost(): string {

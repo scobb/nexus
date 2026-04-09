@@ -71,7 +71,8 @@ webhooks.post('/stripe', async (c) => {
     const customerId = sub.customer as string
     const subscriptionId = sub.id as string
     const status = sub.status as string
-    const periodEnd = unixToDatetime(sub.current_period_end as number)
+    const periodEnd = sub.current_period_end ? unixToDatetime(sub.current_period_end as number) : null
+    const cancelAt = sub.cancel_at ? unixToDatetime(sub.cancel_at as number) : null
     const plan = status === 'active' || status === 'trialing' ? 'pro' : 'free'
 
     // Find user by stripe_customer_id
@@ -88,13 +89,14 @@ webhooks.post('/stripe', async (c) => {
 
     // Upsert subscription record
     await db.prepare(`
-      INSERT INTO subscriptions (id, user_id, stripe_subscription_id, plan, status, current_period_end)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO subscriptions (id, user_id, stripe_subscription_id, plan, status, current_period_end, cancel_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(stripe_subscription_id) DO UPDATE SET
         plan = excluded.plan,
         status = excluded.status,
-        current_period_end = excluded.current_period_end
-    `).bind(crypto.randomUUID(), userId, subscriptionId, plan, status, periodEnd).run()
+        current_period_end = excluded.current_period_end,
+        cancel_at = excluded.cancel_at
+    `).bind(crypto.randomUUID(), userId, subscriptionId, plan, status, periodEnd, cancelAt).run()
 
     // Update user's plan
     await db.prepare(

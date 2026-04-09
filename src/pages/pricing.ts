@@ -1,4 +1,36 @@
 export function pricingPage(): string {
+  const faqJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Can I switch plans?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Yes. Upgrade from Free to Pro at any time from the billing page. Downgrade from Pro to Free at any time — your subscription cancels at the end of the current billing period. No penalties.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is there a free trial for Pro?',
+        acceptedAnswer: { '@type': 'Answer', text: 'The Free plan is effectively a permanent free tier — no trial expiry. You can use Free as long as you need and upgrade when you hit the limits. Stripe handles billing so you can cancel Pro anytime.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'What happens if I exceed the trace limit?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Free users: trace ingestion stops gracefully with a 429 response and a clear error message including an upgrade link. No data is silently dropped — you know exactly when you hit the limit. Pro users: the 50,000 limit is a soft guideline at MVP.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'What payment methods do you accept?',
+        acceptedAnswer: { '@type': 'Answer', text: 'All major credit and debit cards via Stripe. We do not store card details — Stripe handles all payment processing.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is my trace data private?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Yes. Trace data is scoped to your account — no other user can see your traces. Data is stored in Cloudflare D1 (SQLite at edge). We do not use your trace data for training or analytics beyond your own dashboard.' },
+      },
+    ],
+  })
+
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -50,6 +82,7 @@ export function pricingPage(): string {
   <meta name="twitter:description" content="$0 free or $9/month Pro. Simple, affordable AI agent observability.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
+  <script type="application/ld+json">${faqJsonLd}</script>
   <link rel="stylesheet" href="/styles.css">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <!-- Beam Analytics (dogfooding) -->

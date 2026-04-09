@@ -746,11 +746,38 @@ ${navBar}
 }
 
 export function alternativesPage(): string {
+  const faqJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is the best alternative to Langfuse?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Nexus is a strong Langfuse alternative if you want a hosted solution with no infrastructure to manage. Langfuse is the best choice if you need self-hosting or a very mature OSS ecosystem. LangSmith is ideal if you are already using LangChain.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the cheapest AI agent monitoring tool?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Nexus offers a permanent free tier (1,000 traces/month) and a Pro plan at $9/month — the lowest flat-rate paid tier among hosted AI observability tools. Langfuse is free to self-host but requires a server to run.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'Which AI observability tool works with TypeScript agents?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Nexus, Langfuse, and LangSmith all have official TypeScript SDKs. Nexus and Langfuse provide framework-agnostic SDKs that work with any TypeScript agent. LangSmith is optimized for LangChain/LangGraph specifically.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'Do I need to self-host an AI observability tool?',
+        acceptedAnswer: { '@type': 'Answer', text: 'No. Nexus, LangSmith, and AgentOps are fully hosted — no server required. Langfuse and Arize Phoenix can be self-hosted if you need full data control. Self-hosting gives you data sovereignty but adds operational overhead.' },
+      },
+    ],
+  })
   return `${comparisonHead(
     'Best AI Agent Monitoring Alternatives — Nexus vs Langfuse vs LangSmith vs AgentOps',
     'Comparing the top AI agent monitoring and observability tools: Nexus, Langfuse, LangSmith, Arize Phoenix, and AgentOps. Pricing, features, and honest tradeoffs for indie developers.',
     'https://nexus.keylightdigital.dev/alternatives',
   )}
+<script type="application/ld+json">${faqJsonLd}</script>
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 

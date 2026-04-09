@@ -55,6 +55,8 @@ const SITE_URLS = [
   `${SITE_BASE}/vs/helicone`,
   `${SITE_BASE}/vs/braintrust`,
   `${SITE_BASE}/blog`,
+  `${SITE_BASE}/blog/ai-agent-metrics`,
+  `${SITE_BASE}/blog/ai-observability-tools-compared`,
   `${SITE_BASE}/blog/debugging-ai-agents-in-production`,
   `${SITE_BASE}/blog/autonomous-agent-observability`,
   `${SITE_BASE}/blog/monitoring-rag-pipelines`,
@@ -196,17 +198,9 @@ app.use('*', async (c, next) => {
   // Preload critical CSS for all HTML pages
   c.header('Link', '</styles.css>; rel=preload; as=style')
 
-  // Landing page: short browser cache, moderate edge cache
-  if (path === '/') {
-    c.header('Cache-Control', 'public, max-age=300, s-maxage=3600')
-    return
-  }
-
-  // Static content pages: 1-hour browser, 1-day edge
-  const staticPrefixes = ['/blog', '/vs/', '/docs', '/pricing', '/alternatives', '/changelog', '/demo']
-  if (staticPrefixes.some(p => path === p || path.startsWith(p + '/') || path === p.replace('/', ''))) {
-    c.header('Cache-Control', 'public, max-age=3600, s-maxage=86400')
-  }
+  // All static public HTML pages (landing, docs, guides, blog, comparison, pricing, changelog, 404, alternatives):
+  // 1-hour browser cache, 1-day edge cache
+  c.header('Cache-Control', 'public, max-age=3600, s-maxage=86400')
 })
 
 // Serve build-time generated Tailwind CSS — long-lived immutable cache (content changes only on deploy)

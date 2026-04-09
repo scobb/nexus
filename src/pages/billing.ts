@@ -4,6 +4,7 @@ export interface BillingData {
   tracesThisMonth: number
   subscriptionStatus: string | null
   currentPeriodEnd: string | null
+  cancelAt: string | null
   successMessage?: string
   errorMessage?: string
 }
@@ -18,7 +19,7 @@ function formatDate(iso: string): string {
 }
 
 export function billingPage(data: BillingData): string {
-  const { email, plan, tracesThisMonth, subscriptionStatus, currentPeriodEnd, successMessage, errorMessage } = data
+  const { email, plan, tracesThisMonth, subscriptionStatus, currentPeriodEnd, cancelAt, successMessage, errorMessage } = data
   const limit = plan === 'pro' ? 50000 : 1000
   const limitLabel = plan === 'pro' ? '50,000' : '1,000'
   const usagePct = Math.min(Math.round((tracesThisMonth / limit) * 100), 100)
@@ -54,8 +55,12 @@ export function billingPage(data: BillingData): string {
     </div>` : `
     <div class="mt-6">
       <h3 class="text-base font-semibold mb-2">Manage subscription</h3>
-      <p class="text-sm text-gray-400 mb-1">Status: <span class="text-white capitalize">${escHtml(subscriptionStatus ?? 'active')}</span></p>
-      ${currentPeriodEnd ? `<p class="text-sm text-gray-400 mb-4">Renews: <span class="text-white">${escHtml(formatDate(currentPeriodEnd))}</span></p>` : ''}
+      ${cancelAt
+        ? `<p class="text-sm text-yellow-400 mb-1">Cancels: <span class="text-yellow-300">${escHtml(formatDate(cancelAt))}</span></p>
+           <p class="text-xs text-gray-500 mb-4">Your Pro features remain active until this date.</p>`
+        : `<p class="text-sm text-gray-400 mb-1">Status: <span class="text-white capitalize">${escHtml(subscriptionStatus ?? 'active')}</span></p>
+           ${currentPeriodEnd ? `<p class="text-sm text-gray-400 mb-4">Renews: <span class="text-white">${escHtml(formatDate(currentPeriodEnd))}</span></p>` : ''}`
+      }
       <form method="POST" action="/dashboard/billing/portal">
         <button type="submit"
                 class="bg-gray-700 hover:bg-gray-600 text-white font-medium px-5 py-2 rounded-lg transition-colors text-sm">

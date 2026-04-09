@@ -24,8 +24,8 @@ billing.get('/', async (c) => {
   const [userRow, subRow, statsRow] = await Promise.all([
     db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>(),
     db.prepare(
-      "SELECT plan, status, current_period_end FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
-    ).bind(userId).first<{ plan: string; status: string; current_period_end: string }>(),
+      "SELECT plan, status, current_period_end, cancel_at FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
+    ).bind(userId).first<{ plan: string; status: string; current_period_end: string; cancel_at: string | null }>(),
     db.prepare(
       "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','start of month')"
     ).bind(userId).first<{ total: number }>(),
@@ -52,6 +52,7 @@ billing.get('/', async (c) => {
     tracesThisMonth: statsRow?.total ?? 0,
     subscriptionStatus: subRow?.status ?? null,
     currentPeriodEnd: subRow?.current_period_end ?? null,
+    cancelAt: subRow?.cancel_at ?? null,
     errorMessage,
   }))
 })
@@ -63,8 +64,8 @@ billing.get('/success', async (c) => {
   const [userRow, subRow, statsRow] = await Promise.all([
     db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>(),
     db.prepare(
-      "SELECT plan, status, current_period_end FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
-    ).bind(userId).first<{ plan: string; status: string; current_period_end: string }>(),
+      "SELECT plan, status, current_period_end, cancel_at FROM subscriptions WHERE user_id = ? AND status != 'canceled' ORDER BY rowid DESC LIMIT 1"
+    ).bind(userId).first<{ plan: string; status: string; current_period_end: string; cancel_at: string | null }>(),
     db.prepare(
       "SELECT COUNT(*) as total FROM traces WHERE user_id = ? AND started_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','start of month')"
     ).bind(userId).first<{ total: number }>(),
@@ -78,6 +79,7 @@ billing.get('/success', async (c) => {
     tracesThisMonth: statsRow?.total ?? 0,
     subscriptionStatus: subRow?.status ?? null,
     currentPeriodEnd: subRow?.current_period_end ?? null,
+    cancelAt: subRow?.cancel_at ?? null,
     successMessage: 'Welcome to Pro! Your subscription is now active.',
   }))
 })
@@ -121,6 +123,7 @@ billing.post('/checkout', async (c) => {
     mode: 'subscription',
     'line_items[0][price]': c.env.STRIPE_PRICE_ID,
     'line_items[0][quantity]': '1',
+    allow_promotion_codes: 'true',
     success_url: `${origin}/dashboard/billing/success`,
     cancel_url: `${origin}/dashboard/billing`,
   }, c.env.STRIPE_SECRET_KEY)
