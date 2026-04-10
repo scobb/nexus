@@ -124,6 +124,18 @@ export function changelogPage(): string {
       </a>
     </div>
   </section>
+
+  <footer class="border-t border-gray-800 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC</span>
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="/privacy" class="hover:text-gray-300 transition-colors">Privacy</a>
+        <a href="/terms" class="hover:text-gray-300 transition-colors">Terms</a>
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>`
 }

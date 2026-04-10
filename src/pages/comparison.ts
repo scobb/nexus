@@ -86,7 +86,9 @@ function footer(): string {
   <footer class="border-t border-gray-800 mt-16 px-4 py-8 text-center text-gray-500 text-sm">
     <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
       <span>© 2026 <a href="/" class="text-indigo-400 hover:text-indigo-300">Nexus</a> by Keylight Digital LLC</span>
-      <div class="flex gap-4">
+      <div class="flex flex-wrap justify-center gap-4">
+        <a href="/privacy" class="hover:text-gray-300 transition-colors">Privacy</a>
+        <a href="/terms" class="hover:text-gray-300 transition-colors">Terms</a>
         <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
         <a href="/demo" class="hover:text-gray-300 transition-colors">Demo</a>
         <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>

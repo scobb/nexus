@@ -152,7 +152,8 @@ export function blogIndexPage(): string {
   <title>Blog — Nexus AI Agent Observability</title>
   <meta name="description" content="Articles on AI agent observability, monitoring, and the story behind Nexus — the simple, affordable control plane for AI agents.">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -162,7 +163,13 @@ export function blogIndexPage(): string {
   <main id="main-content" class="max-w-3xl mx-auto px-6 py-12">
     <div class="mb-10">
       <h1 class="text-3xl font-bold text-white mb-3">Blog</h1>
-      <p class="text-gray-400">Thoughts on AI agent observability, developer tools, and building in public.</p>
+      <div class="flex items-center gap-4">
+        <p class="text-gray-400">Thoughts on AI agent observability, developer tools, and building in public.</p>
+        <a href="/blog/rss.xml" class="flex items-center gap-1.5 text-sm text-orange-400 hover:text-orange-300 transition-colors whitespace-nowrap" title="Subscribe via RSS">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M3.75 3a.75.75 0 000 1.5A12.75 12.75 0 0116.5 17.25a.75.75 0 001.5 0A14.25 14.25 0 003.75 3zM3.75 7.5a.75.75 0 000 1.5A8.25 8.25 0 0112 17.25a.75.75 0 001.5 0A9.75 9.75 0 003.75 7.5zM5.5 16a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+          RSS
+        </a>
+      </div>
     </div>
 
     <div class="space-y-6">
@@ -173,7 +180,9 @@ export function blogIndexPage(): string {
   <footer class="border-t border-gray-800 mt-16 px-4 py-8">
     <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
       <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
-      <div class="flex items-center gap-6">
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="/privacy" class="hover:text-gray-300 transition-colors">Privacy</a>
+        <a href="/terms" class="hover:text-gray-300 transition-colors">Terms</a>
         <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
         <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
         <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
@@ -1587,7 +1596,8 @@ await trace.end({ status: 'success' })</code></pre>
   <meta name="twitter:description" content="We built Nexus because we needed it. An AI agent (Ralph) needed a way to monitor itself.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -1836,7 +1846,8 @@ async def run_agent(task: str) -> str:
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -2038,7 +2049,8 @@ session-end            [success, 17.8s total]</code></pre>
   <meta property="og:type" content="article">
   <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -2408,7 +2420,8 @@ async def rag_agent_loop(user_query: str):
   <meta name="twitter:description" content="RAG pipelines fail in subtle ways. Here's what to monitor and how to trace retrieval and generation steps with Nexus.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
   <script type="application/ld+json">${jsonLd}</script>
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
 </head>
@@ -2604,7 +2617,8 @@ trace = await nexus.start_trace(
   <meta name="twitter:title" content="How to Debug AI Agents in Production">
   <meta name="twitter:description" content="A practical debugging playbook for AI agents: tool errors, context overflow, infinite loops, and how to trace each failure mode.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <link rel="stylesheet" href="/styles.css">
   <script type="application/ld+json">${jsonLd}</script>
   ${CF_ANALYTICS}
@@ -3109,7 +3123,8 @@ await trace.end({ status: 'success' })`
   <title>${post.title} — Nexus Blog</title>
   <meta name="description" content="${post.excerpt}">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/langchain-tracing-tutorial">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <meta property="og:title" content="${post.title}">
   <meta property="og:description" content="${post.excerpt}">
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/langchain-tracing-tutorial">
@@ -3370,7 +3385,8 @@ const trace = await nexus.startTrace({
   <title>${post.title} — Nexus Blog</title>
   <meta name="description" content="${post.excerpt}">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/ai-agent-cost-guide">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <meta property="og:title" content="${post.title}">
   <meta property="og:description" content="${post.excerpt}">
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/ai-agent-cost-guide">
@@ -3572,7 +3588,8 @@ try {
   <title>${post.title} — Nexus Blog</title>
   <meta name="description" content="${post.excerpt}">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/opentelemetry-ai-agents">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <meta property="og:title" content="${post.title}">
   <meta property="og:description" content="${post.excerpt}">
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/opentelemetry-ai-agents">
@@ -3832,7 +3849,8 @@ function detectingAIHallucinationsPost(): string {
   <title>${post.title} — Nexus Blog</title>
   <meta name="description" content="${post.excerpt}">
   <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/detecting-ai-hallucinations">
-  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Nexus Blog RSS Feed" href="/blog/rss.xml">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog Atom Feed" href="/blog/feed.xml">
   <meta property="og:title" content="${post.title}">
   <meta property="og:description" content="${post.excerpt}">
   <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/detecting-ai-hallucinations">
@@ -3879,6 +3897,31 @@ function detectingAIHallucinationsPost(): string {
   </footer>
 </body>
 </html>`
+}
+
+export function blogRssXml(): string {
+  const BASE = 'https://nexus.keylightdigital.dev'
+  const items = POSTS.map(p => `
+  <item>
+    <title>${p.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+    <link>${BASE}/blog/${p.slug}</link>
+    <guid isPermaLink="true">${BASE}/blog/${p.slug}</guid>
+    <description>${p.excerpt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</description>
+    <pubDate>${new Date(p.date + 'T00:00:00Z').toUTCString()}</pubDate>
+  </item>`).join('')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Nexus Blog</title>
+    <link>${BASE}/blog</link>
+    <description>Articles on AI agent observability, monitoring, and building in public.</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date((POSTS[0]?.date ?? '2026-04-09') + 'T00:00:00Z').toUTCString()}</lastBuildDate>
+    <atom:link href="${BASE}/blog/rss.xml" rel="self" type="application/rss+xml"/>
+${items}
+  </channel>
+</rss>`
 }
 
 export function blogFeedXml(): string {

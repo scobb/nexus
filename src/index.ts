@@ -3,6 +3,7 @@ import type { Env, HonoVariables } from './types'
 import { TAILWIND_CSS } from './generated-styles'
 import * as Sentry from '@sentry/cloudflare'
 import { landingPage } from './pages/landing'
+import { privacyPage, termsPage } from './pages/legal'
 import { notFoundPage } from './pages/notFound'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
@@ -359,6 +360,8 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/vs/portkey`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/google-adk`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/python-quickstart`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/privacy`, priority: '0.5', changefreq: 'yearly' },
+    { loc: `${base}/terms`, priority: '0.5', changefreq: 'yearly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/debugging-ai-agents-in-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
@@ -368,6 +371,11 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/blog/choose-ai-observability-tool`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/detecting-ai-hallucinations`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/multi-agent-observability-patterns`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/ai-agent-cost-guide`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/opentelemetry-ai-agents`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/langchain-tracing-tutorial`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/ai-agent-metrics`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/ai-observability-tools-compared`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/demo/traces/demo-t1`, priority: '0.6', changefreq: 'monthly' },
     { loc: `${base}/demo/traces/demo-t3`, priority: '0.6', changefreq: 'monthly' },
@@ -447,6 +455,8 @@ app.get('/docs/crewai', (c) => c.html(docsCrewAIPage()))
 
 // Standalone pricing page
 app.get('/pricing', (c) => c.html(pricingPage()))
+app.get('/privacy', (c) => c.html(privacyPage()))
+app.get('/terms', (c) => c.html(termsPage()))
 app.get('/docs/anthropic-sdk', (c) => c.html(docsAnthropicSDKPage()))
 app.get('/docs/openai-agents', (c) => c.html(docsOpenAIAgentsPage()))
 app.get('/docs/autogen', (c) => c.html(docsAutoGenPage()))

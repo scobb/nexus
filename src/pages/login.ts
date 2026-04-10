@@ -47,6 +47,10 @@ export function loginPage(error?: string | null, success?: string | null): strin
       <p class="mt-3 text-center text-sm text-gray-500">
         Don't have an account? <a href="/auth/signup" class="text-indigo-400 hover:text-indigo-300">Create one free</a>
       </p>
+      <p class="mt-4 text-center text-xs text-gray-600">
+        <a href="/privacy" class="text-gray-500 hover:text-gray-400 underline">Privacy Policy</a>
+        · <a href="/terms" class="text-gray-500 hover:text-gray-400 underline">Terms of Service</a>
+      </p>
 
       <div class="relative my-6">
         <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-800"></div></div>
@@ -122,6 +126,11 @@ export function signupPage(error?: string | null, success?: string | null): stri
 
       <p class="mt-3 text-center text-sm text-gray-500">
         Already have an account? <a href="/auth/login" class="text-indigo-400 hover:text-indigo-300">Sign in</a>
+      </p>
+      <p class="mt-4 text-center text-xs text-gray-600">
+        By creating an account, you agree to our
+        <a href="/terms" class="text-gray-500 hover:text-gray-400 underline">Terms of Service</a>
+        and <a href="/privacy" class="text-gray-500 hover:text-gray-400 underline">Privacy Policy</a>.
       </p>
 
       <div class="relative my-6">
