@@ -6,9 +6,9 @@ import { landingPage } from './pages/landing'
 import { notFoundPage } from './pages/notFound'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
-import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage } from './pages/guides'
+import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage, docsGoogleADKPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
-import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, alternativesPage } from './pages/comparison'
+import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, vsDatadogPage, vsWandbPage, alternativesPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount, type HourCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
@@ -54,7 +54,13 @@ const SITE_URLS = [
   `${SITE_BASE}/vs/agentops`,
   `${SITE_BASE}/vs/helicone`,
   `${SITE_BASE}/vs/braintrust`,
+  `${SITE_BASE}/vs/datadog`,
+  `${SITE_BASE}/vs/wandb`,
   `${SITE_BASE}/blog`,
+  `${SITE_BASE}/docs/google-adk`,
+  `${SITE_BASE}/blog/ai-agent-cost-guide`,
+  `${SITE_BASE}/blog/opentelemetry-ai-agents`,
+  `${SITE_BASE}/blog/langchain-tracing-tutorial`,
   `${SITE_BASE}/blog/ai-agent-metrics`,
   `${SITE_BASE}/blog/ai-observability-tools-compared`,
   `${SITE_BASE}/blog/debugging-ai-agents-in-production`,
@@ -339,6 +345,8 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/vs/agentops`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/helicone`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/braintrust`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/datadog`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/wandb`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/debugging-ai-agents-in-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
@@ -430,6 +438,7 @@ app.get('/docs/autogen', (c) => c.html(docsAutoGenPage()))
 app.get('/docs/pydantic-ai', (c) => c.html(docsPydanticAIPage()))
 app.get('/docs/llamaindex', (c) => c.html(docsLlamaIndexPage()))
 app.get('/docs/dspy', (c) => c.html(docsDSPyPage()))
+app.get('/docs/google-adk', (c) => c.html(docsGoogleADKPage()))
 
 // SEO comparison pages
 app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
@@ -438,6 +447,8 @@ app.get('/vs/arize-phoenix', (c) => c.html(vsArizePhoenixPage()))
 app.get('/vs/agentops', (c) => c.html(vsAgentopsPage()))
 app.get('/vs/helicone', (c) => c.html(vsHeliconePage()))
 app.get('/vs/braintrust', (c) => c.html(vsBraintrustPage()))
+app.get('/vs/datadog', (c) => c.html(vsDatadogPage()))
+app.get('/vs/wandb', (c) => c.html(vsWandbPage()))
 app.get('/alternatives', (c) => c.html(alternativesPage()))
 
 // /register is the public CTA — redirect to signup page

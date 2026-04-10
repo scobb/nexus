@@ -2226,3 +2226,255 @@ ${navBar}
 </body>
 </html>`
 }
+
+export function docsGoogleADKPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to add observability to a Google ADK agent with Nexus',
+    description: 'Instrument your Google Agent Development Kit agents with Nexus to capture traces, spans, tool calls, and LLM interactions.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install Nexus', text: 'Run: pip install keylightdigital-nexus google-adk' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key.' },
+      { '@type': 'HowToStep', name: 'Wrap agent runs with traces', text: 'Create a Nexus trace before running your ADK agent.' },
+      { '@type': 'HowToStep', name: 'Trace tool calls', text: 'Add spans for individual tool calls within the agent run.' },
+      { '@type': 'HowToStep', name: 'View traces in dashboard', text: 'Open your Nexus dashboard to see waterfall views of every agent run.' },
+    ],
+  })
+
+  const installCode = codeBlock('pip install keylightdigital-nexus google-adk', 'bash')
+  const apikeyCode = codeBlock('export NEXUS_API_KEY="nxs_your_api_key_here"', 'bash')
+  const setupCode = codeBlock(
+    `import os
+from nexus_client import NexusClient
+
+nexus = NexusClient(
+    api_key=os.environ["NEXUS_API_KEY"],
+    agent_id="google-adk-agent",
+)`,
+    'python',
+  )
+  const basicCode = codeBlock(
+    `import asyncio
+import os
+from google.adk.agents import Agent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from nexus_client import NexusClient
+
+nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="research-agent")
+
+agent = Agent(
+    name="research_agent",
+    model="gemini-2.0-flash-exp",
+    instruction="You are a helpful research assistant.",
+)
+
+async def run_agent(user_query: str) -> str:
+    trace = nexus.start_trace(
+        name="adk: " + user_query[:60],
+        metadata={"model": "gemini-2.0-flash-exp"},
+    )
+    try:
+        session_service = InMemorySessionService()
+        runner = Runner(agent=agent, app_name="app", session_service=session_service)
+        session = session_service.create_session(app_name="app", user_id="u1")
+        from google.genai import types
+        content = types.Content(role="user", parts=[types.Part(text=user_query)])
+        final_response = ""
+        async for event in runner.run_async(
+            user_id="u1", session_id=session.id, new_message=content
+        ):
+            if event.is_final_response() and event.content:
+                for part in event.content.parts:
+                    if part.text:
+                        final_response += part.text
+        trace.end(status="success")
+        return final_response
+    except Exception as e:
+        trace.end(status="error")
+        raise`,
+    'python',
+  )
+  const toolCode = codeBlock(
+    `async def run_with_tool_tracing(query: str) -> str:
+    trace = nexus.start_trace(name="adk-tools: " + query[:60])
+    try:
+        session_service = InMemorySessionService()
+        runner = Runner(agent=agent, app_name="app", session_service=session_service)
+        session = session_service.create_session(app_name="app", user_id="u1")
+        from google.genai import types
+        content = types.Content(role="user", parts=[types.Part(text=query)])
+        final_response = ""
+        async for event in runner.run_async(
+            user_id="u1", session_id=session.id, new_message=content
+        ):
+            # Capture tool call events from the ADK event stream
+            if hasattr(event, "tool_call") and event.tool_call:
+                span = trace.add_span(
+                    name="tool:" + event.tool_call.name,
+                    input=dict(event.tool_call.args),
+                )
+                span.end(status="ok")
+            if event.is_final_response() and event.content:
+                for part in event.content.parts:
+                    if part.text:
+                        final_response += part.text
+        trace.end(status="success")
+        return final_response
+    except Exception as e:
+        trace.end(status="error")
+        raise`,
+    'python',
+  )
+  const multiAgentCode = codeBlock(
+    `async def run_multi_agent_pipeline(task: str) -> str:
+    trace = nexus.start_trace(
+        name="pipeline: " + task[:60],
+        metadata={"pipeline": "research-and-summarize"},
+    )
+    try:
+        r_span = trace.add_span(name="sub-agent:research", input={"task": task})
+        research_result = await run_research_agent(task)
+        r_span.end(status="ok", output={"length": len(research_result)})
+
+        s_span = trace.add_span(
+            name="sub-agent:summarize",
+            input={"content_length": len(research_result)},
+        )
+        summary = await run_summary_agent(research_result)
+        s_span.end(status="ok", output={"length": len(summary)})
+
+        trace.end(status="success")
+        return summary
+    except Exception as e:
+        trace.end(status="error")
+        raise`,
+    'python',
+  )
+
+  return `${guideHead(
+    'Google ADK Integration — Nexus AI Agent Observability',
+    'Add observability to your Google Agent Development Kit (ADK) agents with Nexus. Trace agent runs, tool calls, and LLM interactions. Setup in 5 minutes.',
+    'https://nexus.keylightdigital.dev/docs/google-adk',
+    jsonLd,
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+  ${navBar}
+  <div class="max-w-3xl mx-auto px-4 py-12">
+
+    <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
+      <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+      <span>/</span>
+      <span class="text-gray-300">Google ADK</span>
+    </nav>
+
+    <header class="mb-10">
+      <h1 class="text-3xl font-bold text-white mb-4">Google ADK Integration</h1>
+      <p class="text-gray-400 leading-relaxed text-lg">
+        Add Nexus observability to your Google Agent Development Kit agents.
+        Capture full trace waterfalls, tool call spans, and LLM interactions — setup in under 5 minutes.
+      </p>
+    </header>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">1</span>
+        Install
+      </h2>
+      ${installCode}
+      <p class="text-gray-400 text-sm mt-3">Requires Python 3.9+.</p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">2</span>
+        Create an API Key
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Go to <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a> and create a new API key.
+      </p>
+      ${apikeyCode}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">3</span>
+        Initialize the Client
+      </h2>
+      ${setupCode}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">4</span>
+        Trace Agent Runs
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Wrap your ADK <code class="bg-gray-800 px-1 rounded text-indigo-300">Runner.run_async()</code> call with a Nexus trace. One trace = one complete agent invocation.
+      </p>
+      ${basicCode}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">5</span>
+        Trace Tool Calls
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Intercept ADK events in the run loop to capture individual tool call spans:
+      </p>
+      ${toolCode}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-white mb-4">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-900 text-indigo-300 text-sm font-bold mr-2">6</span>
+        Multi-Agent Pipelines
+      </h2>
+      <p class="text-gray-400 mb-4">
+        For pipelines orchestrating multiple ADK agents, use a parent trace with child spans per sub-agent:
+      </p>
+      ${multiAgentCode}
+    </section>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-2">View your traces</h2>
+      <p class="text-gray-400 text-sm mb-4">
+        Open <a href="/dashboard/traces" class="text-indigo-400 hover:text-indigo-300">/dashboard/traces</a> to see waterfall views of every run.
+      </p>
+      <a href="/demo" class="text-sm text-indigo-400 hover:text-indigo-300">See a demo trace &#x2192;</a>
+    </section>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">More resources</h2>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs" class="text-indigo-400 hover:text-indigo-300">API Reference</a></li>
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
+        <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI integration guide</a></li>
+        <li><a href="/docs/autogen" class="text-indigo-400 hover:text-indigo-300">AutoGen integration guide</a></li>
+        <li><a href="/blog/ai-agent-cost-guide" class="text-indigo-400 hover:text-indigo-300">Blog: AI agent cost guide</a></li>
+        <li><a href="/pricing" class="text-indigo-400 hover:text-indigo-300">Nexus pricing</a></li>
+      </ul>
+    </section>
+
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your Google ADK agents</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed. Setup in under 5 minutes.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free &#x2192;
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}

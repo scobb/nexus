@@ -849,9 +849,27 @@ ${navBar}
                 <a href="/vs/agentops" class="hover:text-green-300">AgentOps</a>
               </td>
               <td class="px-4 py-3 text-gray-300">$0 / Usage-based</td>
-              <td class="px-4 py-3 text-green-400">✓ Hosted</td>
+              <td class="px-4 py-3 text-green-400">&#10003; Hosted</td>
               <td class="px-4 py-3 text-gray-600">— No</td>
               <td class="px-4 py-3 text-gray-300">CrewAI/AutoGen users, cost tracking</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-4 py-3 font-semibold text-purple-400">
+                <a href="/vs/datadog" class="hover:text-purple-300">Datadog</a>
+              </td>
+              <td class="px-4 py-3 text-gray-300">Usage-based (~$100s/mo)</td>
+              <td class="px-4 py-3 text-green-400">&#10003; Hosted</td>
+              <td class="px-4 py-3 text-gray-400">Limited</td>
+              <td class="px-4 py-3 text-gray-300">Enterprises already on Datadog APM</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-4 py-3 font-semibold text-yellow-400">
+                <a href="/vs/wandb" class="hover:text-yellow-300">W&amp;B Weave</a>
+              </td>
+              <td class="px-4 py-3 text-gray-300">$0 / $50+/seat</td>
+              <td class="px-4 py-3 text-green-400">&#10003; Hosted</td>
+              <td class="px-4 py-3 text-gray-400">Limited</td>
+              <td class="px-4 py-3 text-gray-300">ML teams running LLM experiments</td>
             </tr>
           </tbody>
         </table>
@@ -1010,7 +1028,253 @@ ${navBar}
         <a href="/vs/braintrust" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Braintrust →</a>
       </div>
 
+      <!-- Datadog -->
+      <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-purple-400">Datadog LLM Monitoring</h3>
+            <p class="text-sm text-gray-400">APM giant's bolt-on LLM observability — powerful but expensive</p>
+          </div>
+          <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1 rounded-full">Alternative</span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Pricing</p><p class="text-sm text-white">Usage-based (per token logged + APM base)</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Hosting</p><p class="text-sm text-white">Hosted (+ on-prem Enterprise)</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">SDKs</p><p class="text-sm text-white">Python + limited TS (via Datadog Agent)</p></div>
+        </div>
+        <p class="text-sm text-gray-300 mb-4">
+          Best for large engineering orgs already running Datadog for APM and infra monitoring. The LLM Observability
+          add-on integrates with existing Datadog dashboards and alerting. Usage-based pricing scales poorly for
+          high-volume AI agents — costs can reach hundreds per month quickly.
+        </p>
+        <a href="/vs/datadog" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Datadog →</a>
+      </div>
+
+      <!-- W&B Weave -->
+      <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-yellow-400">Weights &amp; Biases Weave</h3>
+            <p class="text-sm text-gray-400">ML experiment tracker with LLM tracing and evaluation</p>
+          </div>
+          <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1 rounded-full">Alternative</span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Pricing</p><p class="text-sm text-white">$0 free · $50+/seat Teams</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Hosting</p><p class="text-sm text-white">Hosted (+ on-prem Enterprise)</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">SDKs</p><p class="text-sm text-white">Python primary (limited TypeScript)</p></div>
+        </div>
+        <p class="text-sm text-gray-300 mb-4">
+          Best for ML teams that use W&amp;B for experiment tracking and want to add LLM tracing without a separate tool. Strong
+          evaluation framework for comparing prompts and models against test datasets. Production monitoring features are secondary
+          to the experiment-tracking core.
+        </p>
+        <a href="/vs/wandb" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs W&amp;B Weave →</a>
+      </div>
+
     </section>
+
+    ${ctaSection()}
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function vsDatadogPage(): string {
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Nexus vs Datadog LLM Monitoring — AI Agent Observability",
+    "description": "Nexus vs Datadog for AI agent monitoring: purpose-built observability at $9/mo vs Datadog's usage-based LLM add-on. Pricing, setup complexity, and honest tradeoffs.",
+    "url": "https://nexus.keylightdigital.dev/vs/datadog",
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Feature Comparison: Nexus vs Datadog LLM Monitoring",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Nexus — AI-native agent trace/span observability at $9/mo" },
+        { "@type": "ListItem", "position": 2, "name": "Datadog LLM Observability — APM giant's bolt-on LLM monitoring, usage-based pricing" }
+      ]
+    }
+  })
+
+  return `${comparisonHead(
+    'Nexus vs Datadog LLM Monitoring — AI Agent Observability',
+    "Nexus vs Datadog for AI agent monitoring: purpose-built observability at $9/mo vs Datadog's usage-based LLM add-on. Pricing, setup complexity, and honest tradeoffs.",
+    'https://nexus.keylightdigital.dev/vs/datadog',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+  <script type="application/ld+json">${structuredData}</script>
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Comparison</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Nexus vs Datadog LLM Monitoring</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Datadog is the undisputed leader in infrastructure APM — and recently added LLM Observability as an
+        add-on product. Here is an honest look at when a purpose-built AI agent tool makes more sense than
+        bolting LLM monitoring onto your existing APM stack.
+      </p>
+    </div>
+
+    <!-- TL;DR -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">TL;DR</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-indigo-400 mb-2">Choose Nexus if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Are building AI agents as a core product, not a side feature</li>
+            <li>&#10003; Want a trace/span model designed for multi-step agent workflows</li>
+            <li>&#10003; Need flat-rate pricing with no usage-based surprises</li>
+            <li>&#10003; Are an indie dev or small team without a Datadog contract</li>
+            <li>&#10003; Want lightweight SDK with zero infrastructure overhead</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-purple-400 mb-2">Choose Datadog if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Already pay for Datadog APM and want everything in one platform</li>
+            <li>&#10003; Need LLM monitoring as part of broader infra + application observability</li>
+            <li>&#10003; Have a dedicated SRE/DevOps team managing your Datadog account</li>
+            <li>&#10003; Need enterprise compliance, SSO, RBAC, and audit logs</li>
+            <li>&#10003; Your AI feature is one service among many in a large microservices stack</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key difference callout -->
+    <section class="bg-gray-900 border border-amber-800/40 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">The fundamental difference: purpose-built vs bolted-on</h2>
+      <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Nexus is purpose-built for AI agents:</strong> the trace model maps directly
+          to how agents work — a trace is a complete agent run, spans are the individual steps (LLM calls,
+          tool uses, sub-agent invocations). Every concept in Nexus exists because AI agents need it.
+        </p>
+        <p>
+          <strong class="text-white">Datadog LLM Observability is an extension to a general APM platform:</strong>
+          powerful, but you pay for Datadog's full platform to access it. The trace model is Datadog's generic
+          distributed tracing model adapted for LLMs — not designed from the ground up for agent workflows.
+        </p>
+        <p class="text-amber-200/70">
+          If you are already a Datadog customer running a complex production stack, adding LLM monitoring inside
+          Datadog is the pragmatic choice. If you are building an AI-first product from scratch, paying
+          usage-based pricing for what amounts to structured logging is hard to justify at indie developer scale.
+        </p>
+      </div>
+    </section>
+
+    <!-- Pricing comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Pricing</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Plan</th>
+              <th class="text-left px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-left px-5 py-3 text-purple-400 font-semibold">Datadog LLM Obs.</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Free</td>
+              <td class="px-5 py-3 text-gray-300">$0 &middot; 1K traces/mo &middot; 1 agent</td>
+              <td class="px-5 py-3 text-gray-300">No free tier (requires paid Datadog plan)</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Indie / Pro</td>
+              <td class="px-5 py-3 text-gray-300"><strong class="text-white">$9/mo flat</strong> &middot; 50K traces &middot; unlimited agents</td>
+              <td class="px-5 py-3 text-gray-300">~$0.10/1K LLM tokens logged + base APM cost (~$15-$31/host/mo)</td>
+            </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300 font-medium">Enterprise</td>
+              <td class="px-5 py-3 text-gray-300">—</td>
+              <td class="px-5 py-3 text-gray-300">Custom contracts, typically $100s–$1000s/mo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 mt-3">Datadog pricing as of 2026 — LLM Observability is billed per token logged on top of existing APM/infrastructure costs. A team running an AI agent at moderate scale can easily exceed $100/mo in Datadog LLM costs alone.</p>
+    </section>
+
+    <!-- Feature comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Feature comparison</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Feature</th>
+              <th class="text-center px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-center px-5 py-3 text-purple-400 font-semibold">Datadog</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            ${[
+              ['Agent trace &amp; span waterfall', '&#10003; purpose-built', 'Partial (adapted APM)'],
+              ['LLM call logging', '&#10003;', '&#10003;'],
+              ['Multi-agent dashboard', '&#10003;', 'Partial'],
+              ['Email alerts on failure', '&#10003; (Pro)', '&#10003; (Datadog monitors)'],
+              ['TypeScript SDK', '&#10003; open-source MIT', 'Limited'],
+              ['Python SDK', '&#10003; open-source MIT', '&#10003;'],
+              ['Infrastructure monitoring', '—', '&#10003; (core product)'],
+              ['APM distributed tracing', '—', '&#10003; (core product)'],
+              ['Log management', '—', '&#10003;'],
+              ['SSO / RBAC / audit logs', '—', '&#10003; (Enterprise)'],
+              ['Flat-rate pricing', '&#10003; $9/mo', '—'],
+              ['Cloudflare edge (global CDN)', '&#10003;', '—'],
+              ['Setup time (AI agent only)', '&lt; 2 min', '30–60 min (agent install)'],
+              ['Self-hosted option', '—', 'On-premises (Enterprise)'],
+            ].map(([feat, nexus, dd]) => `
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300">${feat}</td>
+              <td class="px-5 py-3 text-center ${nexus === '—' ? 'text-gray-600' : 'text-green-400'}">${nexus}</td>
+              <td class="px-5 py-3 text-center ${dd === '—' ? 'text-gray-600' : 'text-green-400'}">${dd}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The honest take -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">The honest take</h2>
+      <div class="space-y-5 text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Datadog is the gold standard for production infrastructure monitoring.</strong>
+          If your team already runs Datadog for APM, logs, and infrastructure, adding LLM Observability to your
+          existing account is a pragmatic decision — everything lives in one place, alert routing is already
+          configured, and your team knows the UI.
+        </p>
+        <p>
+          <strong class="text-white">The problem is the cost curve.</strong> Datadog LLM Observability bills
+          per token logged. A modest AI agent making 50 API calls per trace, running 1,000 traces/day, can
+          generate millions of tokens in logs — translating to hundreds of dollars per month before you add
+          the base APM cost. For indie developers and small teams, this is not a realistic option.
+        </p>
+        <p>
+          <strong class="text-white">Nexus is designed for the AI-first use case from scratch.</strong>
+          The trace model treats agent runs as first-class citizens — not as distributed traces adapted
+          for LLMs. The SDK is 3 lines of code, not a Datadog agent installation. And at $9/mo flat,
+          the cost is predictable regardless of how many traces or tokens you generate.
+        </p>
+        <p>
+          The right choice depends on your context: if you are a solo developer or small team building
+          an AI agent product, Nexus is purpose-fit and affordable. If you are a larger engineering org
+          where Datadog is already the observability platform, the integration cost of adding another
+          tool may outweigh the savings.
+        </p>
+      </div>
+    </section>
+
+    ${comparisonRelated('/docs/langchain', 'LangChain observability guide — instrument any agent without Datadog')}
 
     ${ctaSection()}
   </div>
@@ -1411,6 +1675,214 @@ ${navBar}
     </section>
 
     ${comparisonRelated('/docs/llamaindex', 'LlamaIndex observability guide — instrument RAG pipelines with Nexus')}
+
+    ${ctaSection()}
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function vsWandbPage(): string {
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Nexus vs Weights & Biases Weave — AI Agent Observability Compared",
+    "description": "Nexus vs W&B Weave for AI agent monitoring: production observability at $9/mo vs W&B's experiment-tracking platform with tracing add-on. Pricing, setup complexity, and honest tradeoffs.",
+    "url": "https://nexus.keylightdigital.dev/vs/wandb",
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Feature Comparison: Nexus vs Weights & Biases Weave",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Nexus — AI-native agent trace/span observability at $9/mo" },
+        { "@type": "ListItem", "position": 2, "name": "W&B Weave — Weights & Biases tracing and evaluation add-on for LLM applications" }
+      ]
+    }
+  })
+
+  return `${comparisonHead(
+    'Nexus vs Weights & Biases Weave — AI Agent Observability',
+    "Nexus vs W&B Weave for AI agent monitoring: production-focused observability at $9/mo vs W&B's ML experiment platform. Pricing, agent tracing, and honest tradeoffs for developers.",
+    'https://nexus.keylightdigital.dev/vs/wandb',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+  <script type="application/ld+json">${structuredData}</script>
+
+  <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Comparison</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Nexus vs Weights &amp; Biases Weave</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        W&amp;B Weave is the tracing and evaluation layer of the Weights &amp; Biases ML platform.
+        Here is an honest look at when a purpose-built AI agent observability tool makes more sense
+        than adding tracing to a machine learning experiment tracker.
+      </p>
+    </div>
+
+    <!-- TL;DR -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">TL;DR</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-indigo-400 mb-2">Choose Nexus if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Are shipping AI agents to production and need runtime monitoring</li>
+            <li>&#10003; Want flat-rate predictable pricing ($9/mo — no W&amp;B account required)</li>
+            <li>&#10003; Need a trace/span model designed for multi-step agent workflows</li>
+            <li>&#10003; Are an indie developer or small team without an ML platform contract</li>
+            <li>&#10003; Want TypeScript-first SDK support (W&amp;B Weave is Python-first)</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-yellow-400 mb-2">Choose W&amp;B Weave if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Already use W&amp;B for experiment tracking and want everything in one platform</li>
+            <li>&#10003; Need LLM evaluation alongside tracing — test datasets, evaluators, leaderboards</li>
+            <li>&#10003; Work primarily in Python and are comfortable with the W&amp;B ecosystem</li>
+            <li>&#10003; Your team runs structured model comparison experiments, not just production agents</li>
+            <li>&#10003; Need advanced data versioning, artifact tracking, and team collaboration features</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key difference callout -->
+    <section class="bg-gray-900 border border-amber-800/40 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">The fundamental difference: production monitoring vs experiment tracking</h2>
+      <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Nexus is designed for production AI agent monitoring:</strong> every concept
+          maps to runtime agent behavior — a trace is a complete agent run, spans are the individual steps
+          (LLM calls, tool uses, sub-agent invocations). The dashboard shows live error rates, latency trends,
+          and agent health. The alert system fires when agents fail in production.
+        </p>
+        <p>
+          <strong class="text-white">W&amp;B Weave is built on top of a machine learning experiment tracker:</strong>
+          it captures LLM calls and agent traces well, but the underlying mental model is runs, artifacts, and
+          experiments — not production incidents. W&amp;B shines for iterating on prompts and evaluating models
+          before deployment; Nexus is built for what happens after deployment.
+        </p>
+        <p>
+          The result: if you need to answer "why did my agent fail in production at 3pm?" Nexus is the right
+          tool. If you need to answer "which prompt version performs better across my eval dataset?" W&amp;B
+          Weave is the right tool. These are adjacent but different problems.
+        </p>
+      </div>
+    </section>
+
+    <!-- Pricing comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Pricing</h2>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div class="bg-gray-900 border border-indigo-800 rounded-2xl px-6 py-6">
+          <h3 class="text-lg font-bold text-indigo-400 mb-1">Nexus</h3>
+          <p class="text-3xl font-extrabold text-white mb-1">$9<span class="text-base font-normal text-gray-400">/mo</span></p>
+          <p class="text-sm text-gray-400 mb-4">Flat-rate — no usage-based surprises</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Free tier: 1,000 traces/month</li>
+            <li>&#10003; Pro: 50,000 traces, unlimited agents</li>
+            <li>&#10003; No per-token or per-log charges</li>
+            <li>&#10003; Email alerts on failure (Pro)</li>
+            <li>&#10003; TypeScript + Python SDK (MIT)</li>
+          </ul>
+        </div>
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+          <h3 class="text-lg font-bold text-yellow-400 mb-1">W&amp;B Weave</h3>
+          <p class="text-3xl font-extrabold text-white mb-1">Usage<span class="text-base font-normal text-gray-400">-based</span></p>
+          <p class="text-sm text-gray-400 mb-4">Free tier; paid tiers scale with seats + usage</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Free tier available (W&amp;B account required)</li>
+            <li>&#10003; Weave included with W&amp;B account</li>
+            <li>&#10003; Teams plan: $50+/seat/month</li>
+            <li>&#10003; LLM evaluation and experiment tracking</li>
+            <li>&#10003; Python SDK primary (limited TypeScript)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature comparison table -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Feature comparison</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Feature</th>
+              <th class="text-center px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-center px-5 py-3 text-yellow-400 font-semibold">W&amp;B Weave</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            ${[
+              ['Agent trace &amp; span model', '&#10003; Purpose-built', '&#10003; Supported'],
+              ['Production monitoring focus', '&#10003;', 'Partial (experiment-tracking focus)'],
+              ['Real-time error alerts', '&#10003; (Pro)', '&#8212;'],
+              ['TypeScript SDK', '&#10003; Open-source', 'Limited'],
+              ['Python SDK', '&#10003; Open-source', '&#10003; Primary SDK'],
+              ['Flat-rate pricing', '&#10003; $9/mo', '&#8212;'],
+              ['LLM evaluation framework', '&#8212;', '&#10003;'],
+              ['Experiment tracking / sweeps', '&#8212;', '&#10003; Core feature'],
+              ['Dataset &amp; artifact versioning', '&#8212;', '&#10003;'],
+              ['Prompt playground', '&#8212;', '&#10003;'],
+              ['Multi-agent dashboard', '&#10003;', 'Partial'],
+              ['Webhook notifications', '&#10003;', '&#8212;'],
+              ['Setup time', '&lt; 2 min', '5&ndash;15 min (W&amp;B account + SDK setup)'],
+              ['Self-hosted option', '&#8212;', 'On-prem (Enterprise)'],
+              ['Cloudflare edge performance', '&#10003;', '&#8212;'],
+            ].map((row) => {
+              const feat = row[0] ?? ''
+              const nexus = row[1] ?? ''
+              const wb = row[2] ?? ''
+              return `
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300">${feat}</td>
+              <td class="px-5 py-3 text-center ${nexus.includes('&#8212;') ? 'text-gray-600' : 'text-green-400'}">${nexus}</td>
+              <td class="px-5 py-3 text-center ${wb.includes('&#8212;') ? 'text-gray-600' : 'text-green-400'}">${wb}</td>
+            </tr>`
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The honest take -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">The honest take</h2>
+      <div class="space-y-5 text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">W&amp;B is an excellent, mature platform for ML teams.</strong>
+          If your team uses Weights &amp; Biases for experiment tracking, hyperparameter sweeps, and model
+          evaluation, adding Weave to trace your LLM calls is a natural extension — the data lives alongside
+          your experiment history and the team already knows the UI.
+        </p>
+        <p>
+          <strong class="text-white">The challenge is the context mismatch between research and production.</strong>
+          W&amp;B is fundamentally an experimentation tool — it is built around runs, sweeps, and artifacts.
+          Weave adds LLM tracing to that platform, but the alert model and dashboard reflect experiment-tracking
+          roots, not production incident management. If a production agent fails at 2am, W&amp;B is not what
+          your on-call engineer reaches for.
+        </p>
+        <p>
+          <strong class="text-white">Nexus is narrower but deeper for production agent monitoring.</strong>
+          The trace viewer, waterfall display, per-agent health cards, and email alerts are all designed for
+          one specific use case: understanding why your production AI agent failed. If that is your primary
+          question — not "which prompt is better?" but "what went wrong in the last 24 hours?" — Nexus
+          answers it more directly.
+        </p>
+        <p>
+          The pricing dynamic also matters: W&amp;B Teams starts at $50+/seat/month — reasonable for a research
+          team with a budget, but significant for a solo developer shipping an AI product. At $9/mo flat,
+          Nexus fits the indie developer use case that W&amp;B was never designed for.
+        </p>
+      </div>
+    </section>
+
+    ${comparisonRelated('/blog/ai-agent-metrics', '5 Metrics Every AI Agent Team Should Track')}
 
     ${ctaSection()}
   </div>

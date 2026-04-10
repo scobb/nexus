@@ -36,6 +36,27 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'ai-agent-cost-guide',
+    title: 'How Much Does It Cost to Run AI Agents? A Token Economics Guide',
+    date: '2026-04-09',
+    excerpt: 'Running AI agents in production costs more than most teams expect. Token costs compound quickly across retries, context overflows, and unnecessary tool calls. Here\'s how to calculate realistic costs, identify hidden cost patterns, and use tracing to keep your bill predictable.',
+    readingTime: '8 min read',
+  },
+  {
+    slug: 'opentelemetry-ai-agents',
+    title: 'OpenTelemetry for AI Agents: Why Standard APM Falls Short',
+    date: '2026-04-09',
+    excerpt: 'OpenTelemetry is great at instrumenting web services. But AI agents fail in ways that standard spans and metrics were never designed to capture. Here\'s what OTEL gets right, five things it misses, and how purpose-built agent observability fills the gaps.',
+    readingTime: '9 min read',
+  },
+  {
+    slug: 'langchain-tracing-tutorial',
+    title: 'How to Add Tracing to Your LangChain Agent in 5 Minutes',
+    date: '2026-04-09',
+    excerpt: 'A step-by-step tutorial for adding Nexus observability to a LangChain agent. Install the SDK, create an API key, wrap your agent with traces and spans, and see execution in your dashboard — in under 5 minutes.',
+    readingTime: '5 min read',
+  },
+  {
     slug: 'ai-agent-metrics',
     title: '5 Metrics Every AI Agent Team Should Track',
     date: '2026-04-09',
@@ -142,6 +163,15 @@ export function blogIndexPage(): string {
 }
 
 export function blogPostPage(slug: string): string | null {
+  if (slug === 'ai-agent-cost-guide') {
+    return aiAgentCostGuidePost()
+  }
+  if (slug === 'opentelemetry-ai-agents') {
+    return openTelemetryAIAgentsPost()
+  }
+  if (slug === 'langchain-tracing-tutorial') {
+    return langchainTracingTutorialPost()
+  }
   if (slug === 'ai-agent-metrics') {
     return aiAgentMetricsPost()
   }
@@ -2034,6 +2064,807 @@ trace = await nexus.start_trace(
         </a>
       </div>
     </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function langchainTracingTutorialPost(): string {
+  const post = POSTS.find(p => p.slug === 'langchain-tracing-tutorial')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/langchain-tracing-tutorial',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const codeBlock = (code: string, lang = 'TypeScript') =>
+    `<div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden mb-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">${lang}</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+    </div>`
+
+  const installTs = `npm install @keylightdigital/nexus langchain @langchain/openai`
+  const installPy = `pip install nexus-agent langchain langchain-openai`
+
+  const step1Code = `import { NexusClient } from '@keylightdigital/nexus'
+
+const nexus = new NexusClient({
+  apiKey: process.env.NEXUS_API_KEY!,   // from nexus.keylightdigital.dev/dashboard/keys
+  agentId: 'my-langchain-agent',
+})`
+
+  const step2TsCode = `import { ChatOpenAI } from '@langchain/openai'
+import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents'
+import { pull } from 'langchain/hub'
+import { TavilySearchResults } from '@langchain/community/tools/tavily_search'
+import { NexusClient } from '@keylightdigital/nexus'
+
+const nexus = new NexusClient({
+  apiKey: process.env.NEXUS_API_KEY!,
+  agentId: 'research-agent',
+})
+
+async function runAgent(question: string) {
+  // Step 1: start a trace for this agent run
+  const trace = await nexus.startTrace({
+    name: \`research: \${question.slice(0, 60)}\`,
+    metadata: { question },
+  })
+
+  try {
+    const tools = [new TavilySearchResults({ maxResults: 3 })]
+    const prompt = await pull('hwchase17/openai-functions-agent')
+    const llm = new ChatOpenAI({ modelName: 'gpt-4o', temperature: 0 })
+    const agent = await createOpenAIFunctionsAgent({ llm, tools, prompt })
+    const executor = new AgentExecutor({ agent, tools })
+
+    // Step 2: wrap the agent run with a span
+    const agentSpan = await trace.addSpan({
+      name: 'agent-executor-run',
+      input: { question },
+    })
+
+    const result = await executor.invoke({ input: question })
+
+    await agentSpan.end({ output: { answer: result.output }, status: 'ok' })
+    await trace.end({ status: 'success' })
+    return result.output
+  } catch (err) {
+    await trace.end({ status: 'error' })
+    throw err
+  }
+}
+
+// Usage
+runAgent('What is the latest news on LLM observability?').then(console.log)`
+
+  const step2PyCode = `from langchain.agents import create_openai_functions_agent, AgentExecutor
+from langchain_openai import ChatOpenAI
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain import hub
+from nexus_agent import NexusClient
+import os
+
+nexus = NexusClient(
+    api_key=os.environ['NEXUS_API_KEY'],
+    agent_id='research-agent',
+)
+
+def run_agent(question: str) -> str:
+    # Step 1: start a trace
+    trace = nexus.start_trace(
+        name=f'research: {question[:60]}',
+        metadata={'question': question},
+    )
+
+    try:
+        tools = [TavilySearchResults(max_results=3)]
+        prompt = hub.pull('hwchase17/openai-functions-agent')
+        llm = ChatOpenAI(model='gpt-4o', temperature=0)
+        agent = create_openai_functions_agent(llm, tools, prompt)
+        executor = AgentExecutor(agent=agent, tools=tools)
+
+        # Step 2: wrap the executor call
+        agent_span = trace.add_span(
+            name='agent-executor-run',
+            input={'question': question},
+        )
+
+        result = executor.invoke({'input': question})
+        agent_span.end(output={'answer': result['output']}, status='ok')
+        trace.end(status='success')
+        return result['output']
+    except Exception as e:
+        trace.end(status='error')
+        raise`
+
+  const toolSpanCode = `// Instrument individual tool calls for full visibility
+const searchSpan = await trace.addSpan({
+  name: 'tavily-search',
+  input: { query: searchQuery },
+})
+
+const results = await searchTool.invoke(searchQuery)
+
+await searchSpan.end({
+  output: { result_count: results.length, results },
+  status: 'ok',
+})`
+
+  const callbackCode = `import { BaseCallbackHandler } from 'langchain/callbacks'
+import type { Serialized } from 'langchain/load/serializable'
+import type { LLMResult } from 'langchain/schema'
+import type { Trace } from '@keylightdigital/nexus'
+
+class NexusCallbackHandler extends BaseCallbackHandler {
+  name = 'NexusCallbackHandler'
+  private spanMap = new Map<string, Awaited<ReturnType<Trace['addSpan']>>>()
+
+  constructor(private trace: Trace) {
+    super()
+  }
+
+  async handleLLMStart(_llm: Serialized, prompts: string[], runId: string) {
+    const span = await this.trace.addSpan({
+      name: 'llm-call',
+      input: { prompts },
+    })
+    this.spanMap.set(runId, span)
+  }
+
+  async handleLLMEnd(output: LLMResult, runId: string) {
+    const span = this.spanMap.get(runId)
+    if (span) {
+      await span.end({ output: output.generations, status: 'ok' })
+      this.spanMap.delete(runId)
+    }
+  }
+
+  async handleLLMError(err: Error, runId: string) {
+    const span = this.spanMap.get(runId)
+    if (span) {
+      await span.end({ error: err.message, status: 'error' })
+      this.spanMap.delete(runId)
+    }
+  }
+}
+
+// Usage: attach to your LLM or executor
+const trace = await nexus.startTrace({ name: 'agent-run' })
+const handler = new NexusCallbackHandler(trace)
+const result = await executor.invoke({ input: question }, { callbacks: [handler] })
+await trace.end({ status: 'success' })`
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      LangChain agents are easy to build and notoriously hard to debug in production. A tool call silently times out. The LLM picks the wrong tool. Context overflows mid-task. Without traces, you're guessing.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-8">
+      This tutorial shows you how to add Nexus tracing to any LangChain agent — TypeScript or Python — in about 5 minutes. By the end, every agent run will appear in your Nexus dashboard with full span-by-span detail.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Prerequisites</h2>
+    <ul class="list-disc list-inside text-gray-400 space-y-1 mb-6 ml-4">
+      <li>A LangChain agent (TypeScript or Python)</li>
+      <li>A Nexus account — <a href="/register" class="text-indigo-400 hover:text-indigo-300">free tier works</a></li>
+      <li>An API key from <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a></li>
+    </ul>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Step 1: Install the SDK</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">Install the Nexus SDK alongside your LangChain dependencies:</p>
+    <p class="text-sm text-gray-500 mb-2 font-mono">TypeScript / npm</p>
+    ${codeBlock(installTs, 'bash')}
+    <p class="text-sm text-gray-500 mb-2 font-mono">Python / pip</p>
+    ${codeBlock(installPy, 'bash')}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Step 2: Initialize the client</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Create a <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">NexusClient</code> with your API key and an agent ID. The agent ID can be any string — it groups all traces from this agent together in your dashboard.
+    </p>
+    ${codeBlock(step1Code)}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Step 3: Wrap your agent run with a trace</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Wrap each agent invocation with <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">startTrace()</code> and <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">trace.end()</code>. Add spans inside the trace for each logical step. Here's a complete working example with a LangChain OpenAI functions agent:
+    </p>
+    <p class="text-sm text-gray-500 mb-2 font-mono">TypeScript</p>
+    ${codeBlock(step2TsCode)}
+    <p class="text-sm text-gray-500 mb-2 font-mono">Python</p>
+    ${codeBlock(step2PyCode, 'Python')}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Step 4: Add spans for individual tool calls (optional)</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      For full visibility into what the agent is doing, add spans around tool calls. This shows you exactly which tools were called, what inputs they received, and whether they succeeded:
+    </p>
+    ${codeBlock(toolSpanCode)}
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Once this is in place, the trace detail page will show a waterfall of spans: the agent executor at the top, individual tool calls underneath, each with timing and I/O.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Advanced: Automatic LLM span capture with callbacks</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      LangChain's callback system lets you hook into every LLM call, tool call, and chain step. You can build a reusable <code class="text-indigo-400 bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono">NexusCallbackHandler</code> that automatically creates spans for every LLM invocation — no per-call instrumentation needed:
+    </p>
+    ${codeBlock(callbackCode)}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Step 5: View your traces</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Run your agent, then open <a href="/dashboard/traces" class="text-indigo-400 hover:text-indigo-300">/dashboard/traces</a>. You'll see each agent run as a trace with:
+    </p>
+    <ul class="list-disc list-inside text-gray-400 space-y-1 mb-6 ml-4">
+      <li>Status (success, error, running)</li>
+      <li>Total duration</li>
+      <li>Span waterfall showing each step</li>
+      <li>Input/output for every span</li>
+      <li>Error messages if anything failed</li>
+    </ul>
+
+    <div class="bg-indigo-950 border border-indigo-800 rounded-xl p-6 my-8">
+      <p class="text-indigo-200 font-medium mb-2">What you get in the dashboard</p>
+      <ul class="text-indigo-300 text-sm space-y-1">
+        <li>&#10003; Trace list with status, duration, agent name, and timestamp</li>
+        <li>&#10003; Per-trace span waterfall with relative timing</li>
+        <li>&#10003; Input/output captured for each span</li>
+        <li>&#10003; Error messages and failure details</li>
+        <li>&#10003; Filter by agent, status, date range</li>
+        <li>&#10003; Shareable public trace links for debugging with teammates</li>
+      </ul>
+    </div>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What's next</h2>
+    <ul class="list-disc list-inside text-gray-400 space-y-2 mb-6 ml-4">
+      <li>Set up <a href="/dashboard/settings" class="text-indigo-400 hover:text-indigo-300">webhook alerts</a> to get notified when traces error</li>
+      <li>Read the <a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">full LangChain integration guide</a> for more patterns</li>
+      <li>Explore the <a href="/demo" class="text-indigo-400 hover:text-indigo-300">interactive demo</a> to see example traces</li>
+      <li>Browse <a href="/docs" class="text-indigo-400 hover:text-indigo-300">integration guides</a> for CrewAI, LlamaIndex, AutoGen, and more</li>
+    </ul>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mt-10">
+      <p class="text-white font-medium mb-2">Start monitoring your LangChain agents free</p>
+      <p class="text-gray-400 text-sm mb-4">Free tier includes 1,000 traces/month and full trace viewer. No credit card required.</p>
+      <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Get started free →</a>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-gray-800">
+      <p class="text-sm text-gray-500 mb-3">Related articles</p>
+      <div class="space-y-2">
+        <a href="/docs/langchain" class="block text-sm text-indigo-400 hover:text-indigo-300">Full LangChain integration reference →</a>
+        <a href="/blog/monitoring-rag-pipelines" class="block text-sm text-indigo-400 hover:text-indigo-300">Monitoring RAG pipelines in production →</a>
+        <a href="/blog/debugging-ai-agents-in-production" class="block text-sm text-indigo-400 hover:text-indigo-300">How to debug AI agents in production →</a>
+        <a href="/blog/ai-agent-metrics" class="block text-sm text-indigo-400 hover:text-indigo-300">5 Metrics Every AI Agent Team Should Track →</a>
+      </div>
+    </div>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${post.title} — Nexus Blog</title>
+  <meta name="description" content="${post.excerpt}">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/langchain-tracing-tutorial">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <meta property="og:title" content="${post.title}">
+  <meta property="og:description" content="${post.excerpt}">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/langchain-tracing-tutorial">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${post.title}">
+  <meta name="twitter:description" content="${post.excerpt}">
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+  <script type="application/ld+json">${jsonLd}</script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.date}</span>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.readingTime}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">${post.title}</h1>
+      <p class="text-lg text-gray-400 leading-relaxed">${post.excerpt}</p>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function aiAgentCostGuidePost(): string {
+  const post = POSTS.find(p => p.slug === 'ai-agent-cost-guide')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/ai-agent-cost-guide',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const code1 = `// Track token usage in every LLM span
+const llmSpan = await trace.addSpan({
+  name: 'gpt-4o-analysis',
+  input: {
+    prompt_tokens: 1200,
+    model: 'gpt-4o',
+  },
+  output: {
+    completion_tokens: 340,
+    total_tokens: 1540,
+    // At $0.005/1K input + $0.015/1K output (gpt-4o):
+    // cost = (1200 * 0.005 + 340 * 0.015) / 1000 = $0.0111
+    estimated_cost_usd: 0.0111,
+  },
+})`
+
+  const code2 = `// Log retry attempts to catch cost amplifiers
+let attempt = 0
+while (attempt < 3) {
+  attempt++
+  const retrySpan = await trace.addSpan({
+    name: 'tool-call-with-retry',
+    input: { attempt, tool: 'web-search', query: searchQuery },
+  })
+  try {
+    const result = await webSearch(searchQuery)
+    await retrySpan.end({ status: 'ok', output: { result_count: result.length } })
+    break
+  } catch (err) {
+    await retrySpan.end({ status: 'error', error: \`Attempt \${attempt}: \${err.message}\` })
+    // If all 3 attempts fail, you'll see 3x the token cost in the trace
+  }
+}`
+
+  const code3 = `// Detect context window bloat before it hits the limit
+const span = await trace.addSpan({
+  name: 'context-assembly',
+  input: {
+    message_count: conversationHistory.length,
+    estimated_tokens: estimateTokens(conversationHistory),
+    context_window_limit: 128000,
+  },
+})
+
+// Alert if context exceeds 80% of window — prune before the expensive overflow
+if (estimateTokens(conversationHistory) > 128000 * 0.8) {
+  console.warn('[nexus] Context window at 80% — consider pruning old messages')
+  conversationHistory = pruneOldestMessages(conversationHistory, 0.5)
+}
+
+await span.end({ status: 'ok', output: { pruned: conversationHistory.length } })`
+
+  const code4 = `// Tag traces with cost metadata for budget reporting
+const trace = await nexus.startTrace({
+  name: 'customer-support-agent',
+  metadata: {
+    customer_tier: 'enterprise',
+    ticket_id: ticketId,
+    budget_center: 'support-ops',
+    // Track at trace level so you can group costs in dashboard
+    model_family: 'gpt-4o',
+  },
+})`
+
+  const content = `
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Why AI Agent Costs Surprise Teams</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">A simple chatbot using GPT-3.5 Turbo might cost a fraction of a cent per conversation. A multi-tool agent using GPT-4o with web search, code execution, and 10 reasoning steps can cost $0.50–$2.00 per run. At 100 runs/day, that's $1,500–$6,000/month — from a single agent.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">Most teams discover this after the invoice arrives. By that point, the patterns that drove the cost (unnecessary retries, context overflow, redundant tool calls) have been running for weeks. Here's how to model costs before they surprise you, and how to trace the patterns that compound them.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Cost Ranges by Agent Type</h2>
+    <div class="overflow-x-auto mb-6">
+      <table class="w-full text-sm border border-gray-800 rounded-lg overflow-hidden">
+        <thead>
+          <tr class="bg-gray-900">
+            <th class="text-left px-4 py-3 text-gray-300 font-medium">Agent Type</th>
+            <th class="text-left px-4 py-3 text-gray-300 font-medium">Model</th>
+            <th class="text-left px-4 py-3 text-gray-300 font-medium">Cost/Run</th>
+            <th class="text-left px-4 py-3 text-gray-300 font-medium">100 runs/day</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-t border-gray-800">
+            <td class="px-4 py-3 text-white">Simple chatbot</td>
+            <td class="px-4 py-3 text-gray-400">GPT-3.5 Turbo</td>
+            <td class="px-4 py-3 text-green-400">$0.001–$0.003</td>
+            <td class="px-4 py-3 text-green-400">~$9/mo</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-gray-900/40">
+            <td class="px-4 py-3 text-white">Research agent (3–5 tools)</td>
+            <td class="px-4 py-3 text-gray-400">GPT-4o mini</td>
+            <td class="px-4 py-3 text-yellow-400">$0.01–$0.05</td>
+            <td class="px-4 py-3 text-yellow-400">~$150/mo</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="px-4 py-3 text-white">Document analysis agent</td>
+            <td class="px-4 py-3 text-gray-400">GPT-4o</td>
+            <td class="px-4 py-3 text-yellow-400">$0.05–$0.20</td>
+            <td class="px-4 py-3 text-yellow-400">~$750/mo</td>
+          </tr>
+          <tr class="border-t border-gray-800 bg-gray-900/40">
+            <td class="px-4 py-3 text-white">Multi-step reasoning agent</td>
+            <td class="px-4 py-3 text-gray-400">GPT-4o</td>
+            <td class="px-4 py-3 text-orange-400">$0.20–$1.00</td>
+            <td class="px-4 py-3 text-orange-400">~$3,000/mo</td>
+          </tr>
+          <tr class="border-t border-gray-800">
+            <td class="px-4 py-3 text-white">Multi-agent system (3+ agents)</td>
+            <td class="px-4 py-3 text-gray-400">GPT-4o + sub-agents</td>
+            <td class="px-4 py-3 text-red-400">$0.50–$3.00</td>
+            <td class="px-4 py-3 text-red-400">~$7,500/mo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-gray-400 text-sm mb-6">These are ballpark estimates based on typical token usage patterns. Actual costs depend heavily on your specific prompts, context sizes, and retry behavior.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">How to Calculate Token Costs</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Token pricing is asymmetric: input tokens (your prompt + context) are cheaper than output tokens (the model's response). For GPT-4o as of early 2026: $0.005/1K input tokens, $0.015/1K output tokens. For Claude Sonnet 3.5: $0.003/1K input, $0.015/1K output.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">The formula:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-4"><code>cost = (prompt_tokens × input_price + completion_tokens × output_price) / 1000</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">Track this at the span level so you can see cost by tool call, by agent step, and roll up to trace total:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code1}</code></pre>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Hidden Cost Patterns</h2>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">1. Retry Amplification</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">A tool that fails and retries 3 times doesn't just cost 3× the token budget — it also adds latency and often triggers additional LLM calls to re-evaluate the situation. Track retry counts as metadata so you can identify which tools are unreliable and driving disproportionate cost:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code2}</code></pre>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">2. Context Window Overflow</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">As conversation history grows, each new LLM call becomes more expensive — you're re-paying for every past message on every new turn. A 10-turn conversation doesn't cost 10× a 1-turn conversation; it often costs 50× because the context accumulates.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">The fix is to monitor context size and prune proactively:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code3}</code></pre>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">3. Unnecessary Tool Calls</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">Some agents call tools "just to be sure" — searching for information they already have, re-reading documents they just read, calling APIs they called two steps ago. These are invisible costs until you look at trace data.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">Once you have trace data, you can spot patterns: "this agent always calls web-search twice in a row for the same query." A simple dedup cache at the tool call level cuts costs 30–50% for research agents.</p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">4. Sub-Agent Fanout</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">Multi-agent systems can fan out dramatically — a coordinator spawns 3 sub-agents, each spawns 2 more, and suddenly you have 7 concurrent agent runs each paying full context costs. Budget modeling must account for the fanout factor, not just the top-level agent cost.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Using Tracing for Cost Management</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">The most effective cost management technique is trace-based cost attribution: tag every trace with context that lets you group costs by feature, customer, or workflow.</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code4}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">With this tagging, your trace dashboard becomes a cost dashboard: you can answer "which customer is driving 40% of our token spend?" or "which feature request triggers the most expensive agent runs?"</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Cost Reduction Checklist</h2>
+    <ul class="space-y-3 mb-6">
+      <li class="flex items-start gap-3">
+        <span class="text-green-400 font-bold mt-0.5">1.</span>
+        <span class="text-gray-300"><strong class="text-white">Instrument token usage</strong> — Track prompt_tokens and completion_tokens in every LLM span. You can't optimize what you don't measure.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="text-green-400 font-bold mt-0.5">2.</span>
+        <span class="text-gray-300"><strong class="text-white">Set step limits</strong> — Hard-cap agent iterations. A research agent that runs for 20 steps when 8 would suffice is burning 2.5× your budget.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="text-green-400 font-bold mt-0.5">3.</span>
+        <span class="text-gray-300"><strong class="text-white">Prune context aggressively</strong> — For conversational agents, summarize old turns rather than passing them verbatim. A 100-token summary replaces a 2,000-token history.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="text-green-400 font-bold mt-0.5">4.</span>
+        <span class="text-gray-300"><strong class="text-white">Cache tool results</strong> — If a tool returns the same result for the same input, cache it for 5–60 minutes. Many research agents call the same APIs multiple times per session.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="text-green-400 font-bold mt-0.5">5.</span>
+        <span class="text-gray-300"><strong class="text-white">Use smaller models for cheap steps</strong> — Classification, routing, and simple extraction don't need GPT-4o. GPT-4o mini or Claude Haiku costs 10–20× less for tasks that don't require frontier reasoning.</span>
+      </li>
+    </ul>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mt-10">
+      <p class="text-white font-medium mb-2">See your token costs in Nexus</p>
+      <p class="text-gray-400 text-sm mb-4">Track token usage, cost per trace, and error rates. Free tier: 1,000 traces/month. No credit card required.</p>
+      <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Start monitoring free →</a>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-gray-800">
+      <p class="text-sm text-gray-500 mb-3">Related articles</p>
+      <div class="space-y-2">
+        <a href="/blog/ai-agent-metrics" class="block text-sm text-indigo-400 hover:text-indigo-300">5 Metrics Every AI Agent Team Should Track →</a>
+        <a href="/pricing" class="block text-sm text-indigo-400 hover:text-indigo-300">Nexus pricing — Free and Pro plans →</a>
+        <a href="/docs" class="block text-sm text-indigo-400 hover:text-indigo-300">Integration guides →</a>
+        <a href="/register" class="block text-sm text-indigo-400 hover:text-indigo-300">Start monitoring your agents →</a>
+      </div>
+    </div>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${post.title} — Nexus Blog</title>
+  <meta name="description" content="${post.excerpt}">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/ai-agent-cost-guide">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <meta property="og:title" content="${post.title}">
+  <meta property="og:description" content="${post.excerpt}">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/ai-agent-cost-guide">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${post.title}">
+  <meta name="twitter:description" content="${post.excerpt}">
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+  <script type="application/ld+json">${jsonLd}</script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.date}</span>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.readingTime}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">${post.title}</h1>
+      <p class="text-lg text-gray-400 leading-relaxed">${post.excerpt}</p>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function openTelemetryAIAgentsPost(): string {
+  const post = POSTS.find(p => p.slug === 'opentelemetry-ai-agents')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/opentelemetry-ai-agents',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const code1 = `// Standard OTEL span — adequate for web services
+const span = tracer.startSpan('http.request', {
+  attributes: { 'http.method': 'GET', 'http.url': '/api/data' }
+})
+span.end()`
+
+  const code2 = `// What you actually need for an AI agent span
+const span = await trace.addSpan({
+  name: 'gpt-4o-extraction',
+  input: {
+    messages: [{ role: 'user', content: extractPrompt }],
+    model: 'gpt-4o',
+    temperature: 0.2,
+  },
+  output: {
+    content: result.content,
+    usage: { prompt_tokens: 1200, completion_tokens: 340, total_tokens: 1540 },
+    finish_reason: 'stop',
+  },
+})
+await span.end({ status: 'ok' })`
+
+  const code3 = `// Detecting agent loops — impossible with standard OTEL counters
+const trace = await nexus.startTrace({
+  name: 'research-task',
+  metadata: { max_steps: 20, task_id: taskId }
+})
+
+let steps = 0
+while (!done) {
+  steps++
+  const span = await trace.addSpan({
+    name: 'agent-step',
+    input: { step: steps, tool: currentTool },
+    output: { result: stepResult },
+  })
+  await span.end({ status: 'ok' })
+
+  if (steps >= 20) {
+    await trace.end({ status: 'timeout' })
+    // Nexus fires an alert — standard APM would see 20 spans and shrug
+    break
+  }
+}`
+
+  const code4 = `// Tool call tracing with error propagation
+const toolSpan = await trace.addSpan({
+  name: 'web-search',
+  input: { query: searchQuery, engine: 'google' },
+})
+
+try {
+  const results = await searchWeb(searchQuery)
+  await toolSpan.end({ status: 'ok', output: { result_count: results.length } })
+} catch (err) {
+  // Error captured at tool level — visible in waterfall
+  await toolSpan.end({ status: 'error', error: err.message })
+  // Propagate to trace level — APM would lose this
+  await trace.end({ status: 'error' })
+}`
+
+  const content = `
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What OpenTelemetry Gets Right</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">OpenTelemetry is one of the best things to happen to observability in the last decade. A vendor-neutral standard for traces, metrics, and logs — with first-class support in every major language and cloud. If you're running microservices, you should absolutely be using OTEL.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">The distributed tracing model maps well to AI agents: a "trace" corresponds to a single agent run, and "spans" map to individual steps — tool calls, LLM invocations, retrieval queries. The waterfall view OTEL popularized is exactly what you want for understanding agent execution order and timing.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">Here's a standard OTEL span:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code1}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-6">Clean. Simple. Works perfectly for HTTP requests, database queries, and service calls. The problem is that AI agent "spans" look nothing like this.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">5 Things Standard APM Misses for AI Agents</h2>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">1. Prompt and Response Capture</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">Standard OTEL attributes are key-value pairs designed for infrastructure metadata. They weren't built to store multi-kilobyte prompt strings or structured JSON responses from LLMs. Most APM tools either truncate them, ignore them, or charge per-character for storage.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">When an agent misbehaves, the first thing you need is the exact prompt it received and the exact response it got. Without that, you're debugging blind. Here's what purpose-built agent spans capture:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code2}</code></pre>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">2. Token Usage Tracking</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">Token usage is the primary cost driver for AI agents — and standard APM has no concept of it. OTEL metrics can record a counter, but they don't know that <code class="bg-gray-800 px-1 rounded text-indigo-300">prompt_tokens</code> is structurally different from <code class="bg-gray-800 px-1 rounded text-indigo-300">completion_tokens</code>, that they're priced differently, or that watching token growth over time predicts runaway cost before the invoice arrives.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">Purpose-built agent observability surfaces token usage as a first-class metric per span, per trace, and per agent — with trend charts that show when your context windows are growing unexpectedly.</p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">3. Agent Loop Detection</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">One of the most expensive AI agent failures is an infinite loop: the agent keeps calling tools, generating responses, and incurring costs without making progress. Standard APM sees this as "many spans over a long time" — it has no concept of whether that's expected or pathological.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">Agent-aware observability tracks step counts against declared limits and fires alerts when the ratio breaks expectations. A 20-step trace that should finish in 5 steps is a loop — not just a slow request.</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code3}</code></pre>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">4. Tool Call Error Propagation</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">When a web search tool returns no results, should the agent fail? Retry? Hallucinate an answer? Standard APM records the HTTP 200 from the search API and considers the call successful. But from the agent's perspective, empty results is a semantic failure that should be tracked and alerted on.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">AI-specific tracing captures semantic status at the tool call level — not just HTTP status codes — and propagates failures up to the trace level so you see the real error picture:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code4}</code></pre>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">5. Hallucination and Context Quality Monitoring</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">Hallucination monitoring requires capturing what context was <em>given</em> to the LLM alongside what it produced. Standard APM can't correlate retrieval quality with generation quality because it treats them as independent services. An agent observability tool that captures both steps in the same trace can surface patterns like "retrieval quality dropped → hallucination rate spiked three minutes later."</p>
+    <p class="text-gray-300 leading-relaxed mb-4">This is why tools like <a href="/vs/datadog" class="text-indigo-400 hover:text-indigo-300">Datadog LLM Observability</a> had to build separate AI-specific layers on top of their APM infrastructure — the fundamental data model doesn't transfer.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">The OTEL vs Purpose-Built Tradeoff</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">This isn't a knock on OpenTelemetry. OTEL is a standards body solving a hard interoperability problem, not a product company solving an AI monitoring problem. The right comparison is: OTEL is to AI agents what Prometheus is to application-layer business metrics — technically capable, but requiring significant wrapper work to surface what you actually care about.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">The <a href="/blog/ai-observability-tools-compared" class="text-indigo-400 hover:text-indigo-300">current generation of AI observability tools</a> falls into two camps:</p>
+    <ul class="list-disc list-inside text-gray-300 space-y-2 mb-6 ml-4">
+      <li><strong class="text-white">OTEL-compatible layers</strong> (Arize Phoenix, some Langfuse configurations): export OTEL spans and let you plug into existing APM infra. Good if you already have OTEL. Bad if you need AI-specific features fast.</li>
+      <li><strong class="text-white">Purpose-built agent tools</strong> (Nexus, LangSmith, Helicone): model the agent run as the primary unit, with spans, token tracking, and alerts designed specifically for LLM workloads. Higher signal-to-noise for AI teams.</li>
+    </ul>
+    <p class="text-gray-300 leading-relaxed mb-4">Nexus is OTEL-inspired — the trace/span hierarchy comes directly from OTEL — but the data model is extended for AI-specific attributes. You get the familiar waterfall view without the boilerplate of setting up an OTEL collector, exporter, and backend.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Getting Started</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">If you're already using OTEL for your service infrastructure, Nexus can run alongside it for AI-specific spans without replacing your existing setup. Add the SDK to your agent code:</p>
+    <ul class="list-disc list-inside text-gray-300 space-y-2 mb-6 ml-4">
+      <li>See the <a href="/docs" class="text-indigo-400 hover:text-indigo-300">integration guides</a> for LangChain, CrewAI, LlamaIndex, AutoGen, and Google ADK</li>
+      <li>Try the <a href="/demo" class="text-indigo-400 hover:text-indigo-300">interactive demo</a> to see what agent traces look like in the dashboard</li>
+      <li>Free tier: 1,000 traces/month, no credit card required</li>
+    </ul>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mt-10">
+      <p class="text-white font-medium mb-2">Monitor your AI agents — not just your services</p>
+      <p class="text-gray-400 text-sm mb-4">Purpose-built agent observability. Free tier, no credit card required.</p>
+      <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Get started free →</a>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-gray-800">
+      <p class="text-sm text-gray-500 mb-3">Related articles</p>
+      <div class="space-y-2">
+        <a href="/blog/ai-observability-tools-compared" class="block text-sm text-indigo-400 hover:text-indigo-300">AI Observability Tools Compared: The 2026 Guide →</a>
+        <a href="/vs/datadog" class="block text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Datadog LLM Observability →</a>
+        <a href="/blog/ai-agent-metrics" class="block text-sm text-indigo-400 hover:text-indigo-300">5 Metrics Every AI Agent Team Should Track →</a>
+        <a href="/docs" class="block text-sm text-indigo-400 hover:text-indigo-300">Integration guides →</a>
+      </div>
+    </div>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${post.title} — Nexus Blog</title>
+  <meta name="description" content="${post.excerpt}">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/opentelemetry-ai-agents">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <meta property="og:title" content="${post.title}">
+  <meta property="og:description" content="${post.excerpt}">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/opentelemetry-ai-agents">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${post.title}">
+  <meta name="twitter:description" content="${post.excerpt}">
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+  <script type="application/ld+json">${jsonLd}</script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.date}</span>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.readingTime}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">${post.title}</h1>
+      <p class="text-lg text-gray-400 leading-relaxed">${post.excerpt}</p>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
   </main>
 
   <footer class="border-t border-gray-800 mt-16 px-4 py-8">
