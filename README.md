@@ -108,6 +108,24 @@ Zero cold starts. Global edge. ~$0 infrastructure cost at indie scale.
 
 ---
 
+## Examples
+
+Ready-to-run example projects are in the [scobb/nexus-examples](https://github.com/scobb/nexus-examples) repo:
+
+| Example | Description |
+|---------|-------------|
+| [Node.js / TypeScript](https://github.com/scobb/nexus-examples/tree/main/examples/nodejs) | TypeScript agent with trace+span creation, error handling |
+| [Python](https://github.com/scobb/nexus-examples/tree/main/examples/python) | Python agent with sync and async patterns |
+| [LangChain](https://github.com/scobb/nexus-examples/tree/main/examples/langchain) | LangChain agent with automatic LLM call and tool tracing |
+
+```bash
+git clone https://github.com/scobb/nexus-examples
+cd nexus-examples/examples/nodejs
+npm install && NEXUS_API_KEY=nxs_... npm start
+```
+
+---
+
 ## SDK
 
 The `@keylightdigital/nexus` SDK is open-source and available on npm. See [`sdk/README.md`](sdk/README.md) for full docs.

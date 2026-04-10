@@ -52,6 +52,7 @@ export function docsPage(): string {
           <a href="#patch-trace" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">PATCH /traces/:id</a>
           <a href="#sdk-typescript" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">TypeScript SDK</a>
           <a href="#sdk-python" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Python SDK</a>
+          <a href="#examples" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Examples</a>
         </nav>
       </aside>
 
@@ -560,6 +561,42 @@ trace.<span class="text-yellow-300">end</span>(status=<span class="text-green-30
           <p class="text-sm text-gray-400 mt-4">
             Source: <a href="https://github.com/scobb/nexus/tree/main/sdk-python" class="text-indigo-400 hover:text-indigo-300">github.com/scobb/nexus/sdk-python</a>
           </p>
+        </section>
+
+        <!-- Examples -->
+        <section id="examples">
+          <h2 class="text-2xl font-bold text-white mb-4 pb-2 border-b border-gray-800">Quick Start Examples</h2>
+          <p class="text-gray-300 mb-6">
+            Ready-to-run example projects are available on GitHub at
+            <a href="https://github.com/scobb/nexus-examples" class="text-indigo-400 hover:text-indigo-300">scobb/nexus-examples</a>.
+            Clone the repo and run any example in under 2 minutes.
+          </p>
+          <div class="grid sm:grid-cols-3 gap-4 mb-6">
+            <a href="https://github.com/scobb/nexus-examples/tree/main/examples/nodejs" class="block bg-gray-900 border border-gray-800 hover:border-indigo-500 rounded-xl p-4 transition-colors">
+              <div class="text-sm font-semibold text-white mb-1">Node.js / TypeScript</div>
+              <div class="text-xs text-gray-400">Multi-step agent with trace + span creation, error handling</div>
+            </a>
+            <a href="https://github.com/scobb/nexus-examples/tree/main/examples/python" class="block bg-gray-900 border border-gray-800 hover:border-indigo-500 rounded-xl p-4 transition-colors">
+              <div class="text-sm font-semibold text-white mb-1">Python</div>
+              <div class="text-xs text-gray-400">Sync + async patterns, realistic agent simulation</div>
+            </a>
+            <a href="https://github.com/scobb/nexus-examples/tree/main/examples/langchain" class="block bg-gray-900 border border-gray-800 hover:border-indigo-500 rounded-xl p-4 transition-colors">
+              <div class="text-sm font-semibold text-white mb-1">LangChain</div>
+              <div class="text-xs text-gray-400">NexusCallbackHandler for automatic LLM + tool tracing</div>
+            </a>
+          </div>
+          <div class="bg-gray-900 rounded-xl overflow-hidden">
+            <div class="bg-gray-800 px-4 py-2 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+              <span class="text-xs text-gray-400 ml-2">clone and run</span>
+            </div>
+            <pre class="px-5 py-4 text-sm font-mono text-gray-200 overflow-x-auto">git clone https://github.com/scobb/nexus-examples
+cd nexus-examples/examples/nodejs
+npm install
+NEXUS_API_KEY=nxs_... npm start</pre>
+          </div>
         </section>
 
         <!-- Footer CTA -->
