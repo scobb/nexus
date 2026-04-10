@@ -101,6 +101,7 @@ export function billingPage(data: BillingData): string {
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-3">
     <div class="flex items-center justify-between">
       <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
@@ -139,7 +140,7 @@ export function billingPage(data: BillingData): string {
     </div>
   </nav>
 
-  <main class="max-w-4xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold mb-6">Billing</h1>
 
     ${successBanner}

@@ -42,6 +42,7 @@ function statusBadge(status: string): string {
 
 function navBar(email: string): string {
   return `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-3">
     <div class="flex items-center justify-between">
       <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
@@ -154,7 +155,7 @@ export function agentsListPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email)}
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-8">
       <h1 class="text-2xl font-bold mb-1">Agents</h1>
       <p class="text-gray-400 text-sm">All registered agents and their health status.</p>
@@ -238,7 +239,7 @@ export function agentTracesPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email)}
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-4">
         <a href="/dashboard/agents" class="hover:text-indigo-400 transition-colors">Agents</a>

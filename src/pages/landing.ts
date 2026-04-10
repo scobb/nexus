@@ -77,6 +77,7 @@ export function landingPage(deletedMessage?: boolean): string {
   <script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   ${deletedBanner}
   <!-- Nav -->
   <nav class="border-b border-gray-800 px-4 py-4">
@@ -103,7 +104,7 @@ export function landingPage(deletedMessage?: boolean): string {
   </nav>
 
   <!-- Hero -->
-  <section class="px-4 pt-20 pb-16 text-center">
+  <section id="main-content" class="px-4 pt-20 pb-16 text-center">
     <div class="max-w-3xl mx-auto">
       <div class="inline-flex items-center gap-2 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
         <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
@@ -163,17 +164,17 @@ export function landingPage(deletedMessage?: boolean): string {
     <div class="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6">
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div class="text-2xl mb-3">🔍</div>
-        <h3 class="font-semibold text-white mb-2">See every trace</h3>
+        <h2 class="font-semibold text-white mb-2">See every trace</h2>
         <p class="text-sm text-gray-400">Full waterfall view of your agent's steps — LLM calls, tool uses, sub-agent invocations. Know exactly what happened and when.</p>
       </div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div class="text-2xl mb-3">🚨</div>
-        <h3 class="font-semibold text-white mb-2">Alerts when agents fail</h3>
+        <h2 class="font-semibold text-white mb-2">Alerts when agents fail</h2>
         <p class="text-sm text-gray-400">Email alerts the moment a trace errors or times out. With rate limiting to prevent alert fatigue. Know before your users do.</p>
       </div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div class="text-2xl mb-3">⚡</div>
-        <h3 class="font-semibold text-white mb-2">One SDK, 10 lines</h3>
+        <h2 class="font-semibold text-white mb-2">One SDK, 10 lines</h2>
         <p class="text-sm text-gray-400">Open-source TypeScript and Python SDKs. Drop into any agent — Claude, GPT-4, LangChain, custom. Start seeing traces in under 5 minutes.</p>
       </div>
     </div>

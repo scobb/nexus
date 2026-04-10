@@ -12,6 +12,7 @@ export function docsPage(): string {
   <script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- Nav -->
   <nav class="border-b border-gray-800 px-4 py-4">
@@ -55,7 +56,7 @@ export function docsPage(): string {
       </aside>
 
       <!-- Main content -->
-      <main class="min-w-0 flex-1 space-y-16">
+      <main id="main-content" class="min-w-0 flex-1 space-y-16">
 
         <!-- Header -->
         <div>

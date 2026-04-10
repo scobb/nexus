@@ -285,6 +285,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-3">
     <div class="flex items-center justify-between">
       <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
@@ -323,7 +324,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <h1 class="text-2xl font-bold">Overview</h1>
       <div class="flex items-center gap-3">

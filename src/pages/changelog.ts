@@ -29,6 +29,7 @@ export function changelogPage(): string {
   <script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Nav -->
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-5xl mx-auto flex items-center justify-between">
@@ -54,7 +55,7 @@ export function changelogPage(): string {
   </nav>
 
   <!-- Header -->
-  <section class="px-4 pt-16 pb-8 text-center">
+  <section id="main-content" class="px-4 pt-16 pb-8 text-center">
     <div class="max-w-2xl mx-auto">
       <div class="inline-flex items-center gap-2 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
         <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span>

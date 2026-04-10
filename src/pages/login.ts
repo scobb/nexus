@@ -11,7 +11,8 @@ export function loginPage(error?: string | null, success?: string | null): strin
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center px-4">
-  <div class="w-full max-w-md">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div id="main-content" class="w-full max-w-md">
     <div class="text-center mb-8">
       <a href="/" class="text-2xl font-bold text-indigo-400">Nexus</a>
       <p class="text-gray-400 mt-2">Agent observability for indie developers</p>
@@ -54,7 +55,8 @@ export function loginPage(error?: string | null, success?: string | null): strin
 
       <!-- Magic link -->
       <form method="POST" action="/auth/magic-link">
-        <input type="email" name="email" required placeholder="you@example.com"
+        <label for="magic-email-login" class="block text-sm font-medium text-gray-300 mb-2">Email for magic link</label>
+        <input type="email" id="magic-email-login" name="email" required placeholder="you@example.com"
           autocomplete="username"
           class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 mb-3">
         <button type="submit"
@@ -85,7 +87,8 @@ export function signupPage(error?: string | null, success?: string | null): stri
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center px-4">
-  <div class="w-full max-w-md">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div id="main-content" class="w-full max-w-md">
     <div class="text-center mb-8">
       <a href="/" class="text-2xl font-bold text-indigo-400">Nexus</a>
       <p class="text-gray-400 mt-2">Agent observability for indie developers</p>
@@ -128,7 +131,8 @@ export function signupPage(error?: string | null, success?: string | null): stri
 
       <!-- Magic link -->
       <form method="POST" action="/auth/magic-link">
-        <input type="email" name="email" required placeholder="you@example.com"
+        <label for="magic-email-signup" class="block text-sm font-medium text-gray-300 mb-2">Email for magic link</label>
+        <input type="email" id="magic-email-signup" name="email" required placeholder="you@example.com"
           autocomplete="username"
           class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 mb-3">
         <button type="submit"

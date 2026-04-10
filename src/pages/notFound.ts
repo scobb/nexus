@@ -11,6 +11,7 @@ export function notFoundPage(): string {
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body class="bg-gray-950 text-gray-100 antialiased">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Nav -->
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-5xl mx-auto flex items-center justify-between">
@@ -36,7 +37,7 @@ export function notFoundPage(): string {
   </nav>
 
   <!-- 404 Content -->
-  <main class="px-4 py-24 text-center">
+  <main id="main-content" class="px-4 py-24 text-center">
     <div class="max-w-lg mx-auto">
       <p class="text-8xl font-extrabold text-indigo-600 mb-4">404</p>
       <h1 class="text-2xl sm:text-3xl font-bold text-white mb-3">Page not found</h1>

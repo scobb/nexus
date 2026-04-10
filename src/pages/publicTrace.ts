@@ -151,13 +151,14 @@ export function publicTracePage(trace: TraceRow, spans: SpanRow[]): string {
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- Public header -->
   <nav class="border-b border-gray-800 px-4 py-4 flex items-center justify-between">
     <a href="/" class="text-xl font-bold text-indigo-400">Nexus</a>
     <span class="text-xs text-gray-500 bg-gray-800 border border-gray-700 px-2 py-1 rounded">Read-only shared trace</span>
   </nav>
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <!-- Trace header -->
     <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
       <div class="flex items-start justify-between flex-wrap gap-3">

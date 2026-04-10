@@ -209,9 +209,11 @@ app.use('*', async (c, next) => {
   c.header('Cache-Control', 'public, max-age=3600, s-maxage=86400')
 })
 
+const SKIP_LINK_CSS = '.skip-link{position:absolute;transform:translateY(-100%);left:.5rem;top:.5rem;z-index:9999;padding:.5rem 1rem;background:#4f46e5;color:#fff;border-radius:.375rem;font-size:.875rem;text-decoration:none;transition:transform .1s}.skip-link:focus{transform:translateY(0)}'
+
 // Serve build-time generated Tailwind CSS — long-lived immutable cache (content changes only on deploy)
 app.get('/styles.css', (c) => {
-  return new Response(TAILWIND_CSS, {
+  return new Response(TAILWIND_CSS + '\n' + SKIP_LINK_CSS, {
     headers: {
       'Content-Type': 'text/css; charset=utf-8',
       'Cache-Control': 'public, max-age=31536000, immutable',

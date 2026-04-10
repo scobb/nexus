@@ -1,6 +1,7 @@
 const CF_ANALYTICS = `<link rel="icon" type="image/svg+xml" href="/favicon.svg"><!-- Beam Analytics (dogfooding) --><script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>`
 
 const NAV = `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <a href="/" class="text-lg font-bold text-indigo-400">Nexus</a>
@@ -137,7 +138,7 @@ export function blogIndexPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-6 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-6 py-12">
     <div class="mb-10">
       <h1 class="text-3xl font-bold text-white mb-3">Blog</h1>
       <p class="text-gray-400">Thoughts on AI agent observability, developer tools, and building in public.</p>
@@ -406,7 +407,7 @@ const contextSpan = await trace.addSpan({
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
-  <main class="max-w-4xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-12">
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
         <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
@@ -656,7 +657,7 @@ function aiObservabilityToolsComparedPost(): string {
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
-  <main class="max-w-4xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-12">
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
         <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
@@ -855,7 +856,7 @@ await trace.end({ status: 'success' })</code></pre>
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-2xl mx-auto px-6 py-12">
+  <main id="main-content" class="max-w-2xl mx-auto px-6 py-12">
     <!-- Breadcrumb -->
     <nav class="text-sm text-gray-500 mb-8">
       <a href="/blog" class="hover:text-gray-300 transition-colors">Blog</a>
@@ -1104,7 +1105,7 @@ async def run_agent(task: str) -> str:
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-6 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-6 py-12">
     <div class="mb-2">
       <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300">← Blog</a>
     </div>
@@ -1306,7 +1307,7 @@ session-end            [success, 17.8s total]</code></pre>
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-6 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-6 py-12">
     <div class="mb-2">
       <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300">← Blog</a>
     </div>
@@ -1676,7 +1677,7 @@ async def rag_agent_loop(user_query: str):
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-2xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-2xl mx-auto px-4 py-12">
     <!-- Breadcrumb -->
     <nav class="text-sm text-gray-500 mb-8">
       <a href="/blog" class="hover:text-gray-300 transition-colors">Blog</a>
@@ -1873,7 +1874,7 @@ trace = await nexus.start_trace(
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-4 py-12">
     <header class="mb-10">
       <div class="flex items-center gap-3 mb-4 text-sm text-gray-500">
         <span>${post.date}</span>
@@ -2386,7 +2387,7 @@ await trace.end({ status: 'success' })`
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-4 py-12">
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
         <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
@@ -2647,7 +2648,7 @@ const trace = await nexus.startTrace({
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-4 py-12">
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
         <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
@@ -2849,7 +2850,7 @@ try {
 <body class="bg-gray-950 text-white min-h-screen">
   ${NAV}
 
-  <main class="max-w-3xl mx-auto px-4 py-12">
+  <main id="main-content" class="max-w-3xl mx-auto px-4 py-12">
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
         <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>

@@ -8,6 +8,7 @@ export interface ApiKeyRow {
 
 function navBar(email: string): string {
   return `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-3">
     <div class="flex items-center justify-between">
       <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
@@ -122,7 +123,7 @@ export function keysPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email)}
 
-  <main class="max-w-4xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-8">
     <div class="mb-8">
       <h1 class="text-2xl font-bold mb-1">API Keys</h1>
       <p class="text-gray-400 text-sm">Keys authenticate your agents when sending traces. Store them securely.</p>

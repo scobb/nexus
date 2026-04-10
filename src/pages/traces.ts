@@ -71,6 +71,7 @@ function navBar(email: string, activePage: 'traces' | 'keys' | 'dashboard' | 'ag
   const mobileLink = (href: string, label: string, active: boolean) =>
     `<a href="${href}" class="block px-2 py-2.5 text-sm rounded-lg transition-colors ${active ? 'text-white font-medium bg-gray-800' : 'text-gray-300 hover:text-white hover:bg-gray-800'}">${label}</a>`
   return `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-3">
     <div class="flex items-center justify-between">
       <a href="/dashboard" class="text-xl font-bold text-indigo-400">Nexus</a>
@@ -234,7 +235,7 @@ export function tracesListPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <div>
         <h1 class="text-2xl font-bold mb-1">Traces</h1>
@@ -383,7 +384,7 @@ export function traceDetailPage(
 <body class="bg-gray-950 text-white min-h-screen">
   ${navBar(email, 'traces')}
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-6">
       <nav class="text-sm text-gray-500">
         <a href="/dashboard/agents" class="hover:text-indigo-400 transition-colors">Agents</a>

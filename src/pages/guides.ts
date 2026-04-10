@@ -26,6 +26,7 @@ function guideHead(title: string, description: string, canonical: string, jsonLd
 }
 
 const navBar = `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <a href="/" class="text-lg font-bold text-indigo-400">Nexus</a>
@@ -90,7 +91,7 @@ export function docsAnthropicSDKPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -429,7 +430,7 @@ export function docsCrewAIPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -680,7 +681,7 @@ export function docsLangchainPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -943,7 +944,7 @@ export function docsOpenAIAgentsPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -1163,7 +1164,7 @@ export function docsAutoGenPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -1411,7 +1412,7 @@ export function docsPydanticAIPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -1828,7 +1829,7 @@ print(f"Evaluation score: {score:.2f}")
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">
@@ -2091,7 +2092,7 @@ print(answer)
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Breadcrumb -->
     <p class="text-sm text-gray-500 mb-6">

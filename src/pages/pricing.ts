@@ -89,6 +89,7 @@ export function pricingPage(): string {
   <script defer src="https://beam-privacy.com/js/beam.js" data-site-id="dee2fad9-ca65-4746-aa74-6480534507ef"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- Nav -->
   <nav class="border-b border-gray-800 px-4 py-4">
@@ -114,7 +115,7 @@ export function pricingPage(): string {
     </div>
   </nav>
 
-  <div class="max-w-4xl mx-auto px-4 py-16">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-16">
 
     <!-- Header -->
     <div class="text-center mb-14">
@@ -297,7 +298,7 @@ export function pricingPage(): string {
       </div>
     </section>
 
-  </div>
+  </main>
 
   <footer class="border-t border-gray-800 mt-16 px-4 py-8 text-center text-gray-500 text-sm">
     <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">

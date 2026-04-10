@@ -172,6 +172,7 @@ const DEMO_BANNER = `
   </div>`
 
 const DEMO_NAV = `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-4 flex items-center justify-between">
     <a href="/" class="text-xl font-bold text-indigo-400">Nexus</a>
     <div class="flex items-center gap-3">
@@ -239,7 +240,7 @@ export function demoOverviewPage(): string {
   ${DEMO_BANNER}
   ${DEMO_NAV}
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <div>
         <h1 class="text-2xl font-bold">Overview</h1>
@@ -390,7 +391,7 @@ export function demoTraceDetailPage(traceId: string): string {
   ${DEMO_BANNER}
   ${DEMO_NAV}
 
-  <main class="max-w-4xl mx-auto px-4 py-8">
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-8">
     <div class="mb-6">
       <nav class="text-sm text-gray-500">
         <a href="/demo" class="hover:text-indigo-400 transition-colors">Demo</a>

@@ -1,4 +1,5 @@
 const navBar = `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="border-b border-gray-800 px-4 py-4">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <a href="/" class="text-lg font-bold text-indigo-400">Nexus</a>
@@ -104,7 +105,7 @@ export function vsLangfusePage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -268,7 +269,7 @@ export function vsAgentopsPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -431,7 +432,7 @@ export function vsArizePhoenixPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -592,7 +593,7 @@ export function vsLangsmithPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -781,7 +782,7 @@ export function alternativesPage(): string {
 <body class="bg-gray-950 text-white min-h-screen">
 ${navBar}
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -1108,7 +1109,7 @@ export function vsDatadogPage(): string {
 ${navBar}
   <script type="application/ld+json">${structuredData}</script>
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -1310,7 +1311,7 @@ export function vsHeliconePage(): string {
 ${navBar}
   <script type="application/ld+json">${structuredData}</script>
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -1511,7 +1512,7 @@ export function vsBraintrustPage(): string {
 ${navBar}
   <script type="application/ld+json">${structuredData}</script>
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
@@ -1710,7 +1711,7 @@ export function vsWandbPage(): string {
 ${navBar}
   <script type="application/ld+json">${structuredData}</script>
 
-  <div class="max-w-4xl mx-auto px-4 py-12">
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
 
     <!-- Header -->
     <div class="mb-10">
