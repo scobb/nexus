@@ -490,6 +490,19 @@ export function landingPage(deletedMessage?: boolean): string {
     </div>
   </section>
 
+  <!-- Also from Keylight Digital -->
+  <section class="px-4 pb-8">
+    <div class="max-w-5xl mx-auto border-t border-gray-800 pt-8">
+      <p class="text-xs text-gray-600 uppercase tracking-wide font-medium mb-3">Also from Keylight Digital</p>
+      <a href="https://beam-privacy.com" class="inline-flex flex-wrap items-center gap-x-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+        <strong class="text-gray-300">Beam</strong>
+        <span>—</span>
+        <span>Privacy-first web analytics. Cookie-free, GDPR-compliant.</span>
+        <span class="text-gray-600">↗</span>
+      </a>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer class="border-t border-gray-800 px-4 py-8">
     <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">

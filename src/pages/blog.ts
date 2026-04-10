@@ -37,6 +37,13 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'detecting-ai-hallucinations',
+    title: 'Detecting AI Hallucinations in Production with Trace Analysis',
+    date: '2026-04-09',
+    excerpt: 'Hallucinations are the silent killers of AI agent reliability. Most teams only discover them from user complaints. Here\'s how to use trace analysis to detect hallucinations before they reach your users — with output verification spans, confidence scoring, and retrieval comparison tracing.',
+    readingTime: '9 min read',
+  },
+  {
     slug: 'multi-agent-observability-patterns',
     title: 'Building Multi-Agent Systems: Observability Patterns',
     date: '2026-04-09',
@@ -178,6 +185,9 @@ export function blogIndexPage(): string {
 }
 
 export function blogPostPage(slug: string): string | null {
+  if (slug === 'detecting-ai-hallucinations') {
+    return detectingAIHallucinationsPost()
+  }
   if (slug === 'multi-agent-observability-patterns') {
     return multiAgentObservabilityPatternsPost()
   }
@@ -3571,6 +3581,267 @@ try {
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${post.title}">
   <meta name="twitter:description" content="${post.excerpt}">
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+  <script type="application/ld+json">${jsonLd}</script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+
+  <main id="main-content" class="max-w-3xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">← Blog</a>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.date}</span>
+        <span class="text-gray-700">·</span>
+        <span class="text-xs text-gray-500">${post.readingTime}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">${post.title}</h1>
+      <p class="text-lg text-gray-400 leading-relaxed">${post.excerpt}</p>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>© 2026 Keylight Digital LLC · Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function detectingAIHallucinationsPost(): string {
+  const post = POSTS.find(p => p.slug === 'detecting-ai-hallucinations')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/detecting-ai-hallucinations',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const code1 = [
+    'import os',
+    'from nexus_client import NexusClient',
+    '',
+    'nexus = NexusClient(api_key=os.environ["NEXUS_API_KEY"], agent_id="rag-agent")',
+    '',
+    'def answer_question(question: str, retrieved_docs: list[str]) -> str:',
+    '    with nexus.trace(name="rag-query") as trace:',
+    '        # Log what context we gave to the LLM',
+    '        with trace.span("retrieval") as span:',
+    '            span.set_attribute("retrieved_doc_count", len(retrieved_docs))',
+    '            span.set_attribute("retrieved_context", "\\n---\\n".join(retrieved_docs[:3]))',
+    '            span.set_attribute("query", question)',
+    '',
+    '        # Generate the answer',
+    '        with trace.span("generation") as span:',
+    '            answer = llm.complete(question, context=retrieved_docs)',
+    '            span.set_attribute("prompt", question)',
+    '            span.set_attribute("response", answer)',
+    '            span.set_attribute("model", "gpt-4o")',
+    '',
+    '        return answer',
+  ].join('\n')
+
+  const code2 = [
+    'def verify_answer(answer: str, retrieved_docs: list[str]) -> dict:',
+    '    """Check if the answer is grounded in the retrieved context."""',
+    '    with nexus.trace(name="hallucination-check") as trace:',
+    '        with trace.span("output-verification") as span:',
+    '            context_text = " ".join(retrieved_docs)',
+    '            # Ask the LLM to verify its own output against source',
+    '            verification_prompt = (',
+    '                f"Answer: {answer}\\n\\n"',
+    '                f"Source documents: {context_text}\\n\\n"',
+    '                "Is this answer fully supported by the source documents? "',
+    '                "Reply with: SUPPORTED, UNSUPPORTED, or PARTIALLY_SUPPORTED"',
+    '            )',
+    '            verdict = llm.complete(verification_prompt)',
+    '',
+    '            span.set_attribute("answer", answer)',
+    '            span.set_attribute("verdict", verdict)',
+    '            span.set_attribute("grounded", "SUPPORTED" in verdict)',
+    '',
+    '            if "UNSUPPORTED" in verdict:',
+    '                span.set_status("warning", "Potential hallucination detected")',
+    '                trace.set_attribute("hallucination_detected", True)',
+    '',
+    '            return {"verdict": verdict, "grounded": "SUPPORTED" in verdict}',
+  ].join('\n')
+
+  const code3 = [
+    'def score_confidence(answer: str, question: str) -> float:',
+    '    """Log confidence scores to detect low-certainty responses."""',
+    '    with nexus.trace(name="confidence-scoring") as trace:',
+    '        with trace.span("confidence-check") as span:',
+    '            # Ask model to rate its own certainty (1-10)',
+    '            confidence_prompt = (',
+    '                f"Question: {question}\\n"',
+    '                f"Answer: {answer}\\n\\n"',
+    '                "Rate your confidence in this answer from 1-10. "',
+    '                "Reply with just the number."',
+    '            )',
+    '            raw_score = llm.complete(confidence_prompt)',
+    '            score = float(raw_score.strip()) / 10.0',
+    '',
+    '            span.set_attribute("confidence_score", score)',
+    '            span.set_attribute("answer", answer)',
+    '',
+    '            # Flag low-confidence answers for review',
+    '            if score < 0.6:',
+    '                span.set_status("warning", f"Low confidence: {score:.2f}")',
+    '                trace.set_attribute("low_confidence", True)',
+    '',
+    '            return score',
+  ].join('\n')
+
+  const code4 = [
+    'def retrieval_comparison_trace(question: str) -> str:',
+    '    """Compare retrieval quality vs generation quality in one trace."""',
+    '    with nexus.trace(name="retrieval-comparison") as trace:',
+    '        # Step 1: Retrieve',
+    '        with trace.span("vector-search") as span:',
+    '            docs = vector_db.search(question, top_k=5)',
+    '            scores = [d.relevance_score for d in docs]',
+    '            span.set_attribute("top_k", 5)',
+    '            span.set_attribute("avg_relevance_score", sum(scores) / len(scores))',
+    '            span.set_attribute("min_relevance_score", min(scores))',
+    '            span.set_attribute("retrieved_chunks", len(docs))',
+    '',
+    '        # Step 2: Generate — with retrieval quality in scope',
+    '        with trace.span("llm-generation") as span:',
+    '            answer = llm.complete(question, context=[d.text for d in docs])',
+    '            span.set_attribute("input_token_count", len(question.split()))',
+    '            span.set_attribute("output_token_count", len(answer.split()))',
+    '',
+    '            # Flag: poor retrieval → high hallucination risk',
+    '            if min(scores) < 0.3:',
+    '                span.set_attribute("hallucination_risk", "high")',
+    '                span.set_status("warning", "Low retrieval quality — high hallucination risk")',
+    '',
+    '        return answer',
+  ].join('\n')
+
+  const content = `
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">The Hallucination Problem in Production</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Hallucinations are AI's most embarrassing failure mode — and the hardest to catch at scale. A model generates a confident, fluent, completely wrong answer. Your users get misinformation. Your trust erodes. And unless you're logging every LLM response and checking it, you won't know until a user complains.</p>
+    <p class="text-gray-300 leading-relaxed mb-4">Most teams discover hallucinations through user feedback. By that point, the damage is done. The key insight is that hallucinations leave a trace — if you're capturing the right data at inference time, you can detect most of them before they reach users, or at least understand when and why they happen.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">This post covers the three main types of hallucinations and practical trace-based detection strategies for each.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">The 3 Types of AI Hallucinations</h2>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">1. Factual Hallucinations</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">The model asserts a fact that is false or unverifiable. "The Eiffel Tower was built in 1850" (it was 1889). "Company X raised a $50M Series B" (the number is fabricated). These are the hallucinations people fear most because they're indistinguishable from correct answers at a glance.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">Detection approach: output-vs-source verification spans. If your agent retrieves documents before generating, you can compare the generated claims against the source material programmatically.</p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">2. Logical Hallucinations</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">The model makes internally inconsistent statements or draws conclusions that don't follow from the premises. "Since X is true, Y must also be true" — where the inference is invalid. These are common in multi-step reasoning tasks and agent pipelines where earlier errors cascade.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">Detection approach: chain-of-thought tracing. Log each reasoning step as a separate span. Logical breaks become visible as spans where the input assumptions don't match the previous span's output.</p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">3. Context Hallucinations</h3>
+    <p class="text-gray-300 leading-relaxed mb-4">The model generates an answer that contradicts the context it was given. You explicitly said "the user's name is Alice" and the model later refers to "Bob." Or a RAG agent generates an answer that contradicts the retrieved documents it was supposed to use. These are the most tractable to detect because you have the source of truth in your trace.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">Detection approach: retrieval-comparison tracing, covered in detail below.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 1: Output Verification Spans</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">The most direct detection method: after generating an answer, run a separate verification step that checks whether the answer is grounded in the source documents. Log both the answer and the verdict as span attributes. This adds one extra LLM call per query but gives you a hallucination signal you can query across all your traces.</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code1}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">First, capture both the retrieval context and the generated answer in the same trace:</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code2}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">In Nexus, you can filter traces where <code class="bg-gray-800 px-1 rounded text-indigo-300">hallucination_detected = true</code> and review them as a group. Over time, you'll find patterns: specific question types, context lengths, or topics where your model hallucinates most.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 2: Confidence Score Logging</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Models don't natively emit uncertainty estimates, but you can ask them to self-rate. While self-reported confidence isn't perfectly calibrated, it's a useful proxy — consistently low-confidence answers correlate with higher hallucination rates in practice.</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code3}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">With confidence scores logged as span attributes, you can build dashboards showing your p10/p50/p90 confidence distribution. Sudden drops in average confidence often precede spikes in user-reported errors — useful leading indicator before your support queue fills up.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">See <a href="/blog/ai-agent-metrics" class="text-indigo-400 hover:text-indigo-300">5 Metrics Every AI Agent Team Should Track</a> for more on building metric dashboards from span attributes.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 3: Retrieval-vs-Generation Comparison Tracing</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">For RAG pipelines, the most predictive hallucination signal is retrieval quality. When your vector search returns low-relevance chunks, the model has to fill gaps — and fills them with hallucinations. By capturing retrieval relevance scores in the same trace as the generation, you can correlate the two.</p>
+    <pre class="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 mb-6"><code>${code4}</code></pre>
+    <p class="text-gray-300 leading-relaxed mb-4">The key insight: <code class="bg-gray-800 px-1 rounded text-indigo-300">min_relevance_score</code> is a better predictor of hallucination than <code class="bg-gray-800 px-1 rounded text-indigo-300">avg_relevance_score</code>. If even one retrieved chunk is irrelevant, the model may anchor on it and generate plausible-sounding nonsense. Flag traces where <code class="bg-gray-800 px-1 rounded text-indigo-300">min_relevance_score &lt; 0.3</code> for manual review.</p>
+    <p class="text-gray-300 leading-relaxed mb-6">For a deeper dive on RAG monitoring, see <a href="/blog/monitoring-rag-pipelines" class="text-indigo-400 hover:text-indigo-300">Monitoring RAG Pipelines in Production</a>.</p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Practical Monitoring Strategy</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Start with the lowest-overhead approach and add layers as your volume grows:</p>
+    <ol class="list-decimal list-inside text-gray-300 space-y-3 mb-6 ml-4">
+      <li><strong class="text-white">Log everything first.</strong> Capture prompts, responses, and retrieved context as span attributes. You can't detect patterns you haven't logged. The Nexus SDK stores these in your D1 database — cheap and queryable.</li>
+      <li><strong class="text-white">Add retrieval quality scores.</strong> If you're running RAG, your vector DB already computes relevance scores. Log them. This costs nothing extra and gives you the most predictive hallucination signal.</li>
+      <li><strong class="text-white">Sample verification calls.</strong> Run output-vs-source verification on 10-20% of queries. Full coverage is expensive; sampled coverage still gives you a statistically reliable hallucination rate over time.</li>
+      <li><strong class="text-white">Set alerts on <code class="bg-gray-800 px-1 rounded text-indigo-300">hallucination_detected = true</code>.</strong> Route flagged traces to a Slack channel or email alert for human review. This is your QA loop — the ground truth that lets you improve your prompts and retrieval.</li>
+    </ol>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">What to Do When You Find Hallucinations</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Detection is only valuable if it drives improvement. When you identify hallucination-prone traces, look for:</p>
+    <ul class="list-disc list-inside text-gray-300 space-y-2 mb-6 ml-4">
+      <li><strong class="text-white">Question type patterns</strong> — do hallucinations cluster around specific query categories (dates, numbers, company facts)?</li>
+      <li><strong class="text-white">Context length thresholds</strong> — does hallucination rate spike above certain input token counts? This signals context overflow or attention fragmentation.</li>
+      <li><strong class="text-white">Retrieval gaps</strong> — are there topics your vector DB consistently fails to retrieve relevant context for? Expand your knowledge base there first.</li>
+      <li><strong class="text-white">Model-specific patterns</strong> — if you're A/B testing models, trace which model hallucinates more on which query types. The answer is often surprising.</li>
+    </ul>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Getting Started</h2>
+    <p class="text-gray-300 leading-relaxed mb-4">Add hallucination monitoring to your agent in three steps:</p>
+    <ul class="list-disc list-inside text-gray-300 space-y-2 mb-6 ml-4">
+      <li>Install the Nexus SDK: <code class="bg-gray-800 px-1 rounded text-indigo-300">pip install nexus-client</code></li>
+      <li>Wrap your RAG pipeline with retrieval and generation spans (examples above)</li>
+      <li>Add <code class="bg-gray-800 px-1 rounded text-indigo-300">hallucination_detected</code> boolean attributes to verification spans</li>
+    </ul>
+    <p class="text-gray-300 leading-relaxed mb-6">See the <a href="/docs" class="text-indigo-400 hover:text-indigo-300">integration guides</a> for LangChain, LlamaIndex, and CrewAI — all support the trace/span pattern shown above. Or try the <a href="/demo" class="text-indigo-400 hover:text-indigo-300">interactive demo</a> to see what hallucination traces look like in the dashboard.</p>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mt-10">
+      <p class="text-white font-medium mb-2">Catch hallucinations before your users do</p>
+      <p class="text-gray-400 text-sm mb-4">Trace-level hallucination monitoring for production AI agents. Free tier, no credit card required.</p>
+      <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Get started free →</a>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-gray-800">
+      <p class="text-sm text-gray-500 mb-3">Related articles</p>
+      <div class="space-y-2">
+        <a href="/blog/monitoring-rag-pipelines" class="block text-sm text-indigo-400 hover:text-indigo-300">Monitoring RAG Pipelines in Production →</a>
+        <a href="/blog/ai-agent-metrics" class="block text-sm text-indigo-400 hover:text-indigo-300">5 Metrics Every AI Agent Team Should Track →</a>
+        <a href="/docs" class="block text-sm text-indigo-400 hover:text-indigo-300">Integration guides →</a>
+        <a href="/demo" class="block text-sm text-indigo-400 hover:text-indigo-300">Try the interactive demo →</a>
+      </div>
+    </div>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${post.title} — Nexus Blog</title>
+  <meta name="description" content="${post.excerpt}">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/detecting-ai-hallucinations">
+  <link rel="alternate" type="application/atom+xml" title="Nexus Blog" href="/blog/feed.xml">
+  <meta property="og:title" content="${post.title}">
+  <meta property="og:description" content="${post.excerpt}">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/detecting-ai-hallucinations">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${post.title}">
+  <meta name="twitter:description" content="${post.excerpt}">
+  <meta name="keywords" content="AI hallucination detection, LLM hallucination monitoring, detect AI hallucinations production, RAG hallucination, LLM reliability">
   <link rel="stylesheet" href="/styles.css">
   ${CF_ANALYTICS}
   <script type="application/ld+json">${jsonLd}</script>
