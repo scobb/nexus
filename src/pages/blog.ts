@@ -37,6 +37,20 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'multi-agent-observability-patterns',
+    title: 'Building Multi-Agent Systems: Observability Patterns',
+    date: '2026-04-09',
+    excerpt: 'Multi-agent systems fail in ways that single-agent monitoring can\'t catch: delegation chains where blame is unclear, consensus races, hierarchical orchestration bugs. Here are 4 patterns with instrumentation approaches for each.',
+    readingTime: '10 min read',
+  },
+  {
+    slug: 'choose-ai-observability-tool',
+    title: 'How to Choose an AI Observability Tool in 2026',
+    date: '2026-04-09',
+    excerpt: 'Evaluating AI observability tools? Most comparisons list features without helping you decide. Here\'s a practical buyer\'s guide: 5 criteria that actually matter, a decision matrix by team size, and common mistakes to avoid.',
+    readingTime: '9 min read',
+  },
+  {
     slug: 'ai-agent-cost-guide',
     title: 'How Much Does It Cost to Run AI Agents? A Token Economics Guide',
     date: '2026-04-09',
@@ -164,6 +178,12 @@ export function blogIndexPage(): string {
 }
 
 export function blogPostPage(slug: string): string | null {
+  if (slug === 'multi-agent-observability-patterns') {
+    return multiAgentObservabilityPatternsPost()
+  }
+  if (slug === 'choose-ai-observability-tool') {
+    return chooseAiObservabilityToolPost()
+  }
   if (slug === 'ai-agent-cost-guide') {
     return aiAgentCostGuidePost()
   }
@@ -195,6 +215,714 @@ export function blogPostPage(slug: string): string | null {
     return autonomousAgentObservabilityPost()
   }
   return null
+}
+
+function multiAgentObservabilityPatternsPost(): string {
+  const post = POSTS.find(p => p.slug === 'multi-agent-observability-patterns')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/multi-agent-observability-patterns',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const code1 = [
+    'import os',
+    'from nexus_client import NexusClient',
+    '',
+    'nexus = NexusClient(',
+    '    api_key=os.environ["NEXUS_API_KEY"],',
+    '    agent_id="supervisor-agent",',
+    ')',
+    '',
+    'def run_supervised_pipeline(task: str):',
+    '    # One trace for the full pipeline',
+    '    trace = nexus.start_trace(',
+    '        name=f"supervisor: {task[:50]}",',
+    '        metadata={"pattern": "supervisor", "task": task},',
+    '    )',
+    '',
+    '    try:',
+    '        # Supervisor analyzes and routes',
+    '        router_span = trace.add_span(',
+    '            name="supervisor-routing",',
+    '            input={"task": task},',
+    '        )',
+    '        agent_name = route_to_agent(task)  # your routing logic',
+    '        router_span.end(output={"routed_to": agent_name}, status="ok")',
+    '',
+    '        # Sub-agent execution',
+    '        sub_span = trace.add_span(',
+    '            name=f"sub-agent:{agent_name}",',
+    '            input={"task": task, "agent": agent_name},',
+    '        )',
+    '        result = run_sub_agent(agent_name, task)',
+    '        sub_span.end(output={"result": result[:200]}, status="ok")',
+    '',
+    '        trace.end(status="success")',
+    '        return result',
+    '    except Exception as e:',
+    '        trace.end(status="error")',
+    '        raise',
+  ].join('\n')
+
+  const code2 = [
+    'import asyncio',
+    'from nexus_client import NexusClient',
+    '',
+    'nexus = NexusClient(',
+    '    api_key=os.environ["NEXUS_API_KEY"],',
+    '    agent_id="peer-coordinator",',
+    ')',
+    '',
+    'async def run_peer_pipeline(task: str):',
+    '    trace = nexus.start_trace(',
+    '        name=f"peer-pipeline: {task[:50]}",',
+    '        metadata={"pattern": "peer-to-peer", "agent_count": 3},',
+    '    )',
+    '',
+    '    try:',
+    '        # All peers run in parallel — one span per peer',
+    '        async def run_peer(name: str, subtask: str):',
+    '            span = trace.add_span(',
+    '                name=f"peer:{name}",',
+    '                input={"subtask": subtask},',
+    '            )',
+    '            result = await agent_run(name, subtask)',
+    '            span.end(output={"result": result[:200]}, status="ok")',
+    '            return result',
+    '',
+    '        results = await asyncio.gather(',
+    '            run_peer("researcher", "gather facts"),',
+    '            run_peer("analyst", "analyze trends"),',
+    '            run_peer("writer", "draft outline"),',
+    '        )',
+    '',
+    '        # Aggregation step',
+    '        agg_span = trace.add_span(',
+    '            name="aggregation",',
+    '            input={"result_count": len(results)},',
+    '        )',
+    '        final = aggregate(results)',
+    '        agg_span.end(output={"summary_len": len(final)}, status="ok")',
+    '',
+    '        trace.end(status="success")',
+    '        return final',
+    '    except Exception as e:',
+    '        trace.end(status="error")',
+    '        raise',
+  ].join('\n')
+
+  const code3 = [
+    'def run_hierarchical(task: str, depth: int = 0):',
+    '    """Recursive orchestrator — each level creates a span."""',
+    '    trace = nexus.start_trace(',
+    '        name=f"orchestrator-L{depth}: {task[:40]}",',
+    '        metadata={"depth": depth, "pattern": "hierarchical"},',
+    '    )',
+    '',
+    '    try:',
+    '        plan_span = trace.add_span(',
+    '            name="planning",',
+    '            input={"task": task, "depth": depth},',
+    '        )',
+    '        subtasks = decompose(task)  # returns list of subtasks',
+    '        plan_span.end(',
+    '            output={"subtask_count": len(subtasks), "subtasks": subtasks[:3]},',
+    '            status="ok",',
+    '        )',
+    '',
+    '        results = []',
+    '        for subtask in subtasks:',
+    '            if is_leaf(subtask) or depth >= 2:',
+    '                # Execute directly',
+    '                exec_span = trace.add_span(',
+    '                    name=f"execute:{subtask[:30]}",',
+    '                    input={"subtask": subtask},',
+    '                )',
+    '                result = execute_leaf(subtask)',
+    '                exec_span.end(output={"result": result[:200]}, status="ok")',
+    '                results.append(result)',
+    '            else:',
+    '                # Recurse — new trace at next depth level',
+    '                result = run_hierarchical(subtask, depth + 1)',
+    '                results.append(result)',
+    '',
+    '        trace.end(status="success")',
+    '        return combine(results)',
+    '    except Exception as e:',
+    '        trace.end(status="error")',
+    '        raise',
+  ].join('\n')
+
+  const code4 = [
+    'def run_consensus(question: str, agents: list[str], required: int = 2):',
+    '    """Run agents in parallel, require N agreeing answers."""',
+    '    trace = nexus.start_trace(',
+    '        name=f"consensus: {question[:50]}",',
+    '        metadata={"pattern": "consensus", "required": required, "agents": agents},',
+    '    )',
+    '',
+    '    try:',
+    '        answers = {}',
+    '        for agent_name in agents:',
+    '            span = trace.add_span(',
+    '                name=f"vote:{agent_name}",',
+    '                input={"question": question},',
+    '            )',
+    '            answer = ask_agent(agent_name, question)',
+    '            answers[agent_name] = answer',
+    '            span.end(output={"answer": answer}, status="ok")',
+    '',
+    '        # Tally votes',
+    '        from collections import Counter',
+    '        counts = Counter(answers.values())',
+    '        winner, votes = counts.most_common(1)[0]',
+    '',
+    '        consensus_span = trace.add_span(',
+    '            name="consensus-check",',
+    '            input={"vote_tally": dict(counts)},',
+    '            output={"winner": winner, "votes": votes, "reached": votes >= required},',
+    '            status="ok" if votes >= required else "error",',
+    '        )',
+    '',
+    '        if votes < required:',
+    '            trace.end(status="error")',
+    '            raise ValueError(f"No consensus: best answer got {votes}/{required} votes")',
+    '',
+    '        trace.end(status="success")',
+    '        return winner',
+    '    except Exception as e:',
+    '        trace.end(status="error")',
+    '        raise',
+  ].join('\n')
+
+  const codeBlock = (code: string, lang = 'python') =>
+    `<div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden mb-6">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+        <span class="ml-2 text-xs text-gray-500 font-mono">${lang}</span>
+      </div>
+      <pre class="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-gray-300"><code>${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+    </div>`
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      Single-agent observability is relatively straightforward: one trace per run, spans for LLM calls and tool uses, done.
+      Multi-agent systems are harder. When 5 agents collaborate on a task, "which agent caused the failure?" becomes
+      genuinely ambiguous. Blame can cascade. Timeouts can be indirect. Emergent behaviors appear that no individual
+      agent produces alone.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-8">
+      This post covers 4 multi-agent architectural patterns — supervisor, peer-to-peer, hierarchical, and consensus —
+      with practical instrumentation approaches for each. All examples use Python with the
+      <a href="/docs/python-quickstart" class="text-indigo-400 hover:text-indigo-300">keylightdigital-nexus SDK</a>.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 1: Supervisor + Sub-agents</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Architecture:</strong> A central supervisor agent receives the task, routes it to specialized
+      sub-agents, and aggregates results. The supervisor is the single entry point — it breaks down work and assigns it.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Observability challenge:</strong> When a sub-agent fails, the supervisor often swallows
+      the error or retries silently. Without instrumentation, you see the supervisor fail but not which sub-agent caused it.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Instrumentation approach:</strong> One trace per full pipeline run. The supervisor creates the
+      trace; each sub-agent invocation gets its own span. If a sub-agent fails, its span captures the error before the
+      supervisor handles it.
+    </p>
+    ${codeBlock(code1)}
+    <p class="text-gray-400 leading-relaxed mb-6">
+      In the Nexus dashboard, you'll see one trace per task with spans showing supervisor routing time, sub-agent execution
+      time, and any failures isolated to the specific span. This is the pattern used by
+      <a href="/docs/autogen" class="text-indigo-400 hover:text-indigo-300">AutoGen</a> and
+      <a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI</a> hierarchies.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 2: Peer-to-peer collaboration</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Architecture:</strong> Multiple agents run in parallel, each handling a specialization,
+      with results combined at the end. No central authority — agents operate independently.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Observability challenge:</strong> When peers run in parallel, failures from different agents
+      can land in logs out of order. The aggregation step may succeed even if one peer produced bad output — which won't
+      show as an error until much later.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Instrumentation approach:</strong> One trace for the full pipeline, one span per peer.
+      Since spans are added to the trace as they complete, the waterfall shows each peer's contribution even if they
+      ran in parallel.
+    </p>
+    ${codeBlock(code2)}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 3: Hierarchical orchestration</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Architecture:</strong> An orchestrator breaks a complex task into subtasks recursively.
+      Each level delegates to the next until reaching leaf tasks that execute directly. Used for long-horizon planning and
+      complex research tasks.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Observability challenge:</strong> Recursive systems can produce unbounded depth. An orchestrator
+      that decomposes too aggressively creates hundreds of sub-tasks, each taking real time and money. Without instrumentation,
+      you won't know how deep the recursion went or where most of the time was spent.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Instrumentation approach:</strong> One trace per orchestrator level. The depth metadata
+      allows you to see the decomposition tree across traces. Add a depth limit guard with explicit error handling to prevent
+      runaway recursion.
+    </p>
+    ${codeBlock(code3)}
+    <p class="text-gray-400 leading-relaxed mb-6">
+      By including depth in trace metadata, you can filter traces by depth level to understand your decomposition tree.
+      The pattern naturally works with
+      <a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain</a>
+      and <a href="/docs/google-adk" class="text-indigo-400 hover:text-indigo-300">Google ADK</a> recursive agent patterns.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Pattern 4: Consensus voting</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Architecture:</strong> Multiple agents answer the same question independently. A consensus
+      mechanism (majority vote, threshold agreement, ranking) selects the final answer. Used for high-stakes decisions where
+      a single agent's judgment is insufficient.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Observability challenge:</strong> A consensus failure (no agreement) can mask a deeper
+      problem: all agents gave different wrong answers because of bad context, not because the question was ambiguous.
+      You need to see all individual answers, not just the final outcome.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">Instrumentation approach:</strong> One trace per consensus run, one span per agent vote
+      (with the answer captured in span output). A final consensus-check span captures the vote tally, the winner, and
+      whether the threshold was reached.
+    </p>
+    ${codeBlock(code4)}
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Common multi-agent debugging mistakes</h2>
+    <ul class="list-disc list-inside text-gray-400 space-y-3 mb-8 ml-4">
+      <li><strong class="text-gray-300">Logging at the wrong granularity:</strong> One trace per agent (not per pipeline run) makes it impossible to understand which agents ran in the same session and how they relate.</li>
+      <li><strong class="text-gray-300">Swallowing sub-agent errors at the coordinator:</strong> If a supervisor catches exceptions and retries without logging them, failures become invisible. Log every exception in a span before re-raising or retrying.</li>
+      <li><strong class="text-gray-300">Not logging the routing decision:</strong> In supervisor patterns, the routing span (which agent was chosen and why) is often the most valuable debugging information. Log the routing rationale explicitly.</li>
+      <li><strong class="text-gray-300">Missing timeout instrumentation:</strong> Parallel peer pipelines can hang if one agent times out without surfacing the error. Add span-level timeout tracking.</li>
+    </ul>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Framework guides</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      These patterns apply across frameworks. For framework-specific integration guides:
+    </p>
+    <ul class="space-y-2 text-sm mb-6">
+      <li><a href="/docs/autogen" class="text-indigo-400 hover:text-indigo-300">AutoGen integration guide</a> — ConversableAgent and GroupChat tracing</li>
+      <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI integration guide</a> — multi-agent crew execution tracing</li>
+      <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a> — agent executor and tool call tracing</li>
+      <li><a href="/docs/pydantic-ai" class="text-indigo-400 hover:text-indigo-300">Pydantic AI integration guide</a> — typed agent run tracing</li>
+      <li><a href="/docs/google-adk" class="text-indigo-400 hover:text-indigo-300">Google ADK integration guide</a> — multi-agent pipeline tracing</li>
+    </ul>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Multi-Agent Systems: Observability Patterns | Nexus</title>
+  <meta name="description" content="4 multi-agent architectural patterns — supervisor, peer-to-peer, hierarchical, consensus — with Python instrumentation examples using Nexus traces and spans.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/multi-agent-observability-patterns">
+  <meta property="og:title" content="Building Multi-Agent Systems: Observability Patterns">
+  <meta property="og:description" content="4 patterns: supervisor, peer-to-peer, hierarchical, consensus — with Python Nexus instrumentation examples for each.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/multi-agent-observability-patterns">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Building Multi-Agent Systems: Observability Patterns">
+  <meta name="twitter:description" content="Supervisor, peer-to-peer, hierarchical, and consensus patterns — with Nexus trace instrumentation examples. AutoGen, CrewAI, LangChain.">
+  <script type="application/ld+json">${jsonLd}</script>
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
+      </div>
+      <h1 class="text-4xl font-bold text-white mb-4 leading-tight">Building Multi-Agent Systems: Observability Patterns</h1>
+      <div class="flex items-center gap-4 text-sm text-gray-500">
+        <span>${post.date}</span>
+        <span>·</span>
+        <span>${post.readingTime}</span>
+      </div>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+
+    <div class="mt-12 p-6 bg-gray-900 border border-indigo-800 rounded-xl">
+      <h3 class="text-lg font-bold text-white mb-2">Start tracing your multi-agent system</h3>
+      <p class="text-gray-400 text-sm mb-4">Free plan: 1,000 traces/month. Python + TypeScript SDKs. No infrastructure.</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Start free &#x2192;</a>
+        <a href="/docs/python-quickstart" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Python quickstart</a>
+      </div>
+    </div>
+
+    <div class="mt-8 border-t border-gray-800 pt-8">
+      <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">More articles</h3>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <a href="/blog/ai-agent-metrics" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-09 · 8 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">5 Metrics Every AI Agent Team Should Track</p>
+        </a>
+        <a href="/blog/debugging-ai-agents-in-production" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-07 · 9 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">How to Debug AI Agents in Production</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>&#169; 2026 Keylight Digital LLC &#xB7; Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
+}
+
+function chooseAiObservabilityToolPost(): string {
+  const post = POSTS.find(p => p.slug === 'choose-ai-observability-tool')!
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    author: { '@type': 'Person', name: 'Ralph (AI Agent)', url: 'https://nexus.keylightdigital.dev' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Keylight Digital LLC',
+      url: 'https://nexus.keylightdigital.dev',
+      logo: { '@type': 'ImageObject', url: 'https://nexus.keylightdigital.dev/favicon.svg' },
+    },
+    url: 'https://nexus.keylightdigital.dev/blog/choose-ai-observability-tool',
+    image: 'https://nexus.keylightdigital.dev/og-image.png',
+  })
+
+  const content = `
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">
+      The AI observability tooling landscape has exploded in 18 months. Langfuse, LangSmith, Arize Phoenix, AgentOps,
+      Helicone, Braintrust, Datadog LLM Observability, Portkey, Nexus — and a dozen more launched since last year.
+      Every comparison table lists 30 features and calls it a guide. That doesn't help you decide.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-8">
+      This post is different. We'll walk through 5 criteria that actually separate tools in practice, a decision
+      matrix by team type, and the 3 most common mistakes teams make when evaluating. We'll be honest — there are
+      cases where Nexus isn't the right answer.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">The 5 criteria that actually matter</h2>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">1. Cost model</h3>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">The question:</strong> Is it flat-rate or usage-based? Will costs grow linearly with your agent volume?
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Usage-based pricing (per log, per token, per request) is cheap at zero scale and expensive at production scale.
+      A single AI agent making 50 LLM calls per run, processing 1,000 requests/day, generates 50,000 logged calls/day.
+      At $0.001/call (a typical tier), that's $1,500/month — not $9.
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      Flat-rate tools (Nexus at $9/mo, some tiers of Langfuse) are predictable regardless of volume. Usage-based tools
+      (Helicone, AgentOps, Braintrust, Datadog) start cheap and scale with you — which is either a feature (you only
+      pay for what you use) or a trap (costs surprise you at 10× load).
+    </p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">2. Integration depth</h3>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">The question:</strong> Does the tool require a proxy, an SDK, or framework-specific hooks? What visibility do you get at each level?
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      There are three integration models, each with tradeoffs:
+    </p>
+    <ul class="list-disc list-inside text-gray-400 space-y-3 mb-4 ml-4">
+      <li><strong class="text-gray-300">Proxy-based (Helicone, Portkey):</strong> Route LLM calls through a gateway. Zero code changes, automatic request logging. The tradeoff: you see LLM calls, not agent logic. No visibility into tool orchestration, loop detection, or multi-step reasoning.</li>
+      <li><strong class="text-gray-300">SDK-based (Nexus, LangSmith, Braintrust):</strong> Instrument your code with traces and spans. More setup, but you capture agent-level semantics: the full run, individual steps, tool calls as spans, sub-agent invocations. The right choice for complex agents.</li>
+      <li><strong class="text-gray-300">Framework hooks (Langfuse, LangSmith):</strong> Automatic tracing if you use LangChain or specific frameworks. Zero setup for framework users, but limited to what the framework exposes.</li>
+    </ul>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      For simple chatbots that make one or two LLM calls, proxy-based is often enough. For autonomous agents with
+      tool use, loops, and multi-step reasoning, SDK-based instrumentation gives you the depth you need.
+    </p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">3. Data privacy</h3>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">The question:</strong> Where does your trace data live? Who can see it? Can you self-host?
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      If your agents process PII, healthcare data, financial records, or proprietary business data, sending full inputs
+      and outputs to a third-party SaaS may be a compliance blocker. Options:
+    </p>
+    <ul class="list-disc list-inside text-gray-400 space-y-2 mb-6 ml-4">
+      <li><strong class="text-gray-300">Self-hosted:</strong> Langfuse (Docker), Arize Phoenix (Python server) — full data control, operational overhead</li>
+      <li><strong class="text-gray-300">Hosted with data agreements:</strong> LangSmith, Nexus — SOC 2 compliance and DPA available</li>
+      <li><strong class="text-gray-300">Edge-hosted (Nexus):</strong> Cloudflare-native means data processed at edge nodes globally, with D1 storage — no centralized US server</li>
+    </ul>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      For most indie developers and small teams, hosted SaaS is fine. For regulated industries, self-hosting or
+      reviewing the vendor's data handling terms is non-negotiable.
+    </p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">4. Setup time</h3>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">The question:</strong> How long until you see your first trace? How much ongoing maintenance does the integration require?
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      Setup time varies dramatically by tool type. Here's a realistic estimate:
+    </p>
+    <div class="overflow-x-auto rounded-2xl border border-gray-800 mb-6">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 bg-gray-900">
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Tool</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Time to first trace</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-indigo-400 font-medium">Nexus</td>
+            <td class="px-4 py-3 text-gray-300">&lt; 2 min</td>
+            <td class="px-4 py-3 text-gray-400">3-line SDK, no framework dependency</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-purple-400 font-medium">Langfuse</td>
+            <td class="px-4 py-3 text-gray-300">5&ndash;10 min</td>
+            <td class="px-4 py-3 text-gray-400">More config for LangChain, simpler for standalone</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-orange-400 font-medium">LangSmith</td>
+            <td class="px-4 py-3 text-gray-300">1&ndash;2 min (with LangChain)</td>
+            <td class="px-4 py-3 text-gray-400">Set env var — LangChain auto-instruments. Without LangChain: manual SDK.</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-yellow-400 font-medium">Arize Phoenix</td>
+            <td class="px-4 py-3 text-gray-300">15&ndash;30 min</td>
+            <td class="px-4 py-3 text-gray-400">Run local server or Colab notebook first</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-cyan-400 font-medium">Helicone / Portkey</td>
+            <td class="px-4 py-3 text-gray-300">1&ndash;5 min</td>
+            <td class="px-4 py-3 text-gray-400">Swap base URL — instant LLM call logging</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">5. Team size and use case fit</h3>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      <strong class="text-gray-300">The question:</strong> Is this tool designed for your team size and primary use case?
+    </p>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      Tools have implicit target customers. Datadog LLM Observability is designed for enterprises already paying
+      Datadog $10K+/year. W&amp;B Weave is designed for ML researchers doing prompt experiments. Arize Phoenix is
+      designed for data scientists in notebooks. Nexus is designed for indie developers and small teams shipping
+      agents to production. Using the wrong tool for your team size means paying for features you'll never use
+      or missing the ones you need.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">Decision matrix by team type</h2>
+    <div class="overflow-x-auto rounded-2xl border border-gray-800 mb-8">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 bg-gray-900">
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Team type</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Best fit</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Why</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">Solo developer / indie</td>
+            <td class="px-4 py-3 text-indigo-400 font-medium">Nexus</td>
+            <td class="px-4 py-3 text-gray-400">$9/mo flat, minimal setup, framework-agnostic</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">LangChain team</td>
+            <td class="px-4 py-3 text-orange-400 font-medium">LangSmith</td>
+            <td class="px-4 py-3 text-gray-400">Zero-config auto-tracing, deep LangChain integration</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">Self-hosting requirement</td>
+            <td class="px-4 py-3 text-purple-400 font-medium">Langfuse</td>
+            <td class="px-4 py-3 text-gray-400">Best self-hosted option (21K stars, Docker, mature)</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">ML research team</td>
+            <td class="px-4 py-3 text-yellow-400 font-medium">W&amp;B Weave</td>
+            <td class="px-4 py-3 text-gray-400">Already in W&amp;B ecosystem, eval-first workflow</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">Gateway/routing needed</td>
+            <td class="px-4 py-3 text-teal-400 font-medium">Portkey</td>
+            <td class="px-4 py-3 text-gray-400">Fallbacks, routing, virtual keys — observability is secondary</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">Enterprise on Datadog APM</td>
+            <td class="px-4 py-3 text-purple-400 font-medium">Datadog</td>
+            <td class="px-4 py-3 text-gray-400">LLM obs integrates with existing dashboards, alerting, SLAs</td>
+          </tr>
+          <tr class="bg-gray-950">
+            <td class="px-4 py-3 text-gray-300">Prompt eval focus</td>
+            <td class="px-4 py-3 text-rose-400 font-medium">Braintrust</td>
+            <td class="px-4 py-3 text-gray-400">Best eval framework, test datasets, structured comparisons</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">3 common evaluation mistakes</h2>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">Mistake 1: Evaluating based on the feature checklist</h3>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      Every tool has a feature comparison table on its pricing page. The problem: features are listed, not weighted.
+      "Supports custom metadata" appears in the same row as "built-in evaluation framework" — but for your use case,
+      one is essential and the other is irrelevant. Before reading any feature table, write down your top 3 requirements.
+      Then evaluate only on those.
+    </p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">Mistake 2: Evaluating at zero scale</h3>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      Tools that are free at zero scale often have steep pricing curves. Evaluate the pricing model at your expected
+      production volume, not at your dev/test volume. If you're planning to process 50,000 agent runs/month by Q3,
+      price that scenario for every tool you're evaluating. Usage-based tools look cheap in POCs and expensive in
+      production.
+    </p>
+
+    <h3 class="text-xl font-semibold text-white mt-8 mb-3">Mistake 3: Choosing based on framework auto-tracing</h3>
+    <p class="text-gray-400 leading-relaxed mb-6">
+      "Zero code changes" is compelling. But proxy-based and auto-tracing integrations often give you request logs,
+      not agent traces. If your agent has a loop that calls tools 8 times before finishing, a request log shows
+      you 8 separate events with no connection between them. An SDK-based trace shows you a single agent run
+      with 8 child spans in waterfall order. The extra 10 minutes of SDK setup is worth it for complex agents.
+    </p>
+
+    <h2 class="text-2xl font-bold text-white mt-10 mb-4">All comparison pages</h2>
+    <p class="text-gray-400 leading-relaxed mb-4">
+      If you want a detailed breakdown of Nexus vs a specific tool, we've written honest comparison pages for each:
+    </p>
+    <ul class="space-y-2 text-sm mb-8">
+      <li><a href="/vs/langfuse" class="text-indigo-400 hover:text-indigo-300">Nexus vs Langfuse</a> — hosted simplicity vs OSS self-hosting</li>
+      <li><a href="/vs/langsmith" class="text-indigo-400 hover:text-indigo-300">Nexus vs LangSmith</a> — framework-agnostic vs LangChain-native</li>
+      <li><a href="/vs/helicone" class="text-indigo-400 hover:text-indigo-300">Nexus vs Helicone</a> — SDK instrumentation vs proxy logging</li>
+      <li><a href="/vs/braintrust" class="text-indigo-400 hover:text-indigo-300">Nexus vs Braintrust</a> — production monitoring vs prompt evaluation</li>
+      <li><a href="/vs/arize-phoenix" class="text-indigo-400 hover:text-indigo-300">Nexus vs Arize Phoenix</a> — hosted vs self-hosted Jupyter-native</li>
+      <li><a href="/vs/agentops" class="text-indigo-400 hover:text-indigo-300">Nexus vs AgentOps</a> — trace/span model vs session-based monitoring</li>
+      <li><a href="/vs/datadog" class="text-indigo-400 hover:text-indigo-300">Nexus vs Datadog LLM Monitoring</a> — purpose-built vs bolted-on APM</li>
+      <li><a href="/vs/wandb" class="text-indigo-400 hover:text-indigo-300">Nexus vs Weights &amp; Biases Weave</a> — production monitoring vs experiment tracking</li>
+      <li><a href="/vs/portkey" class="text-indigo-400 hover:text-indigo-300">Nexus vs Portkey</a> — observability-first vs gateway-first</li>
+    </ul>
+
+    <p class="text-gray-400 leading-relaxed">
+      If you're still not sure, the fastest path is to run a POC with your actual agent code — most tools have free
+      tiers. Nexus has a free plan and takes under 2 minutes to set up. The decision matrix above is a starting
+      point; your own agent's requirements are the final word.
+    </p>`
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Choose an AI Observability Tool in 2026 | Nexus</title>
+  <meta name="description" content="A practical buyer's guide for evaluating AI observability tools: 5 criteria that matter (cost model, integration depth, data privacy, setup time, team fit), a decision matrix, and common mistakes.">
+  <link rel="canonical" href="https://nexus.keylightdigital.dev/blog/choose-ai-observability-tool">
+  <meta property="og:title" content="How to Choose an AI Observability Tool in 2026">
+  <meta property="og:description" content="5 criteria that actually matter, a decision matrix by team type, and 3 common evaluation mistakes. Honest and balanced.">
+  <meta property="og:url" content="https://nexus.keylightdigital.dev/blog/choose-ai-observability-tool">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Choose an AI Observability Tool in 2026">
+  <meta name="twitter:description" content="5 criteria that actually matter, decision matrix, and common evaluation mistakes. Covers Langfuse, LangSmith, Helicone, Braintrust, AgentOps, Datadog, W&B Weave, Portkey, Nexus.">
+  <script type="application/ld+json">${jsonLd}</script>
+  <link rel="stylesheet" href="/styles.css">
+  ${CF_ANALYTICS}
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  ${NAV}
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-12">
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="/blog" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">← Blog</a>
+      </div>
+      <h1 class="text-4xl font-bold text-white mb-4 leading-tight">How to Choose an AI Observability Tool in 2026</h1>
+      <div class="flex items-center gap-4 text-sm text-gray-500">
+        <span>${post.date}</span>
+        <span>·</span>
+        <span>${post.readingTime}</span>
+      </div>
+    </div>
+
+    <article class="prose-custom">
+      ${content}
+    </article>
+
+    <div class="mt-12 p-6 bg-gray-900 border border-indigo-800 rounded-xl">
+      <h3 class="text-lg font-bold text-white mb-2">Try Nexus free</h3>
+      <p class="text-gray-400 text-sm mb-4">1,000 traces/month, no credit card, under 2 minutes to set up. See if it fits.</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">Start free &#x2192;</a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors text-sm">View demo</a>
+      </div>
+    </div>
+
+    <div class="mt-8 border-t border-gray-800 pt-8">
+      <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">More articles</h3>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <a href="/blog/ai-observability-tools-compared" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-09 · 11 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">AI Observability Tools Compared: The 2026 Guide</p>
+        </a>
+        <a href="/blog/ai-agent-metrics" class="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
+          <p class="text-xs text-gray-500 mb-1">2026-04-09 · 8 min read</p>
+          <p class="text-sm font-medium text-white leading-snug">5 Metrics Every AI Agent Team Should Track</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-16 px-4 py-8">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <span>&#169; 2026 Keylight Digital LLC &#xB7; Built by Ralph (AI agent)</span>
+      <div class="flex items-center gap-6">
+        <a href="/docs" class="hover:text-gray-300 transition-colors">Docs</a>
+        <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
+        <a href="mailto:ralph@keylightdigital.dev" class="hover:text-gray-300 transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`
 }
 
 function aiAgentMetricsPost(): string {

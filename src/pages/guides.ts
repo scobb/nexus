@@ -2479,3 +2479,242 @@ async def run_agent(user_query: str) -> str:
 </body>
 </html>`
 }
+
+export function docsPythonQuickstartPage(): string {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Python AI Agent Tracing with Nexus — Quickstart Guide',
+    description: 'How to monitor Python AI agents using the Nexus SDK. Install, instrument, and view traces in under 5 minutes.',
+    step: [
+      { '@type': 'HowToStep', name: 'Install the SDK', text: 'Run: pip install keylightdigital-nexus' },
+      { '@type': 'HowToStep', name: 'Create an API key', text: 'Go to /dashboard/keys and create a new API key. Set it as NEXUS_API_KEY.' },
+      { '@type': 'HowToStep', name: 'Create a trace', text: 'Initialize NexusClient and call start_trace() before your agent runs.' },
+      { '@type': 'HowToStep', name: 'Add spans', text: 'Call add_span() for each sub-step: LLM calls, tool uses, data fetches.' },
+      { '@type': 'HowToStep', name: 'Finish the trace', text: 'Call end() with status="success" or "error" when the agent completes.' },
+    ],
+  })
+
+  const installCode = 'pip install keylightdigital-nexus'
+
+  const basicCode = [
+    'import os',
+    'from nexus_client import NexusClient',
+    '',
+    'nexus = NexusClient(',
+    '    api_key=os.environ["NEXUS_API_KEY"],',
+    '    base_url="https://nexus.keylightdigital.dev",',
+    '    agent_id="my-python-agent",',
+    ')',
+    '',
+    '# Start a trace for this agent run',
+    'trace = nexus.start_trace(name="Summarize document")',
+    '',
+    '# Add a span for each step',
+    'span = trace.add_span(',
+    '    name="fetch_document",',
+    '    input={"url": "https://example.com/doc.pdf"},',
+    ')',
+    '# ... do work ...',
+    'span.end(output={"chars": 4200}, status="ok")',
+    '',
+    'llm_span = trace.add_span(',
+    '    name="llm_summarize",',
+    '    input={"model": "gpt-4o", "prompt_tokens": 2100},',
+    ')',
+    '# ... call LLM ...',
+    'llm_span.end(output={"summary": "...", "completion_tokens": 420}, status="ok")',
+    '',
+    '# Finish the trace',
+    'trace.end(status="success")',
+  ].join('\n')
+
+  const errorCode = [
+    'trace = nexus.start_trace(name="Process order")',
+    'span = trace.add_span(name="validate_payment")',
+    '',
+    'try:',
+    '    result = process_payment(order)',
+    '    span.end(output={"result": result}, status="ok")',
+    '    trace.end(status="success")',
+    'except Exception as e:',
+    '    span.end(error=str(e), status="error")',
+    '    trace.end(status="error", metadata={"error": str(e)})',
+  ].join('\n')
+
+  const asyncCode = [
+    'import asyncio',
+    'import os',
+    'from nexus_client import NexusClient',
+    '',
+    'nexus = NexusClient(',
+    '    api_key=os.environ["NEXUS_API_KEY"],',
+    '    base_url="https://nexus.keylightdigital.dev",',
+    '    agent_id="async-agent",',
+    ')',
+    '',
+    'async def run_agent(query: str) -> str:',
+    '    trace = nexus.start_trace(name="async_query", metadata={"query": query})',
+    '    span = trace.add_span(name="llm_call", input={"query": query})',
+    '    try:',
+    '        response = await call_llm_async(query)',
+    '        span.end(output={"response": response}, status="ok")',
+    '        trace.end(status="success")',
+    '        return response',
+    '    except Exception as e:',
+    '        span.end(error=str(e), status="error")',
+    '        trace.end(status="error")',
+    '        raise',
+    '',
+    'asyncio.run(run_agent("What is 2 + 2?"))',
+  ].join('\n')
+
+  const metadataCode = [
+    'trace = nexus.start_trace(',
+    '    name="research_task",',
+    '    metadata={',
+    '        "model": "claude-3-5-sonnet",',
+    '        "user_id": "usr_123",',
+    '        "session_id": "ses_abc",',
+    '        "environment": "production",',
+    '    },',
+    ')',
+    '',
+    'span = trace.add_span(',
+    '    name="web_search",',
+    '    input={"query": "latest AI news", "max_results": 5},',
+    ')',
+    'results = search_web("latest AI news")',
+    'span.end(',
+    '    output={"count": len(results), "sources": [r["url"] for r in results]},',
+    '    status="ok",',
+    ')',
+  ].join('\n')
+
+  return `${guideHead(
+    'Python AI Agent Tracing with Nexus \u2014 Quickstart Guide',
+    'Monitor Python AI agents with Nexus. Install the SDK, add traces and spans, and view waterfall dashboards in under 5 minutes. Works with any Python agent.',
+    'https://nexus.keylightdigital.dev/docs/python-quickstart',
+    jsonLd,
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
+
+    <p class="text-sm text-gray-500 mb-6">
+      <a href="/docs" class="text-indigo-400 hover:text-indigo-300">Docs</a>
+      <span class="mx-2">\u203a</span>
+      <span class="text-gray-400">Python Quickstart</span>
+    </p>
+
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Quickstart Guide</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Python Quickstart</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Instrument any Python AI agent with Nexus in under 5 minutes. Works with LangChain, CrewAI,
+        Pydantic AI, AutoGen, raw API calls \u2014 any pattern.
+      </p>
+    </div>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">Before you start</h2>
+      <ul class="text-sm text-gray-300 space-y-2">
+        <li>\u2713 Python 3.8 or higher</li>
+        <li>\u2713 A free Nexus account \u2014 <a href="/register" class="text-indigo-400 hover:text-indigo-300">sign up here</a></li>
+        <li>\u2713 An API key from <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a></li>
+      </ul>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 1 \u2014 Install the SDK</h2>
+      ${codeBlock(installCode, 'bash')}
+      <p class="text-sm text-gray-500 mt-2">Requires only Python stdlib. No heavy dependencies. Python 3.8+ compatible.</p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 2 \u2014 Set your API key</h2>
+      <p class="text-gray-400 mb-4">
+        Create an API key at <a href="/dashboard/keys" class="text-indigo-400 hover:text-indigo-300">/dashboard/keys</a>,
+        then set it as an environment variable:
+      </p>
+      ${codeBlock('export NEXUS_API_KEY="nxs_your_api_key_here"', 'bash')}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 3 \u2014 Create your first trace</h2>
+      <p class="text-gray-400 mb-4">
+        Wrap your agent run with a trace, and add a span for each step \u2014 LLM calls, tool uses, API fetches:
+      </p>
+      ${codeBlock(basicCode, 'python')}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 4 \u2014 Handle errors</h2>
+      <p class="text-gray-400 mb-4">
+        Wrap your logic in try/except and set <code class="text-indigo-300">status="error"</code> on failure.
+        Error traces trigger email alerts for Pro users.
+      </p>
+      ${codeBlock(errorCode, 'python')}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 5 \u2014 Async support</h2>
+      <p class="text-gray-400 mb-4">
+        The SDK is fully compatible with async/await. SDK calls are synchronous by default \u2014
+        for non-blocking async use, wrap with <code class="text-indigo-300">asyncio.to_thread()</code>:
+      </p>
+      ${codeBlock(asyncCode, 'python')}
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-4">Step 6 \u2014 Add metadata for filtering</h2>
+      <p class="text-gray-400 mb-4">
+        Attach arbitrary metadata to traces and spans to filter and debug in the dashboard:
+      </p>
+      ${codeBlock(metadataCode, 'python')}
+    </section>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-2">View your traces</h2>
+      <p class="text-gray-400 text-sm mb-4">
+        Open <a href="/dashboard/traces" class="text-indigo-400 hover:text-indigo-300">/dashboard/traces</a>
+        to see a waterfall view of every run \u2014 spans, durations, inputs, and outputs.
+      </p>
+      <a href="/demo" class="text-sm text-indigo-400 hover:text-indigo-300">See a demo trace &#x2192;</a>
+    </section>
+
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">Framework-specific guides</h2>
+      <p class="text-gray-400 text-sm mb-4">Using a specific Python framework? These guides show integration patterns tailored to each:</p>
+      <ul class="space-y-2 text-sm">
+        <li><a href="/docs/langchain" class="text-indigo-400 hover:text-indigo-300">LangChain integration guide</a></li>
+        <li><a href="/docs/crewai" class="text-indigo-400 hover:text-indigo-300">CrewAI integration guide</a></li>
+        <li><a href="/docs/autogen" class="text-indigo-400 hover:text-indigo-300">AutoGen (AG2) integration guide</a></li>
+        <li><a href="/docs/pydantic-ai" class="text-indigo-400 hover:text-indigo-300">Pydantic AI integration guide</a></li>
+        <li><a href="/docs/dspy" class="text-indigo-400 hover:text-indigo-300">DSPy integration guide</a></li>
+        <li><a href="/docs/llamaindex" class="text-indigo-400 hover:text-indigo-300">LlamaIndex integration guide</a></li>
+        <li><a href="/docs/google-adk" class="text-indigo-400 hover:text-indigo-300">Google ADK integration guide</a></li>
+      </ul>
+    </section>
+
+    <section class="bg-indigo-950 border border-indigo-800 rounded-2xl px-8 py-10 text-center">
+      <h2 class="text-2xl font-bold text-white mb-3">Start monitoring your Python agents</h2>
+      <p class="text-gray-400 mb-6 max-w-lg mx-auto">
+        Free plan: 1,000 traces/month. No credit card needed. Setup in under 5 minutes.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          Start free &#x2192;
+        </a>
+        <a href="/demo" class="inline-block bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+          View demo
+        </a>
+      </div>
+    </section>
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}

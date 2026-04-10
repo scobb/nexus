@@ -872,6 +872,15 @@ ${navBar}
               <td class="px-4 py-3 text-gray-400">Limited</td>
               <td class="px-4 py-3 text-gray-300">ML teams running LLM experiments</td>
             </tr>
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-4 py-3 font-semibold text-teal-400">
+                <a href="/vs/portkey" class="hover:text-teal-300">Portkey</a>
+              </td>
+              <td class="px-4 py-3 text-gray-300">$0 / Usage-based</td>
+              <td class="px-4 py-3 text-green-400">&#10003; Hosted</td>
+              <td class="px-4 py-3 text-green-400">&#10003; Yes</td>
+              <td class="px-4 py-3 text-gray-300">LLM gateway routing, multi-provider switching</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -1071,6 +1080,28 @@ ${navBar}
           to the experiment-tracking core.
         </p>
         <a href="/vs/wandb" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs W&amp;B Weave →</a>
+      </div>
+
+      <!-- Portkey -->
+      <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-teal-400">Portkey</h3>
+            <p class="text-sm text-gray-400">AI gateway with routing, fallbacks, and LLM request logging</p>
+          </div>
+          <span class="bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1 rounded-full">Alternative</span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Pricing</p><p class="text-sm text-white">$0 free · Usage-based</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Hosting</p><p class="text-sm text-white">Hosted (+ self-hosted OSS)</p></div>
+          <div><p class="text-xs text-gray-500 uppercase tracking-widest mb-1">SDKs</p><p class="text-sm text-white">TypeScript + Python (proxy)</p></div>
+        </div>
+        <p class="text-sm text-gray-300 mb-4">
+          Best for teams that need LLM gateway features: route between providers, add fallbacks, manage API keys centrally,
+          and cache responses. Proxy-based approach captures LLM calls automatically. Agent-level trace/span depth is limited
+          compared to instrumentation-first tools.
+        </p>
+        <a href="/vs/portkey" class="text-sm text-indigo-400 hover:text-indigo-300">Nexus vs Portkey →</a>
       </div>
 
     </section>
@@ -1884,6 +1915,217 @@ ${navBar}
     </section>
 
     ${comparisonRelated('/blog/ai-agent-metrics', '5 Metrics Every AI Agent Team Should Track')}
+
+    ${ctaSection()}
+  </div>
+
+  ${footer()}
+</body>
+</html>`
+}
+
+export function vsPortkeyPage(): string {
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Nexus vs Portkey — AI Agent Observability vs AI Gateway",
+    "description": "Nexus vs Portkey for AI agent developers: purpose-built agent observability at $9/mo vs Portkey's AI gateway with routing, fallbacks, and load balancing. Pricing, features, and honest tradeoffs.",
+    "url": "https://nexus.keylightdigital.dev/vs/portkey",
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Feature Comparison: Nexus vs Portkey",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Nexus — AI-native agent trace/span observability at $9/mo flat" },
+        { "@type": "ListItem", "position": 2, "name": "Portkey — AI gateway with routing, fallbacks, and LLM request logging" }
+      ]
+    }
+  })
+
+  return `${comparisonHead(
+    'Nexus vs Portkey — AI Observability vs AI Gateway',
+    "Nexus vs Portkey for AI developers: agent observability at $9/mo flat vs Portkey's AI gateway with routing and fallbacks. Pricing, integration depth, and honest tradeoffs.",
+    'https://nexus.keylightdigital.dev/vs/portkey',
+  )}
+<body class="bg-gray-950 text-white min-h-screen">
+${navBar}
+  <script type="application/ld+json">${structuredData}</script>
+
+  <div id="main-content" class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">Comparison</p>
+      <h1 class="text-4xl font-extrabold text-white mb-4">Nexus vs Portkey</h1>
+      <p class="text-xl text-gray-400 max-w-2xl">
+        Portkey is an AI gateway with built-in observability. Nexus is an observability tool without a gateway.
+        Here is an honest look at when each approach makes more sense for AI agent developers.
+      </p>
+    </div>
+
+    <!-- TL;DR -->
+    <section class="bg-gray-900 border border-gray-800 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-4">TL;DR</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-indigo-400 mb-2">Choose Nexus if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Need deep agent trace/span observability with span waterfall views</li>
+            <li>&#10003; Want flat-rate predictable pricing ($9/mo — no per-request charges)</li>
+            <li>&#10003; Are monitoring multi-step agents with complex tool use and sub-agents</li>
+            <li>&#10003; Want TypeScript-first SDK with zero proxy dependencies</li>
+            <li>&#10003; Need email alerts when agents fail in production (Pro)</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+          <p class="font-semibold text-teal-400 mb-2">Choose Portkey if you...</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Need model routing, fallbacks, or load balancing across LLM providers</li>
+            <li>&#10003; Want automatic request-level logging without SDK instrumentation</li>
+            <li>&#10003; Require multi-provider LLM switching (OpenAI, Anthropic, Gemini, etc.)</li>
+            <li>&#10003; Need rate limiting, caching, or virtual keys for API management</li>
+            <li>&#10003; Want a single gateway for all LLM provider calls across your stack</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key difference callout -->
+    <section class="bg-gray-900 border border-amber-800/40 rounded-2xl px-6 py-6 mb-10">
+      <h2 class="text-lg font-bold text-white mb-3">The fundamental difference: observability vs gateway</h2>
+      <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Portkey is gateway-first:</strong> your LLM calls route through Portkey's
+          proxy, which automatically logs every request and response. This zero-instrumentation approach captures
+          all LLM calls without code changes, but the mental model is a request/response log — not an agent
+          trace with nested spans, tool calls, and multi-step reasoning.
+        </p>
+        <p>
+          <strong class="text-white">Nexus is observability-first:</strong> you instrument your agent code with
+          the SDK to create traces and spans that map directly to agent behavior. Each trace is a complete agent
+          run; each span is a specific step (LLM call, tool use, sub-agent invocation). The result is a waterfall
+          view that shows exactly what happened inside a complex, multi-step agent workflow.
+        </p>
+        <p>
+          The result: Portkey captures what you send to LLM APIs; Nexus captures what your agent actually does.
+          If your application is primarily direct LLM calls (not multi-step agents), Portkey's proxy logging is
+          simpler. If you are running complex agents with branching logic, tool use, and sub-agents, Nexus
+          gives you the trace depth that proxy logging cannot.
+        </p>
+      </div>
+    </section>
+
+    <!-- Pricing comparison -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Pricing</h2>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div class="bg-gray-900 border border-indigo-800 rounded-2xl px-6 py-6">
+          <h3 class="text-lg font-bold text-indigo-400 mb-1">Nexus</h3>
+          <p class="text-3xl font-extrabold text-white mb-1">$9<span class="text-base font-normal text-gray-400">/mo</span></p>
+          <p class="text-sm text-gray-400 mb-4">Flat-rate — no per-request charges</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Free tier: 1,000 traces/month</li>
+            <li>&#10003; Pro: 50,000 traces, unlimited agents</li>
+            <li>&#10003; No per-token or per-request fees</li>
+            <li>&#10003; Email alerts on failure (Pro)</li>
+            <li>&#10003; TypeScript + Python SDK (MIT)</li>
+          </ul>
+        </div>
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl px-6 py-6">
+          <h3 class="text-lg font-bold text-teal-400 mb-1">Portkey</h3>
+          <p class="text-3xl font-extrabold text-white mb-1">Usage<span class="text-base font-normal text-gray-400">-based</span></p>
+          <p class="text-sm text-gray-400 mb-4">Free tier; paid tiers scale with request volume</p>
+          <ul class="text-sm text-gray-300 space-y-1.5">
+            <li>&#10003; Free tier: 10,000 requests/month</li>
+            <li>&#10003; Growth: usage-based per request</li>
+            <li>&#10003; AI gateway + routing + fallbacks</li>
+            <li>&#10003; Virtual API keys, caching, rate limiting</li>
+            <li>&#10003; TypeScript + Python (proxy-based)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature comparison table -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">Feature comparison</h2>
+      <div class="overflow-x-auto rounded-2xl border border-gray-800">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900">
+              <th class="text-left px-5 py-3 text-gray-400 font-medium">Feature</th>
+              <th class="text-center px-5 py-3 text-indigo-400 font-semibold">Nexus</th>
+              <th class="text-center px-5 py-3 text-teal-400 font-semibold">Portkey</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            ${[
+              ['Agent trace &amp; span model', '&#10003; Purpose-built', '&#8212; (request logs only)'],
+              ['Span waterfall view', '&#10003;', '&#8212;'],
+              ['Multi-step agent debugging', '&#10003; Deep', 'Limited'],
+              ['Real-time error alerts', '&#10003; (Pro)', '&#8212;'],
+              ['TypeScript SDK', '&#10003; Open-source', '&#10003; (proxy-based)'],
+              ['Python SDK', '&#10003; Open-source', '&#10003; (proxy-based)'],
+              ['Flat-rate pricing', '&#10003; $9/mo', '&#8212; (usage-based)'],
+              ['AI model routing / fallbacks', '&#8212;', '&#10003; Core feature'],
+              ['Multi-provider LLM switching', '&#8212;', '&#10003;'],
+              ['Virtual API keys', '&#8212;', '&#10003;'],
+              ['LLM response caching', '&#8212;', '&#10003;'],
+              ['Rate limiting', '&#8212;', '&#10003;'],
+              ['Zero-code instrumentation', '&#8212; (SDK needed)', '&#10003; (proxy-based)'],
+              ['Setup time', '&lt; 2 min', '5&ndash;10 min (proxy setup)'],
+              ['Self-hosted option', '&#8212;', '&#10003; (open-source)'],
+            ].map((row) => {
+              const feat = row[0] ?? ''
+              const nexus = row[1] ?? ''
+              const portkey = row[2] ?? ''
+              return `
+            <tr class="bg-gray-950 hover:bg-gray-900 transition-colors">
+              <td class="px-5 py-3 text-gray-300">${feat}</td>
+              <td class="px-5 py-3 text-center ${nexus.includes('&#8212;') ? 'text-gray-600' : 'text-green-400'}">${nexus}</td>
+              <td class="px-5 py-3 text-center ${portkey.includes('&#8212;') ? 'text-gray-600' : 'text-green-400'}">${portkey}</td>
+            </tr>`
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The honest take -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-white mb-6">The honest take</h2>
+      <div class="space-y-5 text-gray-300 leading-relaxed">
+        <p>
+          <strong class="text-white">Portkey is genuinely useful for AI gateway concerns.</strong>
+          If you need to route between GPT-4o and Claude based on cost or latency, fall back to a
+          secondary model when your primary is down, or manage API keys centrally across a team,
+          Portkey solves these problems well. The proxy approach means zero code changes to your
+          existing LLM calls — just swap the base URL.
+        </p>
+        <p>
+          <strong class="text-white">The gap is depth of observability for agent workflows.</strong>
+          Portkey logs LLM requests and responses, which is useful for debugging individual calls.
+          But when your agent makes 15 LLM calls, 8 tool invocations, and spawns 3 sub-agents over
+          a 45-second run, a flat request log cannot tell you which step caused the failure or how
+          long each segment took relative to the others. That is what Nexus's trace/span model
+          was built for.
+        </p>
+        <p>
+          <strong class="text-white">They can be complementary.</strong>
+          Some teams use Portkey for gateway concerns (routing, fallbacks, cost optimization)
+          and Nexus for agent-level observability (trace waterfall, error alerts, per-agent health).
+          The SDKs do not conflict — you can route through Portkey while instrumenting your agent
+          logic with Nexus spans. That said, if budget is tight, prioritize based on your primary
+          pain point: gateway routing or agent debugging.
+        </p>
+        <p>
+          The pricing model also differs meaningfully: Nexus at $9/mo flat is predictable regardless
+          of how many requests your agent makes. Portkey's usage-based pricing can be cheaper at low
+          volume but scales with request count — which can add up for high-throughput production agents.
+        </p>
+      </div>
+    </section>
+
+    ${comparisonRelated('/blog/opentelemetry-ai-agents', 'OpenTelemetry for AI Agents: Why Standard APM Falls Short')}
 
     ${ctaSection()}
   </div>

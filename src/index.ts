@@ -6,9 +6,9 @@ import { landingPage } from './pages/landing'
 import { notFoundPage } from './pages/notFound'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
-import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage, docsGoogleADKPage } from './pages/guides'
+import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage, docsGoogleADKPage, docsPythonQuickstartPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
-import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, vsDatadogPage, vsWandbPage, alternativesPage } from './pages/comparison'
+import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, vsDatadogPage, vsWandbPage, vsPortkeyPage, alternativesPage } from './pages/comparison'
 import { dashboardPage, type DashboardMetrics, type AgentHealth, type DayCount, type HourCount } from './pages/dashboard'
 import { requireAuth } from './middleware/requireAuth'
 import authRoutes from './routes/auth'
@@ -56,8 +56,12 @@ const SITE_URLS = [
   `${SITE_BASE}/vs/braintrust`,
   `${SITE_BASE}/vs/datadog`,
   `${SITE_BASE}/vs/wandb`,
+  `${SITE_BASE}/vs/portkey`,
   `${SITE_BASE}/blog`,
   `${SITE_BASE}/docs/google-adk`,
+  `${SITE_BASE}/docs/python-quickstart`,
+  `${SITE_BASE}/blog/multi-agent-observability-patterns`,
+  `${SITE_BASE}/blog/choose-ai-observability-tool`,
   `${SITE_BASE}/blog/ai-agent-cost-guide`,
   `${SITE_BASE}/blog/opentelemetry-ai-agents`,
   `${SITE_BASE}/blog/langchain-tracing-tutorial`,
@@ -351,12 +355,17 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/vs/braintrust`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/datadog`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/vs/wandb`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/vs/portkey`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/google-adk`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/python-quickstart`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/blog/debugging-ai-agents-in-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/autonomous-agent-observability`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/monitoring-rag-pipelines`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/monitor-ai-agents-production`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/blog/introducing-nexus`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${base}/blog/choose-ai-observability-tool`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/blog/multi-agent-observability-patterns`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/changelog`, priority: '0.7', changefreq: 'weekly' },
     { loc: `${base}/demo/traces/demo-t1`, priority: '0.6', changefreq: 'monthly' },
     { loc: `${base}/demo/traces/demo-t3`, priority: '0.6', changefreq: 'monthly' },
@@ -443,6 +452,7 @@ app.get('/docs/pydantic-ai', (c) => c.html(docsPydanticAIPage()))
 app.get('/docs/llamaindex', (c) => c.html(docsLlamaIndexPage()))
 app.get('/docs/dspy', (c) => c.html(docsDSPyPage()))
 app.get('/docs/google-adk', (c) => c.html(docsGoogleADKPage()))
+app.get('/docs/python-quickstart', (c) => c.html(docsPythonQuickstartPage()))
 
 // SEO comparison pages
 app.get('/vs/langfuse', (c) => c.html(vsLangfusePage()))
@@ -453,6 +463,7 @@ app.get('/vs/helicone', (c) => c.html(vsHeliconePage()))
 app.get('/vs/braintrust', (c) => c.html(vsBraintrustPage()))
 app.get('/vs/datadog', (c) => c.html(vsDatadogPage()))
 app.get('/vs/wandb', (c) => c.html(vsWandbPage()))
+app.get('/vs/portkey', (c) => c.html(vsPortkeyPage()))
 app.get('/alternatives', (c) => c.html(alternativesPage()))
 
 // /register is the public CTA — redirect to signup page
