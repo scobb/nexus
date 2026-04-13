@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8787'
+const isRemote = !!process.env.BASE_URL
+
 export default defineConfig({
   testDir: './test/smoke',
   fullyParallel: false, // run serially to avoid DB conflicts on shared local instance
@@ -7,7 +10,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: 'line',
   use: {
-    baseURL: 'http://localhost:8787',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -20,12 +23,17 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] }, // 390px width — validates no horizontal overflow
     },
   ],
-  webServer: {
-    command: 'npx wrangler dev --local',
-    url: 'http://localhost:8787',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-  },
+  // Only start local dev server when BASE_URL is not set
+  ...(isRemote
+    ? {}
+    : {
+        webServer: {
+          command: 'npx wrangler dev --local',
+          url: 'http://localhost:8787',
+          reuseExistingServer: !process.env.CI,
+          timeout: 60_000,
+          stdout: 'ignore',
+          stderr: 'pipe',
+        },
+      }),
 })

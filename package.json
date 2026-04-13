@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\"",
     "test:smoke": "playwright test",
+    "test:smoke:staging": "BASE_URL=https://nexus-staging.stevencolecobb.workers.dev playwright test",
+    "test:smoke:prod": "BASE_URL=https://nexus.keylightdigital.dev SKIP_AUTH_TESTS=1 playwright test",
     "test:webhooks": "npx tsx test/stripe-webhooks.ts",
     "migrations:local": "wrangler d1 migrations apply nexus-db --local",
     "migrations:staging": "wrangler d1 migrations apply nexus-db-staging --env staging --remote"
