@@ -1,3 +1,38 @@
 # Ralph Progress Log
-Started: Sun Apr 12 10:38:24 AM PDT 2026
+Started: Sun Apr 12 07:08:41 PM PDT 2026
+---
+
+## Codebase Patterns
+- D1 queries on `subscriptions` table: Use `ORDER BY rowid DESC LIMIT 1` NOT `ORDER BY created_at DESC` — the billing route already did this correctly; agents/settings/dashboard had a bug using `created_at` which didn't exist until migration 0008
+- Migration tracking: Production D1 migrations were applied manually (outside Wrangler), causing d1_migrations table to be out of sync. Fix: INSERT rows into d1_migrations to mark them as applied, then redeploy
+- Smoke test helpers: `hasTestEndpoints` flag gates all bootstrap-dependent tests. Set `SKIP_AUTH_TESTS=1` for production runs. `BASE_URL` env var switches playwright.config.ts between local dev server and remote
+- Playwright form submissions: Use `Promise.all([page.waitForLoadState('networkidle'), page.click('button[type="submit"]')])` to wait for POST navigation. HTML5 `required` validation blocks empty submissions — use `page.evaluate()` to remove `required` before testing server-side validation
+- Revoke form has `onsubmit="return confirm(...)"` — use REST DELETE endpoint instead of browser form click for cleaner testing
+- KV eventual consistency: Don't test browser-redirect behavior after logout against staging/prod — KV writes can take seconds to propagate across edge. Test the API response (redirect status code) instead
+
+## [2026-04-13] - ACP-159
+- Implemented comprehensive Playwright smoke test suite for all core user flows
+- Files changed:
+  - playwright.config.ts — configurable BASE_URL (remote skips local server)
+  - test/smoke/helpers.ts — dynamic cookie domain, hasTestEndpoints flag
+  - test/smoke/keys.spec.ts — API key create, list, revoke (NEW)
+  - test/smoke/dashboard.spec.ts — dashboard home, metrics, plan indicator (NEW)
+  - test/smoke/agents.spec.ts — agents list, agent detail (NEW)
+  - test/smoke/settings.spec.ts — settings page, webhook validation (NEW)
+  - test/smoke/public.spec.ts — pricing, docs, demo, blog, sitemap, robots.txt (NEW)
+  - test/smoke/auth.spec.ts — refactored to separate public/authenticated groups
+  - test/smoke/api.spec.ts — restructured with hasTestEndpoints guards
+  - test/smoke/billing.spec.ts — added hasTestEndpoints guard
+  - test/smoke/traces.spec.ts — added hasTestEndpoints guard
+  - CLAUDE.md — smoke test location and run commands (NEW)
+  - package.json — test:smoke:staging, test:smoke:prod scripts
+  - migrations/0008_subscriptions_created_at.sql — bug fix (NEW)
+- Bug found and fixed: subscriptions table missing created_at column caused 500 errors on dashboard, agents, settings routes for ALL users (SQL parser rejects ORDER BY on unknown column even with 0 rows). Billing route used ORDER BY rowid DESC correctly — other routes didn't.
+- Production migration tracking was out of sync (0004-0007 applied manually, not via Wrangler). Fixed by inserting records into d1_migrations table.
+- Test results: 63/63 pass on staging, 27 pass + 36 skip on production (skips = bootstrap-dependent tests correctly gated from prod)
+- **Learnings for future iterations:**
+  - Always use `ORDER BY rowid DESC` on subscriptions (or any table without created_at)
+  - Set SKIP_AUTH_TESTS=1 when running smoke tests against production
+  - Production d1_migrations table was not tracking all applied migrations — future migrations should apply cleanly now
+  - The /test/bootstrap endpoint returns 404 on production (ENVIRONMENT=production guard in index.ts)
 ---
