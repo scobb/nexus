@@ -508,6 +508,7 @@ export function landingPage(deletedMessage?: boolean): string {
     <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
       <span><strong class="text-gray-400">Nexus</strong> by Keylight Digital LLC</span>
       <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="/changelog" class="hover:text-gray-300 transition-colors">Changelog</a>
         <a href="/privacy" class="hover:text-gray-300 transition-colors">Privacy</a>
         <a href="/terms" class="hover:text-gray-300 transition-colors">Terms</a>
         <span>ralph@keylightdigital.dev</span>

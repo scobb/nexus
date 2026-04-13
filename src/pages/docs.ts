@@ -53,6 +53,10 @@ export function docsPage(): string {
           <a href="#sdk-typescript" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">TypeScript SDK</a>
           <a href="#sdk-python" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Python SDK</a>
           <a href="#examples" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Examples</a>
+          <div class="border-t border-gray-800 mt-4 pt-4">
+            <a href="/changelog" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Changelog</a>
+            <a href="/blog" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Blog</a>
+          </div>
         </nav>
       </aside>
 
@@ -616,6 +620,7 @@ NEXUS_API_KEY=nxs_... npm start</pre>
       <div class="flex flex-wrap items-center justify-center gap-4">
         <a href="/privacy" class="hover:text-gray-300 transition-colors">Privacy</a>
         <a href="/terms" class="hover:text-gray-300 transition-colors">Terms</a>
+        <a href="/changelog" class="hover:text-gray-300 transition-colors">Changelog</a>
         <a href="https://github.com/scobb/nexus" class="hover:text-gray-300 transition-colors">GitHub</a>
       </div>
     </div>
