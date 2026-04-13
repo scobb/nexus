@@ -66,9 +66,29 @@ If staging secrets need to be rotated:
 echo "new_value" | npx wrangler secret put SECRET_NAME --env staging
 ```
 
+## Smoke Tests
+
+See `CLAUDE.md` for full smoke test documentation.
+
+```bash
+npm run typecheck         # TypeScript type check (must pass before commit)
+npm run test:smoke        # Run against local dev server
+npm run test:smoke:staging  # Run against staging (BASE_URL set automatically)
+npm run test:smoke:prod   # Run against production (SKIP_AUTH_TESTS=1 set automatically)
+```
+
+### Key smoke test patterns
+- `hasTestEndpoints` flag in helpers.ts: `true` for local and staging (where /test/bootstrap works), `false` for production
+- Set `SKIP_AUTH_TESTS=1` in production runs — all bootstrap-dependent tests are gated on `hasTestEndpoints`
+- Production runs expect: some tests skipped (bootstrap-dependent), rest pass
+
+## Known DB Patterns
+- `subscriptions` table: use `ORDER BY rowid DESC LIMIT 1` when querying "latest subscription". The `billing.ts` route does this correctly. Do NOT use `ORDER BY created_at DESC` — the column exists (migration 0008) but rowid is more reliable.
+- Migration tracking: Production d1_migrations may lag behind actual schema if migrations were applied manually. Check with `SELECT name FROM d1_migrations ORDER BY id` before deploying.
+
 ## Quality Checks
 
 ```bash
-npm run typecheck   # TypeScript type check (must pass before commit)
-npm run test        # Playwright smoke tests
+npm run typecheck         # TypeScript type check (must pass before commit)
+npm run test:smoke        # Playwright smoke tests (local)
 ```
