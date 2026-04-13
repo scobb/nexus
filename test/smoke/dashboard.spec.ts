@@ -133,12 +133,15 @@ test.describe('Dashboard home', () => {
     expect(content).not.toContain('onboarding-widget')
   })
 
-  test('onboarding widget: polling endpoint returns hasTrace', async ({ request, context }) => {
+  test('onboarding widget: polling endpoint returns hasTrace', async ({ page, request, context }) => {
     const user = await bootstrap(request, { plan: 'free' })
-    await context.addCookies([{ name: 'session', value: user.sessionId, domain: new URL(process.env.BASE_URL || 'http://localhost:8787').hostname, path: '/' }])
+    await authenticate(context, user.sessionId)
+
+    // Navigate first so the browser context has auth cookies for page.request
+    await page.goto('/dashboard')
 
     // Before any trace: hasTrace should be false
-    const before = await request.get('/dashboard/onboarding/check')
+    const before = await page.request.get('/dashboard/onboarding/check')
     expect(before.status()).toBe(200)
     const beforeData = await before.json() as { hasTrace: boolean }
     expect(beforeData.hasTrace).toBe(false)
@@ -155,7 +158,7 @@ test.describe('Dashboard home', () => {
     })
 
     // After trace: hasTrace should be true
-    const after = await request.get('/dashboard/onboarding/check')
+    const after = await page.request.get('/dashboard/onboarding/check')
     expect(after.status()).toBe(200)
     const afterData = await after.json() as { hasTrace: boolean }
     expect(afterData.hasTrace).toBe(true)
