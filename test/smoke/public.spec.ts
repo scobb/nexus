@@ -252,6 +252,87 @@ test.describe('Public pages', () => {
     expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 2)
   })
 
+  test('ACP-165: /docs/api-reference has playground section with endpoint selector and send button', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    const content = await page.content()
+    // Playground section
+    expect(content).toContain('id="playground"')
+    expect(content).toContain('API Playground')
+    expect(content).toContain('pg-api-key')
+    expect(content).toContain('pg-endpoint')
+    expect(content).toContain('pg-send-btn')
+    expect(content).toContain('pg-curl')
+    expect(content).toContain('pg-response-area')
+    // Endpoint options
+    expect(content).toContain('get-health')
+    expect(content).toContain('post-trace')
+    expect(content).toContain('post-span')
+    expect(content).toContain('patch-trace')
+    expect(content).toContain('get-trace')
+    // sessionStorage mention
+    expect(content).toContain('sessionStorage')
+    // Sidebar link
+    expect(content).toContain('href="#playground"')
+  })
+
+  test('ACP-165: playground sidebar link and GET /health visible', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    // The sidebar should have a Playground anchor
+    const sidebarLink = await page.locator('a[href="#playground"]').first()
+    await expect(sidebarLink).toBeVisible()
+    // Health endpoint option present
+    const endpointSel = await page.locator('#pg-endpoint')
+    await expect(endpointSel).toBeVisible()
+    const opts = await endpointSel.locator('option').allTextContents()
+    expect(opts.some(o => o.includes('health'))).toBeTruthy()
+  })
+
+  test('ACP-165: playground curl command updates on endpoint change', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    await page.waitForFunction(() => document.getElementById('pg-curl')?.textContent?.includes('curl'))
+    // Select POST /traces
+    await page.selectOption('#pg-endpoint', 'post-trace')
+    const curl1 = await page.locator('#pg-curl').textContent()
+    expect(curl1).toContain('/api/v1/traces')
+    // Select GET /health
+    await page.selectOption('#pg-endpoint', 'get-health')
+    const curl2 = await page.locator('#pg-curl').textContent()
+    expect(curl2).toContain('/health')
+  })
+
+  test('ACP-165: playground GET /health send returns 200 ok', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    await page.waitForFunction(() => typeof window.pgSend === 'function')
+    await page.selectOption('#pg-endpoint', 'get-health')
+    await page.click('#pg-send-btn')
+    // Wait for response area to appear
+    await page.waitForSelector('#pg-response-area:not(.hidden)', { timeout: 10000 })
+    const badge = await page.locator('#pg-status-badge').textContent()
+    expect(badge?.trim()).toBe('200')
+    const body = await page.locator('#pg-response-body').textContent()
+    expect(body).toContain('"status"')
+    expect(body).toContain('"ok"')
+  })
+
+  test('ACP-165: playground API key stored in sessionStorage', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    await page.waitForFunction(() => typeof window.pgSaveKey === 'function')
+    // Type a fake key
+    await page.fill('#pg-api-key', 'nxs_test_key_abc123')
+    await page.dispatchEvent('#pg-api-key', 'input')
+    // Verify sessionStorage
+    const stored = await page.evaluate(() => sessionStorage.getItem('nexus_pg_key'))
+    expect(stored).toBe('nxs_test_key_abc123')
+  })
+
+  test('ACP-165: mobile /docs/api-reference playground has no horizontal overflow at 375px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/docs/api-reference')
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
+    const viewportWidth = await page.evaluate(() => window.innerWidth)
+    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 2)
+  })
+
   test('mobile: /pricing has no horizontal overflow at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/pricing')
