@@ -2510,7 +2510,7 @@
       "id": "ACP-162",
       "title": "Dashboard onboarding widget for new users with zero traces",
       "priority": 162,
-      "passes": false,
+      "passes": true,
       "description": "When a new user signs up and has zero traces, the empty dashboard is a dead end. Replace it with an interactive getting-started widget that walks them through sending their first trace. Show code snippets they can copy-paste, with tabs for Python/TypeScript/curl. The widget should feel like a guided tutorial, not a wall of text.",
       "acceptanceCriteria": [
         "Dashboard shows onboarding widget when user has 0 traces",
