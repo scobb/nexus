@@ -1,38 +1,31 @@
 # Ralph Progress Log
-Started: Sun Apr 12 07:08:41 PM PDT 2026
+Started: Mon Apr 13 09:07:57 AM PDT 2026
 ---
 
 ## Codebase Patterns
-- D1 queries on `subscriptions` table: Use `ORDER BY rowid DESC LIMIT 1` NOT `ORDER BY created_at DESC` — the billing route already did this correctly; agents/settings/dashboard had a bug using `created_at` which didn't exist until migration 0008
-- Migration tracking: Production D1 migrations were applied manually (outside Wrangler), causing d1_migrations table to be out of sync. Fix: INSERT rows into d1_migrations to mark them as applied, then redeploy
-- Smoke test helpers: `hasTestEndpoints` flag gates all bootstrap-dependent tests. Set `SKIP_AUTH_TESTS=1` for production runs. `BASE_URL` env var switches playwright.config.ts between local dev server and remote
-- Playwright form submissions: Use `Promise.all([page.waitForLoadState('networkidle'), page.click('button[type="submit"]')])` to wait for POST navigation. HTML5 `required` validation blocks empty submissions — use `page.evaluate()` to remove `required` before testing server-side validation
-- Revoke form has `onsubmit="return confirm(...)"` — use REST DELETE endpoint instead of browser form click for cleaner testing
-- KV eventual consistency: Don't test browser-redirect behavior after logout against staging/prod — KV writes can take seconds to propagate across edge. Test the API response (redirect status code) instead
+- Migrations: Always use `IF NOT EXISTS`. Apply with `npm run migrations:local` / `npm run migrations:staging`.
+- CSS: Compile with `npm run build:css` before deploy. Never edit `generated-styles.ts` directly.
+- D1 queries: `env.NEXUS_DB.prepare(...).bind(...).all()` / `.first()` / `.run()`
+- KV: Sessions (7-day TTL), magic links (15-min TTL), rate limiting, trace counts
+- Auth: `nexus_session` HttpOnly cookie. `requireAuth` middleware in `src/middleware/`.
+- SQL escaping in .sql files: Use `''` to escape single quotes (NOT `\'` which is shell syntax)
+- subscriptions table: Use `ORDER BY rowid DESC LIMIT 1` for latest sub. Production d1_migrations may lag.
+- Demo data: Hardcoded in `src/pages/demo.ts` (DEMO_TRACES, DEMO_SPANS). Seed data in D1 via `scripts/seed-demo.sql`.
+- Smoke test pattern: `hasTestEndpoints` flag gates bootstrap tests. Production runs with SKIP_AUTH_TESTS=1.
+- Pre-existing test failures (not my work): keys.spec empty name, settings.spec non-https URL, mobile webkit missing.
 
-## [2026-04-13] - ACP-159
-- Implemented comprehensive Playwright smoke test suite for all core user flows
+---
+
+## 2026-04-13 — ACP-160
+- What was implemented: Demo seed script for D1 database
 - Files changed:
-  - playwright.config.ts — configurable BASE_URL (remote skips local server)
-  - test/smoke/helpers.ts — dynamic cookie domain, hasTestEndpoints flag
-  - test/smoke/keys.spec.ts — API key create, list, revoke (NEW)
-  - test/smoke/dashboard.spec.ts — dashboard home, metrics, plan indicator (NEW)
-  - test/smoke/agents.spec.ts — agents list, agent detail (NEW)
-  - test/smoke/settings.spec.ts — settings page, webhook validation (NEW)
-  - test/smoke/public.spec.ts — pricing, docs, demo, blog, sitemap, robots.txt (NEW)
-  - test/smoke/auth.spec.ts — refactored to separate public/authenticated groups
-  - test/smoke/api.spec.ts — restructured with hasTestEndpoints guards
-  - test/smoke/billing.spec.ts — added hasTestEndpoints guard
-  - test/smoke/traces.spec.ts — added hasTestEndpoints guard
-  - CLAUDE.md — smoke test location and run commands (NEW)
-  - package.json — test:smoke:staging, test:smoke:prod scripts
-  - migrations/0008_subscriptions_created_at.sql — bug fix (NEW)
-- Bug found and fixed: subscriptions table missing created_at column caused 500 errors on dashboard, agents, settings routes for ALL users (SQL parser rejects ORDER BY on unknown column even with 0 rows). Billing route used ORDER BY rowid DESC correctly — other routes didn't.
-- Production migration tracking was out of sync (0004-0007 applied manually, not via Wrangler). Fixed by inserting records into d1_migrations table.
-- Test results: 63/63 pass on staging, 27 pass + 36 skip on production (skips = bootstrap-dependent tests correctly gated from prod)
+  - `scripts/seed-demo.sql` — idempotent SQL seed with INSERT OR IGNORE; creates demo user, 5 agents, 53 traces across 7 days, 11 spans for representative traces; ~10% error/timeout rate
+  - `package.json` — added `seed-demo:local`, `seed-demo:staging`, `seed-demo:prod` npm scripts
+- Seed verified locally (53 traces, 5 agents, idempotency confirmed), on staging (268 rows written), on prod (268 rows written)
+- No app code changes; smoke tests: 61/63 chromium pass on staging (2 pre-existing failures), 39 pass + 72 skip on prod (no failures from my changes)
 - **Learnings for future iterations:**
-  - Always use `ORDER BY rowid DESC` on subscriptions (or any table without created_at)
-  - Set SKIP_AUTH_TESTS=1 when running smoke tests against production
-  - Production d1_migrations table was not tracking all applied migrations — future migrations should apply cleanly now
-  - The /test/bootstrap endpoint returns 404 on production (ENVIRONMENT=production guard in index.ts)
+  - SQL escape single quotes with `''` not `\'` — wrangler d1 execute treats the file as raw SQL, not shell
+  - wrangler d1 execute `--file` is the right approach for seeding; `INSERT OR IGNORE` handles idempotency cleanly
+  - Must run `npm run migrations:local` before first local seed (tables don't exist in fresh DB)
+  - D1 remote seed takes ~30ms on prod vs ~8ms on staging for same data
 ---

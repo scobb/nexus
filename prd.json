@@ -2472,7 +2472,7 @@
       "id": "ACP-160",
       "title": "Demo seed script \u2014 populate D1 with realistic AI agent traces",
       "priority": 160,
-      "passes": false,
+      "passes": true,
       "description": "Create a seed script that generates ~50 realistic demo traces showing different AI agent patterns: RAG pipeline, multi-agent collaboration, tool-calling agent, simple Q&A, and a few failures. Traces should have realistic latencies, token counts, model names (gpt-4, claude-3, etc.), and a natural success/failure distribution (~90% success). Data is associated with a dedicated 'demo' user and demo agents in D1. Script is idempotent \u2014 can re-run without duplicating data.",
       "acceptanceCriteria": [
         "Seed script at scripts/seed-demo.ts or similar",
