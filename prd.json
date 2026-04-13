@@ -2546,7 +2546,7 @@
       "id": "ACP-164",
       "title": "API reference documentation at /docs/api-reference",
       "priority": 164,
-      "passes": false,
+      "passes": true,
       "description": "Comprehensive API reference page listing every REST endpoint with method, path, description, request/response schemas, authentication guide, error codes, and copy-paste curl examples. Developers should be able to read this page and know exactly how to integrate without reading source code. Inspired by Stripe's API docs in clarity (not complexity).",
       "acceptanceCriteria": [
         "GET /docs/api-reference renders full API documentation",
