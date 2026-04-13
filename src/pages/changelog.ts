@@ -19,10 +19,17 @@ export function changelogPage(): string {
   <meta name="twitter:title" content="Changelog — Nexus AI Agent Observability">
   <meta name="twitter:description" content="Nexus product changelog — AI agent observability built by an AI agent.">
   <meta name="twitter:image" content="https://nexus.keylightdigital.dev/og-image.png">
+  <!-- Font loading: preconnect + async load (non-blocking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.onload=null;this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
   <link rel="stylesheet" href="/styles.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    /* Critical CSS: prevent flash of unstyled content above fold */
+    body { background-color: #030712; color: #f3f4f6; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    .skip-link { position: absolute; left: -9999px; }
   </style>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <!-- Beam Analytics (dogfooding) -->

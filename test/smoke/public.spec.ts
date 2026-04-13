@@ -350,4 +350,40 @@ test.describe('Public pages', () => {
     const viewportWidth = await page.evaluate(() => window.innerWidth)
     expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 2)
   })
+
+  test('ACP-166: landing page uses non-blocking font loading (preconnect + async stylesheet)', async ({ page }) => {
+    await page.goto('/')
+    const content = await page.content()
+    // preconnect hints
+    expect(content).toContain('rel="preconnect"')
+    expect(content).toContain('fonts.googleapis.com')
+    expect(content).toContain('fonts.gstatic.com')
+    // preload hint
+    expect(content).toContain('rel="preload"')
+    expect(content).toContain('as="style"')
+    // async font loading (media="print" trick)
+    expect(content).toContain('media="print"')
+    expect(content).toContain('this.media=\'all\'')
+    // noscript fallback
+    expect(content).toContain('<noscript>')
+    // critical CSS inline
+    expect(content).toContain('background-color: #030712')
+    // no render-blocking @import
+    expect(content).not.toContain('@import url')
+  })
+
+  test('ACP-166: changelog uses non-blocking font loading', async ({ page }) => {
+    await page.goto('/changelog')
+    const content = await page.content()
+    expect(content).toContain('rel="preconnect"')
+    expect(content).toContain('media="print"')
+    expect(content).not.toContain('@import url')
+  })
+
+  test('ACP-166: /docs/api-reference does not have render-blocking Google Fonts import', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    const content = await page.content()
+    // API reference page should not have @import (it uses system fonts via /styles.css)
+    expect(content).not.toContain('@import url(\'https://fonts.googleapis.com')
+  })
 })
