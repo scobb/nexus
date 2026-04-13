@@ -61,3 +61,18 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
   - Dashboard onboarding widget shows when `!hasTrace && !onboardingDismissed` (changed from old `!hasApiKey && !hasTrace` condition)
   - Tab switching in pure JS: toggle `hidden` class + `bg-indigo-700`/`bg-gray-800` on buttons to avoid needing a JS framework
 ---
+
+## 2026-04-13 — ACP-163
+- What was implemented: Changelog page at /changelog with category badges, recent entries, RSS link, footer/sidebar links
+- Files changed:
+  - `src/pages/changelog.ts` — updated entry() to support 'feature' | 'improvement' | 'fix' | 'content' types; fixed badge colors (green=Feature, blue=Improvement, orange=Fix, purple=Content); added 20+ entries for Apr 7–13 (waterfall, webhooks, onboarding widget, mobile audit, CD, demo, etc.); added RSS link in header; added /changelog link in footer
+  - `src/pages/docs.ts` — added /changelog and /blog links in sidebar TOC; added /changelog link in docs footer
+  - `src/pages/landing.ts` — added /changelog link in landing page footer
+  - `src/generated-styles.ts` — rebuilt CSS to include orange/purple badge classes
+  - `test/smoke/public.spec.ts` — expanded changelog tests: dates, all 4 badge types, RSS link, OG meta tags, sidebar link, footer link, mobile 375px
+- Smoke tests: staging 91 pass + 57 pre-existing webkit+keys.spec failures; prod 42 pass + 84 skip + 22 pre-existing webkit failures
+- **Learnings for future iterations:**
+  - When adding new Tailwind color classes (bg-orange-900, bg-purple-900), must rebuild CSS with `npm run build:css` or they won't appear
+  - Changelog page was already scaffolded (imported in index.ts at line 8) — check for existing stubs before creating new files
+  - Pre-existing prod smoke test baseline: 42 pass + 84 skip + 22 webkit mobile failures (SKIP_AUTH_TESTS=1)
+---

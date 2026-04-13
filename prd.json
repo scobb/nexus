@@ -2529,7 +2529,7 @@
       "id": "ACP-163",
       "title": "Changelog page at /changelog — show product velocity",
       "priority": 163,
-      "passes": false,
+      "passes": true,
       "description": "A changelog page signals that the product is actively maintained — critical for developer trust. Create /changelog with a curated list of recent updates, features, and improvements. Each entry has a date, title, category badge, and short description. Seed with highlights from the 159 stories already shipped.",
       "acceptanceCriteria": [
         "GET /changelog renders a chronological list of product updates (newest first)",
