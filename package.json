@@ -5,11 +5,14 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run build:css && wrangler deploy",
+    "deploy:staging": "npm run build:css && wrangler deploy --env staging",
     "build:css": "tailwindcss --input tailwind/input.css --output tailwind/output.css --content 'src/**/*.ts' --minify && node scripts/embed-css.js",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\"",
     "test:smoke": "playwright test",
-    "migrations:local": "wrangler d1 migrations apply nexus-db --local"
+    "test:webhooks": "npx tsx test/stripe-webhooks.ts",
+    "migrations:local": "wrangler d1 migrations apply nexus-db --local",
+    "migrations:staging": "wrangler d1 migrations apply nexus-db-staging --env staging --remote"
   },
   "dependencies": {
     "@sentry/cloudflare": "^10.47.0",

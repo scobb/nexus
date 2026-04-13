@@ -1,0 +1,2574 @@
+{
+  "userStories": [
+    {
+      "id": "ACP-001",
+      "title": "Project scaffolding — Cloudflare Workers + Hono + D1 + KV",
+      "priority": 1,
+      "passes": true,
+      "description": "As Ralph, I need to scaffold the Nexus project from scratch: Cloudflare Workers with Hono framework, D1 database, KV namespace, wrangler.toml configuration, TypeScript setup, and a working 'hello world' health check endpoint. This is the foundation every subsequent story builds on.",
+      "acceptanceCriteria": [
+        "wrangler.toml configured with D1 binding (NEXUS_DB), KV binding (NEXUS_KV), and compatibility_date",
+        "Hono installed and serving GET /health returning {status: 'ok', version: '0.1.0'}",
+        "TypeScript compiles without errors (tsc --noEmit passes)",
+        "package.json with scripts: dev (wrangler dev), deploy (wrangler deploy), typecheck (tsc --noEmit), test",
+        ".dev.vars.example documents required secrets: RESEND_API_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET",
+        "wrangler dev starts without errors"
+      ]
+    },
+    {
+      "id": "ACP-002",
+      "title": "Database schema — agents, traces, spans, users, api_keys",
+      "priority": 2,
+      "passes": true,
+      "description": "As Ralph, I need to define the D1 database schema with migrations for all core entities: users, api_keys, agents, traces, spans, and subscriptions. The schema must support multi-tenancy, plan limits, and efficient trace queries.",
+      "acceptanceCriteria": [
+        "migrations/0001_schema.sql creates: users (id, email, created_at, stripe_customer_id, plan), api_keys (id, user_id, key_hash, name, created_at, last_used_at), agents (id, user_id, name, description, created_at), traces (id, agent_id, user_id, name, status, started_at, ended_at, metadata), spans (id, trace_id, parent_span_id, name, status, started_at, ended_at, input, output, error), subscriptions (id, user_id, stripe_subscription_id, plan, status, current_period_end)",
+        "All tables have IF NOT EXISTS guards",
+        "Indexes on: traces(agent_id, started_at DESC), spans(trace_id), api_keys(key_hash)",
+        "Migration runs cleanly via wrangler d1 execute"
+      ]
+    },
+    {
+      "id": "ACP-003",
+      "title": "Landing page — 'Plausible for AI agents' positioning",
+      "priority": 3,
+      "passes": true,
+      "description": "As Ralph, I need to create the public landing page at GET / with clear 'Plausible for AI agents' positioning, pricing table (Free vs Pro $9/mo), feature list, and CTAs. Server-rendered HTML with Tailwind CDN. No JavaScript frameworks.",
+      "acceptanceCriteria": [
+        "GET / returns HTML with headline, subheadline, and 3 key benefits",
+        "Pricing table shows Free (1K traces, 1 agent, $0) and Pro (50K traces, unlimited agents, $9/mo) tiers",
+        "Feature comparison table: trace viewer, alerts, team access, retention, support",
+        "Two CTAs: 'Start free' (→ /register) and 'View demo' (→ /demo or live trace)",
+        "Meta-narrative section: 'Built by an AI agent (Ralph), for AI agents'",
+        "Mobile-responsive at 375px width — no horizontal overflow",
+        "GET /health still returns {status: 'ok'}"
+      ]
+    },
+    {
+      "id": "ACP-004",
+      "title": "Auth — magic link email login, session cookies",
+      "priority": 4,
+      "passes": true,
+      "description": "As a developer, I need to register and log in with my email address via magic link (no passwords). Sessions are stored in KV with a 7-day TTL. Rate limiting prevents abuse.",
+      "acceptanceCriteria": [
+        "POST /auth/register accepts email, sends magic link via Resend API, stores pending token in KV (TTL 15min)",
+        "GET /auth/verify?token=... validates token, creates user in D1 if new, sets session cookie (HttpOnly, Secure, SameSite=Lax), redirects to /dashboard",
+        "POST /auth/logout clears session cookie and deletes KV entry",
+        "Rate limit: max 5 magic links per email per hour (KV-backed)",
+        "GET /dashboard redirects to /auth/login if no valid session",
+        "Auth middleware function usable as Hono middleware on protected routes"
+      ]
+    },
+    {
+      "id": "ACP-005",
+      "title": "API key management — create, list, revoke",
+      "priority": 5,
+      "passes": true,
+      "description": "As a developer, I need to create API keys that my agents use to send traces. I need to be able to list my active keys and revoke compromised ones. Keys are shown once at creation and stored as SHA-256 hashes.",
+      "acceptanceCriteria": [
+        "GET /dashboard/keys lists all API keys for the authenticated user (masked: show first 8 chars + ...)",
+        "POST /dashboard/keys creates a new key: generates 32-byte random key, stores SHA-256 hash in D1, returns plaintext key ONCE in response",
+        "DELETE /dashboard/keys/:id soft-deletes key (sets deleted_at)",
+        "API key auth middleware: extracts Bearer token from Authorization header, hashes it, looks up in D1, attaches user_id to request context",
+        "Invalid or revoked keys return 401 {error: 'Invalid API key'}"
+      ]
+    },
+    {
+      "id": "ACP-006",
+      "title": "Trace ingestion API — POST /api/v1/traces",
+      "priority": 6,
+      "passes": true,
+      "description": "As a developer, I need a simple API endpoint where my agent can POST trace data. The endpoint validates the API key, checks plan limits, and stores the trace in D1. Design is OTEL-inspired but simpler.",
+      "acceptanceCriteria": [
+        "POST /api/v1/traces accepts: {agent_id, name, status ('running'|'success'|'error'|'timeout'), started_at, ended_at?, metadata?}",
+        "Returns {trace_id: '<uuid>'} on success (201)",
+        "Validates API key via Authorization: Bearer <key> header",
+        "Enforces plan limits: Free users capped at 1,000 traces/month (count from D1, cache in KV). Returns 429 {error: 'Monthly trace limit reached. Upgrade to Pro.'} when exceeded",
+        "Creates agent record in D1 if agent_id is new for this user",
+        "Input validation: required fields, status enum, started_at is ISO 8601",
+        "Returns 400 with field-level errors for invalid input"
+      ]
+    },
+    {
+      "id": "ACP-007",
+      "title": "Span ingestion — POST /api/v1/traces/:id/spans",
+      "priority": 7,
+      "passes": true,
+      "description": "As a developer, I need to add spans (sub-steps) to a trace. Spans capture individual LLM calls, tool uses, or sub-agent invocations with timing, input, output, and error data.",
+      "acceptanceCriteria": [
+        "POST /api/v1/traces/:id/spans accepts: {name, parent_span_id?, status ('ok'|'error'), started_at, ended_at?, input?, output?, error?}",
+        "Returns {span_id: '<uuid>'} on success (201)",
+        "Validates trace_id belongs to the authenticated user's API key",
+        "input/output fields are stored as JSON strings (arbitrary object)",
+        "error field is stored as string",
+        "Returns 404 if trace not found or not owned by caller",
+        "No separate plan limit check (spans are included in trace cost)"
+      ]
+    },
+    {
+      "id": "ACP-008",
+      "title": "TypeScript SDK — npm package for agent instrumentation",
+      "priority": 8,
+      "passes": true,
+      "description": "As a developer, I need a simple TypeScript SDK to instrument my agents without writing raw HTTP calls. The SDK wraps trace and span creation with a fluent interface. It must be open-source.",
+      "acceptanceCriteria": [
+        "sdk/ directory with package.json (name: @keylightdigital/nexus, private: false), tsconfig.json, src/index.ts",
+        "NexusClient class: constructor({apiKey, baseUrl, agentId})",
+        "client.startTrace({name, metadata?}) returns a Trace object with trace_id",
+        "trace.addSpan({name, input?, output?, error?}) returns a Span object with timing auto-captured",
+        "trace.end({status}) finalizes the trace",
+        "All methods handle network errors gracefully (log to console, never throw)",
+        "README.md in sdk/ with 10-line quickstart example",
+        "TypeScript types exported: NexusClient, TraceOptions, SpanOptions, TraceStatus"
+      ]
+    },
+    {
+      "id": "ACP-009",
+      "title": "Trace viewer — browse traces, expand spans",
+      "priority": 9,
+      "passes": true,
+      "description": "As a developer, I need to browse my traces in a web UI, see each trace's status and duration, and expand a trace to see all its spans in a waterfall view.",
+      "acceptanceCriteria": [
+        "GET /dashboard/traces lists recent traces for the authenticated user: trace name, agent name, status (color-coded), duration, started_at. Paginated (20 per page).",
+        "GET /dashboard/traces/:id shows trace detail: all spans in waterfall order (started_at ASC), each span shows name, status, duration, input/output/error (collapsible)",
+        "Status colors: success=green, error=red, running=yellow, timeout=orange",
+        "Duration formatted as: <1s shows ms, >=1s shows seconds with 2 decimal places",
+        "Empty state: 'No traces yet. Add the SDK to your agent to start tracking.' with link to docs",
+        "Mobile-responsive"
+      ]
+    },
+    {
+      "id": "ACP-010",
+      "title": "Dashboard — agent health overview and trace volume chart",
+      "priority": 10,
+      "passes": true,
+      "description": "As a developer, I need a dashboard homepage that shows a health summary across all my agents: total traces this month, error rate, average latency, and a 7-day trace volume sparkline.",
+      "acceptanceCriteria": [
+        "GET /dashboard shows: traces this month (with plan limit), error rate %, avg duration (ms), agent count",
+        "Per-agent health cards: agent name, last trace status, last trace time, 24h error rate",
+        "7-day trace volume: daily counts as a simple bar chart (inline SVG or CSS bars, no JS charting library)",
+        "Plan usage bar: 'X of 1,000 traces used this month' (Free) or 'X of 50,000' (Pro)",
+        "Quick link: 'View all traces' and 'Create API key'",
+        "All metrics computed from D1 queries (no caching required for MVP)"
+      ]
+    },
+    {
+      "id": "ACP-011",
+      "title": "Email alerts — notify on agent failure",
+      "priority": 11,
+      "passes": true,
+      "description": "As a Pro developer, I need email alerts when an agent trace ends with status 'error' or 'timeout'. Alerts are sent via Resend and include the trace name, error message, and a link to the trace viewer.",
+      "acceptanceCriteria": [
+        "Alert triggers on trace ingestion when status is 'error' or 'timeout' AND user is on Pro plan",
+        "Alert email sent via Resend API: from=alerts@nexus.keylightdigital.com, to=user's email",
+        "Email subject: 'Agent alert: [agent_name] trace failed'",
+        "Email body: agent name, trace name, status, error message (from trace metadata or error span), link to /dashboard/traces/:id",
+        "Rate limit alerts: max 1 alert per agent per 5 minutes (KV-backed, TTL 300s) to prevent alert fatigue",
+        "Free users: no alerts (returns without sending). Pro check via subscriptions table."
+      ]
+    },
+    {
+      "id": "ACP-012",
+      "title": "Multi-agent management — agent list and per-agent trace history",
+      "priority": 12,
+      "passes": true,
+      "description": "As a developer, I need to see all my registered agents, their health status, and navigate to per-agent trace history.",
+      "acceptanceCriteria": [
+        "GET /dashboard/agents lists all agents for the user: name, created_at, last trace status, last trace time, 24h trace count",
+        "GET /dashboard/agents/:id shows per-agent trace list (same as /dashboard/traces but filtered)",
+        "Agents are auto-created on first trace ingestion (no manual creation needed)",
+        "Agent name shown in breadcrumbs on trace detail page",
+        "Free tier: if user has >1 agent (only allowed on Pro), show upgrade prompt on /dashboard/agents"
+      ]
+    },
+    {
+      "id": "ACP-013",
+      "title": "Stripe billing — Free/Pro Checkout and webhook handling",
+      "priority": 13,
+      "passes": true,
+      "description": "As a developer, I need to upgrade from Free to Pro via Stripe Checkout. The system must handle subscription events via webhook to keep the user's plan current.",
+      "acceptanceCriteria": [
+        "GET /dashboard/billing shows current plan, usage, and 'Upgrade to Pro' button (Free) or 'Manage billing' (Pro)",
+        "POST /dashboard/billing/checkout creates Stripe Checkout session (mode=subscription, price=Pro $9/mo) and redirects to Stripe",
+        "Stripe redirects to /dashboard/billing/success on completion",
+        "POST /api/webhooks/stripe handles: customer.subscription.created (set plan=pro), customer.subscription.deleted (set plan=free), customer.subscription.updated",
+        "Webhook validates Stripe-Signature header",
+        "Stripe customer created on first checkout attempt and stored in users.stripe_customer_id"
+      ]
+    },
+    {
+      "id": "ACP-014",
+      "title": "Plan limits enforcement — hard limits with clear error messages",
+      "priority": 14,
+      "passes": true,
+      "description": "As Ralph, I need to enforce Free plan limits (1K traces/month, 1 agent) with clear error messages that encourage upgrade — not silent drops or cryptic errors.",
+      "acceptanceCriteria": [
+        "Trace ingestion: count current month traces for user (cache in KV, TTL 1 hour). Return 429 with {error: 'Monthly trace limit reached', limit: 1000, current: X, upgrade_url: '/dashboard/billing'} when Free user exceeds 1K",
+        "Agent creation: if Free user already has 1 agent and tries to ingest for a second agent_id, return 403 with {error: 'Free plan limited to 1 agent', upgrade_url: '/dashboard/billing'}",
+        "Dashboard shows plan limit banner when usage > 80% of Free limit",
+        "Upgrade link in all limit errors points to /dashboard/billing",
+        "Pro users have no hard limits (50K traces is a soft guideline, not enforced at MVP)"
+      ]
+    },
+    {
+      "id": "ACP-015",
+      "title": "Settings page — API keys, account info, danger zone",
+      "priority": 15,
+      "passes": true,
+      "description": "As a developer, I need a settings page where I can manage my API keys, see my account email, and delete my account.",
+      "acceptanceCriteria": [
+        "GET /dashboard/settings shows: account email, plan badge, API keys section (list + create + revoke), danger zone",
+        "API key creation inline (POST /dashboard/keys from settings page, same handler as ACP-005)",
+        "DELETE /dashboard/account with confirmation text input ('delete my account') — deletes user, all agents, all traces, all spans, all API keys, cancels Stripe subscription if active",
+        "Account deletion is irreversible — show warning with data loss summary before confirming",
+        "Redirect to / with 'Account deleted' message after deletion"
+      ]
+    },
+    {
+      "id": "ACP-016",
+      "title": "Data retention — auto-delete old traces",
+      "priority": 16,
+      "passes": true,
+      "description": "As Ralph, I need a scheduled job to delete traces older than the plan retention window (30 days Free, 90 days Pro) to control D1 storage costs.",
+      "acceptanceCriteria": [
+        "Cloudflare Cron Trigger configured in wrangler.toml: runs daily at 02:00 UTC",
+        "Scheduled handler deletes traces (and their spans) where started_at < NOW - retention_days",
+        "Retention days determined per-user by plan (30 Free, 90 Pro)",
+        "Batched deletes: process max 1,000 traces per run to stay within D1 limits",
+        "Logs deleted count to console for observability"
+      ]
+    },
+    {
+      "id": "ACP-017",
+      "title": "Deployment — Cloudflare Workers production deploy",
+      "priority": 17,
+      "passes": true,
+      "description": "As Ralph, I need to deploy Nexus to Cloudflare Workers production with custom domain nexus.keylightdigital.com, production D1 and KV, and all secrets configured.",
+      "acceptanceCriteria": [
+        "wrangler deploy succeeds without errors",
+        "nexus.keylightdigital.com returns HTTP 200 for GET /",
+        "nexus.keylightdigital.com/health returns {status: 'ok'}",
+        "Production D1 migration applied (wrangler d1 execute --env production)",
+        "All secrets set via wrangler secret put: RESEND_API_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SESSION_SECRET",
+        "Cloudflare DNS CNAME configured: nexus.keylightdigital.com → workers.dev route"
+      ]
+    },
+    {
+      "id": "ACP-018",
+      "title": "Smoke tests — Playwright suite for critical paths",
+      "priority": 18,
+      "passes": true,
+      "description": "As Ralph, I need a Playwright smoke test suite covering the critical user paths: landing page, registration, API key creation, trace ingestion, trace viewer, and billing page load.",
+      "acceptanceCriteria": [
+        "test/smoke/landing.spec.ts: GET / returns 200, headline visible, pricing table present",
+        "test/smoke/auth.spec.ts: magic link flow (with Resend intercepted via page.route), session cookie set, /dashboard accessible",
+        "test/smoke/api.spec.ts: POST /api/v1/traces with valid key returns 201 with trace_id; with invalid key returns 401; Free user over limit returns 429",
+        "test/smoke/traces.spec.ts: /dashboard/traces shows ingested trace; /dashboard/traces/:id shows spans",
+        "test/smoke/billing.spec.ts: /dashboard/billing loads for Free and Pro users",
+        "All smoke tests pass in CI (npm run test:smoke)",
+        "No horizontal overflow at 375px viewport"
+      ]
+    },
+    {
+      "id": "ACP-019",
+      "title": "Launch materials — README, Show HN draft, SDK quickstart",
+      "priority": 19,
+      "passes": true,
+      "description": "As Ralph, I need to prepare the launch materials before the product ships: a compelling README (which is the Show HN post), a quickstart guide, and the SDK's getting-started docs. Distribution-first — these are written before Story 1 is coded in production.",
+      "acceptanceCriteria": [
+        "README.md in repo root: product name, 1-sentence pitch, meta-narrative ('built by an AI agent for AI agents'), 10-line SDK quickstart, pricing, link to nexus.keylightdigital.com",
+        "Show HN draft in launch/show-hn.md: title (under 80 chars), body (technical, honest, no hype), shows the meta-narrative",
+        "sdk/README.md: installation (npm install @keylightdigital/nexus), 10-line quickstart, all config options, link to dashboard",
+        "GitHub repo description and topics set: ai-agents, observability, cloudflare-workers, developer-tools, self-hosted",
+        "Email to Steve: launch checklist, deployment steps, 'here's what to post on HN on day 1'"
+      ]
+    },
+    {
+      "id": "ACP-020",
+      "title": "Email Steve — pivot approval request with PRD summary",
+      "priority": 20,
+      "passes": true,
+      "description": "As Ralph, I need to email Steve with the complete PRD summary for the AI Agent Control Plane, ask for explicit go/no-go approval, and explain that Ralph is ready to start building immediately upon approval.",
+      "acceptanceCriteria": [
+        "Email sent to steve@keylightdigital.dev via Resend API",
+        "Email subject: 'Nexus PRD ready — go/no-go on AI agent control plane?'",
+        "Email includes: product name, 1-sentence pitch, pricing ($0 free / $9 Pro), architecture (Cloudflare-native), 20-story build plan, urgency (3-6 month window), lessons-from-Beam distribution plan",
+        "Email asks Steve to reply with 'go' or 'no-go'",
+        "Email references control-plane/prd.json for full details",
+        "Resend API returns success (id captured)"
+      ]
+    },
+    {
+      "id": "ACP-021",
+      "title": "Fix production URLs — .com → .dev migration",
+      "priority": 21,
+      "passes": true,
+      "description": "As Ralph, I need to update all references from keylightdigital.com to keylightdigital.dev across the codebase. The production domain is nexus.keylightdigital.dev (not .com). This is a launch blocker — wrong URLs mean broken links in every launch artifact.",
+      "acceptanceCriteria": [
+        "All occurrences of 'keylightdigital.com' in nexus/ source code replaced with 'keylightdigital.dev'",
+        "nexus/README.md: all links point to nexus.keylightdigital.dev",
+        "nexus/launch/show-hn.md: URL at bottom points to nexus.keylightdigital.dev",
+        "nexus/sdk/src/index.ts: default baseUrl uses nexus.keylightdigital.dev",
+        "nexus/sdk/package.json: repository URL updated to github.com/scobb/nexus",
+        "nexus/src/pages/landing.ts: any hardcoded .com references updated",
+        "tsc --noEmit passes in both nexus/ and nexus/sdk/",
+        "grep -r 'keylightdigital.com' nexus/src/ nexus/sdk/src/ nexus/README.md nexus/launch/ returns no results"
+      ]
+    },
+    {
+      "id": "ACP-022",
+      "title": "Publish SDK to npm — @keylightdigital/nexus",
+      "priority": 22,
+      "passes": true,
+      "description": "As Ralph, I need to build and publish the @keylightdigital/nexus SDK to npm so that `npm install @keylightdigital/nexus` works. The quickstart in the README is broken until this is done. NPM_TOKEN is in .env.",
+      "acceptanceCriteria": [
+        "npm run build in nexus/sdk/ produces dist/index.js and dist/index.d.ts",
+        "npm publish succeeds (using NPM_TOKEN from .env)",
+        "@keylightdigital/nexus v0.1.0 is visible on npmjs.com",
+        "sdk/package.json has correct metadata: description, keywords, license, repository",
+        "sdk/.npmignore or files field ensures only dist/ and README are published (no src/)"
+      ]
+    },
+    {
+      "id": "ACP-023",
+      "title": "Push nexus/ to standalone GitHub repo scobb/nexus",
+      "priority": 23,
+      "passes": true,
+      "description": "As Ralph, I need to push the nexus/ subdirectory to the standalone GitHub repo scobb/nexus so the open-source claim is real. Visitors from Show HN and npm will click through to GitHub — an empty repo kills credibility.",
+      "acceptanceCriteria": [
+        "scobb/nexus on GitHub contains all nexus/ source code (src/, sdk/, migrations/, test/, etc.)",
+        "README.md is visible on the repo homepage",
+        "package.json, wrangler.toml, tsconfig.json are present",
+        ".gitignore excludes node_modules/, .dev.vars, .wrangler/",
+        "No .env or secrets committed to the public repo",
+        "Repository description and topics are set (ai-agents, observability, cloudflare-workers, developer-tools, typescript)"
+      ]
+    },
+    {
+      "id": "ACP-024",
+      "title": "SEO meta tags and Open Graph social cards",
+      "priority": 24,
+      "passes": true,
+      "description": "As Ralph, I need to add Open Graph and Twitter Card meta tags to the landing page so that links shared on HN, Twitter, LinkedIn, and Slack show rich previews. Without these, shared links are text-only — a massive missed opportunity for Show HN and social posts.",
+      "acceptanceCriteria": [
+        "Landing page <head> includes: og:title, og:description, og:url, og:type, og:image, og:site_name",
+        "Landing page <head> includes: twitter:card (summary_large_image), twitter:title, twitter:description, twitter:image",
+        "OG image is a simple generated SVG or static image at /og-image.png (Nexus logo + tagline + dark background)",
+        "GET /og-image.png returns a valid image (PNG or SVG served as image/png)",
+        "canonical URL set to https://nexus.keylightdigital.dev",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-025",
+      "title": "Interactive demo page with sample traces",
+      "priority": 25,
+      "passes": true,
+      "description": "As a visitor, I want to see what Nexus looks like without signing up. A /demo page with realistic pre-loaded sample trace data lets visitors experience the trace viewer, span waterfall, and dashboard before creating an account.",
+      "acceptanceCriteria": [
+        "GET /demo returns a page showing a realistic sample dashboard: 3 agents, trace volume chart, error rate",
+        "Sample trace data is hardcoded (not from D1) — 3 agents with 5-10 traces each, various statuses",
+        "Clicking a sample trace shows the span waterfall with realistic AI agent spans (LLM call, tool use, sub-agent)",
+        "Banner at top: 'This is a demo with sample data. Sign up free to instrument your own agents.' with CTA",
+        "Mobile-responsive, consistent with dashboard styling",
+        "No authentication required to view /demo"
+      ]
+    },
+    {
+      "id": "ACP-026",
+      "title": "Dev.to article draft — 'How I monitor my AI agents for $9/month'",
+      "priority": 26,
+      "passes": true,
+      "description": "As Ralph, I need to write a compelling dev.to article that can be published to drive traffic. The article should be technical, honest, and lead with the problem. Stored in launch/ for Steve to publish.",
+      "acceptanceCriteria": [
+        "nexus/launch/devto-article.md contains a 800-1200 word article",
+        "Title: 'How I Monitor My AI Agents for $9/Month' (or similar)",
+        "Article structure: problem → existing solutions → why they don't fit → what I built → architecture → quickstart → pricing → meta-narrative",
+        "Includes 2-3 code snippets showing SDK usage",
+        "Includes dev.to frontmatter (title, description, tags, canonical_url)",
+        "Tags: ai, webdev, cloudflare, opensource",
+        "Canonical URL points to nexus.keylightdigital.dev",
+        "No hype — technical and honest tone"
+      ]
+    },
+    {
+      "id": "ACP-027",
+      "title": "Awesome-list PR submissions",
+      "priority": 27,
+      "passes": true,
+      "description": "As Ralph, I need to open pull requests to relevant awesome-lists on GitHub. These provide backlinks, SEO, and discovery. PRs require human merge, but Ralph can create them.",
+      "acceptanceCriteria": [
+        "PR opened to awesome-ai-agents (or closest equivalent) adding Nexus under monitoring/observability",
+        "PR opened to awesome-cloudflare (or awesome-cloudflare-workers) adding Nexus",
+        "Each PR follows the target repo's contribution guidelines (alphabetical order, format, description length)",
+        "PR descriptions explain what Nexus is, link to GitHub repo and live product",
+        "PR body mentions open-source, Cloudflare-native, $9/mo pricing",
+        "List of submitted PRs logged in progress.txt for Steve to follow up on"
+      ]
+    },
+    {
+      "id": "ACP-028",
+      "title": "Landing page conversion improvements — FAQ, how-it-works, code example",
+      "priority": 28,
+      "passes": true,
+      "description": "As Ralph, I need to improve the landing page conversion rate by adding sections visitors expect: a 'How it works' 3-step flow, an inline code example showing the SDK, and an FAQ addressing common objections (vs Langfuse, data privacy, vendor lock-in).",
+      "acceptanceCriteria": [
+        "Landing page has 'How it works' section: 1) Install SDK, 2) Add 3 lines of code, 3) See traces in dashboard",
+        "Inline code block showing the 6-line SDK quickstart (syntax-highlighted via Tailwind/Prism CDN or preformatted)",
+        "FAQ section with 5-6 questions: 'Why not Langfuse?', 'Where is my data stored?', 'Can I use this with Python?', 'What happens when I hit the free limit?', 'Is there a self-hosted option?', 'Who built this?'",
+        "View demo CTA links to /demo (from ACP-025)",
+        "Mobile-responsive, consistent with existing page styling",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-029",
+      "title": "Redeploy to production with all post-launch-prep changes",
+      "priority": 29,
+      "passes": true,
+      "description": "As Ralph, I need to redeploy Nexus to Cloudflare Workers so the production site at nexus.keylightdigital.dev includes all changes from ACP-021 through ACP-028: demo page, OG meta tags, FAQ section, how-it-works flow, inline code example, URL fixes (.com → .dev), and landing page conversion improvements. The current production deploy is running the ACP-001-020 codebase — visitors see no demo, no FAQ, no social previews, and potentially broken URLs.",
+      "acceptanceCriteria": [
+        "wrangler deploy succeeds from nexus/ directory",
+        "GET https://nexus.keylightdigital.dev/ returns landing page with FAQ section, how-it-works, and code example",
+        "GET https://nexus.keylightdigital.dev/demo returns interactive demo page with sample traces",
+        "GET https://nexus.keylightdigital.dev/og-image.png returns SVG social card image",
+        "Landing page HTML contains og:title, og:description, og:image, twitter:card meta tags",
+        "No references to keylightdigital.com remain in served HTML (verify with curl | grep)",
+        "GET /health still returns {status: 'ok'}"
+      ]
+    },
+    {
+      "id": "ACP-030",
+      "title": "Sync scobb/nexus GitHub repo with latest code",
+      "priority": 30,
+      "passes": true,
+      "description": "As Ralph, I need to push all latest changes (ACP-024 through ACP-028 and any subsequent fixes) to the scobb/nexus GitHub repo. The repo was pushed once during ACP-023 but is now stale — missing the OG tags, demo page, FAQ, code example, and landing page improvements. Stale repos kill credibility when HN or npm visitors click through to GitHub.",
+      "acceptanceCriteria": [
+        "scobb/nexus on GitHub contains latest src/ code including pages/demo.ts, routes/demo.ts",
+        "Landing page source in repo includes OG meta tags and FAQ section",
+        "SDK source matches what was published to npm (v0.1.0)",
+        "No secrets (.env, .dev.vars, cfat_, npm_, sk_live, whsec_) in pushed code",
+        "README.md on GitHub homepage matches current nexus/README.md",
+        "launch/ directory with show-hn.md and devto-article.md present"
+      ]
+    },
+    {
+      "id": "ACP-031",
+      "title": "Python SDK — pip package for Python agent developers",
+      "priority": 31,
+      "passes": true,
+      "description": "As Ralph, I need to create a Python SDK so developers building AI agents in Python can instrument their agents with Nexus. Python is the dominant language for AI/ML — without a Python SDK, we're missing the majority of our target market. The FAQ already promises 'Python support coming soon'. The SDK should mirror the TypeScript SDK's API surface.",
+      "acceptanceCriteria": [
+        "nexus/sdk-python/ directory with pyproject.toml (name: nexus-agent, or keylightdigital-nexus)",
+        "NexusClient class: __init__(api_key, base_url, agent_id), start_trace(name, metadata), returns Trace",
+        "Trace class: add_span(name, input, output, error), end(status) — timing auto-captured",
+        "All methods handle network errors gracefully (log warning, never raise)",
+        "Uses only stdlib (urllib.request or http.client) — no requests dependency for minimal install",
+        "README.md with pip install command, 10-line quickstart, link to dashboard",
+        "Type hints throughout (Python 3.8+ compatible)",
+        "Unit tests for client initialization and request formatting"
+      ],
+      "notes": "PyPI publishing may require Steve to set up a PyPI account/token — create the package first, log blocker if publish fails"
+    },
+    {
+      "id": "ACP-032",
+      "title": "SEO foundation — sitemap, robots.txt, structured data, Google indexing",
+      "priority": 32,
+      "passes": true,
+      "description": "As Ralph, I need to add SEO fundamentals so Nexus can be discovered via Google. Currently site:nexus.keylightdigital.dev returns zero results — the site is invisible to search engines. Add robots.txt, XML sitemap, JSON-LD structured data, and submit to Google Search Console via the Indexing API.",
+      "acceptanceCriteria": [
+        "GET /robots.txt returns valid robots.txt allowing all crawlers, pointing to /sitemap.xml",
+        "GET /sitemap.xml returns valid XML sitemap listing all public pages: /, /demo, /demo/traces/:id (sample IDs)",
+        "Landing page includes JSON-LD structured data (Organization + SoftwareApplication schema)",
+        "All public pages have unique <title> and <meta name='description'> tags",
+        "Landing page title includes target keyword: 'AI Agent Observability' or 'AI Agent Monitoring'",
+        "tsc --noEmit passes"
+      ],
+      "notes": "Google Search Console submission may require manual verification by Steve — prepare the sitemap and structured data so crawlers can index on next visit"
+    },
+    {
+      "id": "ACP-033",
+      "title": "GitHub repo polish — LICENSE, CI badge, issue templates, contributing guide",
+      "priority": 33,
+      "passes": true,
+      "description": "As Ralph, I need to make the scobb/nexus GitHub repo look professional and inviting for contributors. First impressions drive stars and trust. A bare repo with no LICENSE, no CI badge, no issue templates signals abandonment.",
+      "acceptanceCriteria": [
+        "LICENSE file (MIT) present in repo root",
+        "CONTRIBUTING.md with setup instructions, development workflow, PR guidelines",
+        ".github/ISSUE_TEMPLATE/bug_report.md and feature_request.md templates",
+        ".github/workflows/ci.yml — GitHub Actions workflow: install deps, typecheck (tsc --noEmit), run tests",
+        "README.md updated with CI badge (GitHub Actions status badge)",
+        "All files pushed to scobb/nexus on GitHub"
+      ]
+    },
+    {
+      "id": "ACP-034",
+      "title": "API documentation page at /docs",
+      "priority": 34,
+      "passes": true,
+      "description": "As a developer evaluating Nexus, I need to see API documentation before integrating. A /docs page with the REST API reference (trace ingestion, span creation, authentication) gives developers confidence the product is real and well-documented. Currently there is no documentation beyond the SDK README.",
+      "acceptanceCriteria": [
+        "GET /docs returns server-rendered HTML page with full API reference",
+        "Documents: POST /api/v1/traces, POST /api/v1/traces/:id/spans, PATCH /api/v1/traces/:id",
+        "Each endpoint shows: method, path, headers (Authorization: Bearer), request body (JSON schema), response (201/400/401/429 examples)",
+        "Authentication section: how to create API keys, Bearer token usage",
+        "Rate limits section: Free (1K traces/month, 1 agent) vs Pro (50K traces, unlimited)",
+        "SDK quickstart sections for both TypeScript and Python (with pip/npm install)",
+        "Mobile-responsive, consistent styling with landing page",
+        "Linked from landing page nav and dashboard nav"
+      ]
+    },
+    {
+      "id": "ACP-035",
+      "title": "SEO comparison pages — /vs/langfuse and /vs/langsmith",
+      "priority": 35,
+      "passes": true,
+      "description": "As Ralph, I need to create comparison pages that rank for 'Nexus vs Langfuse' and 'Nexus vs LangSmith' searches. These pages are a proven SEO strategy — developers searching for alternatives will find Nexus. Each page should be honest, technical, and highlight Nexus's positioning (simpler, cheaper, no self-hosting burden).",
+      "acceptanceCriteria": [
+        "GET /vs/langfuse returns comparison page: feature table (Nexus vs Langfuse), pricing comparison, positioning differences, when to choose each",
+        "GET /vs/langsmith returns comparison page: feature table (Nexus vs LangSmith), pricing comparison, positioning differences, when to choose each",
+        "Both pages have unique <title> and <meta description> optimized for search (e.g., 'Nexus vs Langfuse — AI Agent Observability Compared')",
+        "Honest tone — acknowledge competitor strengths (Langfuse: self-hosted/21K stars, LangSmith: LangChain integration)",
+        "CTA at bottom: 'Try Nexus free' → /register",
+        "Mobile-responsive, consistent with landing page styling",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-036",
+      "title": "Product Hunt and social media launch kit for Steve",
+      "priority": 36,
+      "passes": true,
+      "description": "As Ralph, I need to prepare all the launch materials Steve needs for Product Hunt and social media so he can execute the launch with minimal effort. Product Hunt requires: tagline, description, maker comment, topics. Social needs: tweet thread, LinkedIn post, Reddit post drafts.",
+      "acceptanceCriteria": [
+        "nexus/launch/producthunt.md: tagline (<60 chars), description (300 words), maker comment draft, suggested topics (Developer Tools, Artificial Intelligence, Open Source), first comment text",
+        "nexus/launch/social-posts.md: 3 tweet drafts (launch day, technical angle, meta-narrative), 1 LinkedIn post draft, 2 Reddit post drafts (r/artificial, r/programming), 1 Hacker News comment template for relevant threads",
+        "All posts include nexus.keylightdigital.dev link and github.com/scobb/nexus link",
+        "All posts emphasize the meta-narrative: 'built by an AI agent for AI agents'",
+        "Launch timing recommendation: best days/times for each platform",
+        "Checklist for Steve: ordered list of what to post and when"
+      ]
+    },
+    {
+      "id": "ACP-037",
+      "title": "Redeploy to production — SEO routes, docs, and comparison pages",
+      "priority": 37,
+      "passes": true,
+      "description": "As Ralph, I need to redeploy Nexus to Cloudflare Workers so the production site includes all changes from ACP-032 through ACP-035: robots.txt, sitemap.xml, JSON-LD structured data, /docs API documentation page, /vs/langfuse and /vs/langsmith comparison pages. The current production deploy (ACP-029) is running ACP-021-028 code — SEO foundation, docs, and comparison pages are not live.",
+      "acceptanceCriteria": [
+        "wrangler deploy succeeds from nexus/ directory",
+        "GET https://nexus.keylightdigital.dev/robots.txt returns valid robots.txt",
+        "GET https://nexus.keylightdigital.dev/sitemap.xml returns valid XML sitemap",
+        "GET https://nexus.keylightdigital.dev/docs returns API documentation page",
+        "GET https://nexus.keylightdigital.dev/vs/langfuse returns comparison page",
+        "GET https://nexus.keylightdigital.dev/vs/langsmith returns comparison page",
+        "Landing page HTML contains JSON-LD structured data",
+        "GET /health still returns {status: \"ok\"}"
+      ]
+    },
+    {
+      "id": "ACP-038",
+      "title": "Sync scobb/nexus GitHub repo with ACP-034-036 changes",
+      "priority": 38,
+      "passes": true,
+      "description": "As Ralph, I need to push all latest changes (ACP-034 through ACP-036) to the scobb/nexus GitHub repo. The repo was last synced during ACP-033 but is now missing: /docs page source, /vs/ comparison pages, Python SDK, and launch kit files. Stale repos erode credibility when HN or npm visitors click through.",
+      "acceptanceCriteria": [
+        "scobb/nexus on GitHub contains src/pages/docs.ts and src/pages/comparison.ts",
+        "scobb/nexus contains sdk-python/ directory with Python SDK code",
+        "scobb/nexus contains launch/producthunt.md and launch/social-posts.md",
+        "sitemap.xml source includes /docs and /vs/* routes",
+        "No secrets (.env, .dev.vars, cfat_, npm_, sk_live, whsec_) in pushed code",
+        "README.md on GitHub homepage is current"
+      ]
+    },
+    {
+      "id": "ACP-039",
+      "title": "Publish Python SDK to PyPI — nexus-agent package",
+      "priority": 39,
+      "passes": true,
+      "description": "As Ralph, I need to build and publish the nexus-agent Python SDK to PyPI so that pip install nexus-agent works. The Python SDK was built in ACP-031 but never published. Python is the dominant AI agent language — without PyPI availability, the SDK is invisible to most of the target market.",
+      "acceptanceCriteria": [
+        "python3 -m build in nexus/sdk-python/ produces dist/*.whl and dist/*.tar.gz",
+        "twine upload succeeds (using PYPI_TOKEN from .env)",
+        "nexus-agent is visible on pypi.org",
+        "pip install nexus-agent works in a clean environment",
+        "Package metadata correct: description, keywords, license, project URLs"
+      ],
+      "notes": "PyPI publishing requires a PyPI API token. If PYPI_TOKEN is not in .env or upload fails, log blocker and email Steve with exact steps to create a PyPI account and token."
+    },
+    {
+      "id": "ACP-040",
+      "title": "Update landing page — Python SDK available now, not coming soon",
+      "priority": 40,
+      "passes": true,
+      "description": "As Ralph, I need to update the landing page FAQ and any other references that say Python support is coming soon. The Python SDK was built in ACP-031 and should be promoted as available. Also update the /docs page and README to feature the Python SDK prominently alongside TypeScript.",
+      "acceptanceCriteria": [
+        "Landing page FAQ answer for Can I use this with Python? updated from coming soon to Yes with pip install command",
+        "Landing page how-it-works or code example section mentions Python alongside TypeScript",
+        "nexus/README.md updated with Python SDK install and quickstart alongside TypeScript",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-041",
+      "title": "Cloudflare Web Analytics — privacy-friendly traffic tracking",
+      "priority": 41,
+      "passes": true,
+      "description": "As Ralph, I need to add Cloudflare Web Analytics to all public-facing pages so Steve can see if launch efforts drive traffic. Without analytics, there is no way to know if anyone is visiting the site. Cloudflare Web Analytics is free, privacy-friendly (no cookies), and requires only a JS beacon script.",
+      "acceptanceCriteria": [
+        "Cloudflare Web Analytics site token created via API (or logged as blocker if manual setup required)",
+        "Analytics beacon script added to all public pages: landing, /demo, /docs, /vs/langfuse, /vs/langsmith, demo trace detail",
+        "Analytics script NOT added to authenticated dashboard pages (privacy — only track public visitors)",
+        "Beacon script loads asynchronously and does not block page rendering",
+        "tsc --noEmit passes"
+      ],
+      "notes": "Cloudflare Web Analytics setup may require dashboard access. If API creation fails, add the script tag with a placeholder token and log blocker for Steve to create the site in CF dashboard and provide the token."
+    },
+    {
+      "id": "ACP-042",
+      "title": "Example projects — TypeScript and Python agent examples",
+      "priority": 42,
+      "passes": true,
+      "description": "As Ralph, I need to create small, runnable example projects that show developers how to use the Nexus SDK in real AI agent patterns. Examples reduce friction for new users and live on GitHub for discoverability. Each example should be a self-contained project that runs with one command.",
+      "acceptanceCriteria": [
+        "nexus/examples/typescript/ contains a working example: package.json, index.ts showing an AI agent using NexusClient with startTrace, addSpan, end",
+        "nexus/examples/python/ contains a working example: requirements.txt, main.py showing NexusClient usage with start_trace, add_span, end",
+        "Both examples include realistic agent patterns: LLM call span, tool use span, error handling",
+        "Both examples have README.md with setup instructions (set API key, run command)",
+        "Examples reference nexus.keylightdigital.dev as the base URL"
+      ]
+    },
+    {
+      "id": "ACP-043",
+      "title": "Welcome email after signup — quickstart onboarding",
+      "priority": 43,
+      "passes": true,
+      "description": "As Ralph, I need to send a welcome email via Resend when a new user signs up. Currently signup leads to an empty dashboard with no guidance. A welcome email with the quickstart steps (create API key, install SDK, send first trace) reduces time-to-first-trace and increases activation.",
+      "acceptanceCriteria": [
+        "Welcome email sent via Resend API when a new user is created (first magic link verification)",
+        "Email subject: Welcome to Nexus — start monitoring your agents in 2 minutes",
+        "Email body: 3-step quickstart (create API key at /dashboard/keys, install SDK, paste code example), link to /docs, link to /demo",
+        "Email includes both TypeScript (npm) and Python (pip) install commands",
+        "Email NOT sent on subsequent logins — only on first user creation (check if user already exists before sending)",
+        "Email from: Nexus <alerts@nexus.keylightdigital.dev>"
+      ]
+    },
+    {
+      "id": "ACP-044",
+      "title": "Blog page with launch announcement — /blog",
+      "priority": 44,
+      "passes": true,
+      "description": "As Ralph, I need to create a /blog page with a launch announcement post. Blog content drives organic search traffic and establishes credibility. The first post should announce Nexus, explain the meta-narrative (built by an AI agent for AI agents), and target keywords like AI agent monitoring and AI agent observability.",
+      "acceptanceCriteria": [
+        "GET /blog returns a blog index page listing all posts with title, date, and excerpt",
+        "GET /blog/introducing-nexus returns the first blog post: Introducing Nexus — AI Agent Observability Built by an AI Agent",
+        "Blog post is 600-1000 words covering: problem, solution, architecture, meta-narrative, getting started, pricing",
+        "Both pages have unique <title> and <meta description> optimized for search",
+        "Blog pages added to sitemap.xml",
+        "Blog linked from landing page nav",
+        "Mobile-responsive, consistent with landing page styling",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-045",
+      "title": "Redeploy production — ACP-040 through ACP-044 changes not live",
+      "priority": 45,
+      "passes": true,
+      "description": "As Ralph, I need to redeploy Nexus to Cloudflare Workers. ACP-040 through ACP-044 added: Python SDK promotion on landing page, Cloudflare Web Analytics beacon, example projects, welcome email on signup, and blog with launch announcement. None of these are live on nexus.keylightdigital.dev. This is the third deploy gap — must be closed before any launch activity.",
+      "acceptanceCriteria": [
+        "wrangler deploy succeeds from nexus/ directory",
+        "GET /health returns {status: ok} on production",
+        "GET /blog returns blog index page (ACP-044 content visible)",
+        "GET /blog/introducing-nexus returns blog post",
+        "Landing page FAQ shows Python SDK as available (not coming soon)",
+        "GET /robots.txt and /sitemap.xml return correct content",
+        "All existing routes still work: /, /demo, /docs, /vs/langfuse, /vs/langsmith"
+      ]
+    },
+    {
+      "id": "ACP-046",
+      "title": "Sync GitHub repo with ACP-040 through ACP-044 changes",
+      "priority": 46,
+      "passes": true,
+      "description": "As Ralph, I need to sync the scobb/nexus GitHub repo with all changes since the last sync (ACP-030 synced through ACP-036). Missing: landing page Python SDK update, analytics beacon, example projects, welcome email, blog pages. A stale GitHub repo undermines credibility when developers click through from npm, PyPI, or Hacker News.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo updated with all nexus/ changes through ACP-044",
+        "No secrets in pushed code (grep for cfat_, sk_live, re_, npm_, pypi_ before push)",
+        "examples/ directory present with TypeScript and Python examples",
+        "Blog pages and welcome email code included",
+        "README.md is current (Python SDK featured alongside TypeScript)"
+      ]
+    },
+    {
+      "id": "ACP-047",
+      "title": "Comparison page — /vs/arize-phoenix",
+      "priority": 47,
+      "passes": true,
+      "description": "As Ralph, I need to create a comparison page at /vs/arize-phoenix. Arize Phoenix is an open-source, Jupyter-native observability tool. Comparison pages are proven SEO magnets for developer tools — developers search 'nexus vs arize' or 'arize phoenix alternative'. Position Nexus as simpler hosted alternative vs Phoenix's self-hosted Jupyter approach.",
+      "acceptanceCriteria": [
+        "GET /vs/arize-phoenix returns comparison page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'arize phoenix alternative' keyword",
+        "Feature comparison table: hosting, pricing, setup time, Python support, self-hosting requirement, trace visualization",
+        "Clear positioning: Nexus = hosted simplicity ($9/mo, no setup) vs Phoenix = self-hosted power (free, Jupyter notebooks)",
+        "CTA linking to /demo and signup",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "Mobile-responsive, consistent styling with existing /vs pages",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-048",
+      "title": "Comparison page — /vs/agentops",
+      "priority": 48,
+      "passes": true,
+      "description": "As Ralph, I need to create a comparison page at /vs/agentops. AgentOps provides session-based agent monitoring with cost tracking. Developers evaluating agent observability tools search for comparisons. Position Nexus as simpler and more affordable — no session concept overhead, just traces and spans.",
+      "acceptanceCriteria": [
+        "GET /vs/agentops returns comparison page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'agentops alternative' keyword",
+        "Feature comparison table: pricing, session vs trace model, cost tracking, SDK languages, hosting model",
+        "Clear positioning: Nexus = simple trace-based model ($9/mo) vs AgentOps = session-based with cost tracking",
+        "CTA linking to /demo and signup",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "Mobile-responsive, consistent styling with existing /vs pages",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-049",
+      "title": "Alternatives hub page — /alternatives",
+      "priority": 49,
+      "passes": true,
+      "description": "As Ralph, I need to create an alternatives hub page at /alternatives that lists all AI agent observability tools and links to individual comparison pages. 'AI agent monitoring alternatives' is a high-intent search query. This hub page aggregates SEO value and acts as a navigation hub for all /vs/* pages.",
+      "acceptanceCriteria": [
+        "GET /alternatives returns hub page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'AI agent monitoring alternatives' keyword",
+        "Lists all competitors with brief description and link to detailed /vs page: Langfuse, LangSmith, Arize Phoenix, AgentOps",
+        "Each competitor entry includes: name, one-line description, pricing, key differentiator, link to /vs/[name]",
+        "Summary table comparing all tools including Nexus on key dimensions",
+        "CTA: Try Nexus free, link to /demo",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "Mobile-responsive, consistent landing page styling",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-050",
+      "title": "Integration guide — /docs/langchain",
+      "priority": 50,
+      "passes": true,
+      "description": "As Ralph, I need to create an integration guide at /docs/langchain showing how to use the Nexus SDK with LangChain. LangChain is the most popular AI agent framework — developers search 'langchain observability' and 'langchain monitoring'. This page captures that intent and shows Nexus as the simple, affordable option.",
+      "acceptanceCriteria": [
+        "GET /docs/langchain returns integration guide page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'langchain observability' keyword",
+        "Working code example showing NexusClient wrapping LangChain agent execution with traces and spans",
+        "Both TypeScript and Python code examples included",
+        "Step-by-step: install SDK, create API key, wrap LangChain calls, view traces in dashboard",
+        "Links to main /docs page and /demo",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-051",
+      "title": "Integration guide — /docs/crewai",
+      "priority": 51,
+      "passes": true,
+      "description": "As Ralph, I need to create an integration guide at /docs/crewai showing how to use the Nexus Python SDK with CrewAI. CrewAI is a fast-growing multi-agent framework — developers search 'crewai monitoring' and 'crewai observability'. This page captures that search intent. CrewAI is Python-only, making our Python SDK essential.",
+      "acceptanceCriteria": [
+        "GET /docs/crewai returns integration guide page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'crewai observability' keyword",
+        "Working Python code example showing NexusClient wrapping CrewAI crew execution with traces and spans for each agent",
+        "Step-by-step: pip install keylightdigital-nexus, create API key, instrument CrewAI agents, view multi-agent traces",
+        "Shows how to track individual agent performance within a crew",
+        "Links to main /docs page and Python SDK on PyPI",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-052",
+      "title": "Standalone pricing page — /pricing",
+      "priority": 52,
+      "passes": true,
+      "description": "As Ralph, I need to create a standalone pricing page at /pricing. 'AI agent monitoring pricing' is a commercial-intent search keyword. Currently pricing only exists as a section on the landing page. A dedicated page with structured data (Product schema with Offer) improves Google rich results and captures pricing-specific search traffic.",
+      "acceptanceCriteria": [
+        "GET /pricing returns standalone pricing page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'AI agent monitoring pricing' keyword",
+        "Free tier and Pro tier displayed with full feature comparison",
+        "JSON-LD structured data: Product schema with two Offer entries ($0 Free, $9 Pro)",
+        "Pro tier CTA links to signup; Free tier CTA links to signup",
+        "FAQ section addressing: Can I switch plans? Is there a free trial? What happens if I exceed limits?",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "Mobile-responsive, consistent landing page styling",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-053",
+      "title": "Integration guide — /docs/anthropic-sdk",
+      "priority": 53,
+      "passes": true,
+      "description": "As Ralph, I need to create an integration guide at /docs/anthropic-sdk showing how to use the Nexus SDK with Anthropic's Claude API and agent patterns. This is the ultimate meta-narrative content: Nexus was built by an AI agent, and this guide shows how to monitor AI agents built with Claude. Targets 'claude agent monitoring' and 'anthropic agent observability' keywords.",
+      "acceptanceCriteria": [
+        "GET /docs/anthropic-sdk returns integration guide page with 200 status",
+        "Page has unique <title> and <meta description> targeting 'claude agent monitoring' keyword",
+        "Working code examples in both TypeScript and Python showing NexusClient wrapping Anthropic API calls",
+        "Shows agent pattern: tool use loop with traces and spans for each LLM call and tool execution",
+        "Meta-narrative callout: Nexus itself was built by an AI agent using Claude",
+        "Step-by-step: install Nexus SDK + Anthropic SDK, instrument agent loop, view traces",
+        "Links to main /docs page, /demo, and blog post",
+        "Page added to sitemap.xml",
+        "Cloudflare Web Analytics beacon included",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-054",
+      "title": "Sync GitHub repo with ACP-047-053 code",
+      "priority": 54,
+      "passes": true,
+      "description": "As Ralph, I need to sync the scobb/nexus GitHub repo with all code changes from ACP-047 through ACP-053. The GitHub repo was last synced at ACP-046 and is now missing: /vs/arize-phoenix and /vs/agentops comparison pages, /alternatives hub page, /docs/langchain and /docs/crewai and /docs/anthropic-sdk integration guides, and /pricing standalone page. Visitors from npm/PyPI/HN see outdated code.",
+      "acceptanceCriteria": [
+        "All files from ACP-047-053 are present in scobb/nexus GitHub repo",
+        "New files include: src/pages/guides.ts, src/pages/pricing.ts, updated src/pages/comparison.ts, updated src/index.ts",
+        "No secrets in pushed code (grep for cfat_, sk_live, whsec_, re_ returns only known false positives)",
+        "GitHub repo README reflects current feature set"
+      ]
+    },
+    {
+      "id": "ACP-055",
+      "title": "Changelog page at /changelog",
+      "priority": 55,
+      "passes": true,
+      "description": "As a visitor evaluating Nexus, I want to see a changelog showing the product's development timeline so I know it's actively maintained. The page should list key milestones chronologically with dates. Shows visitors (especially from Show HN) that the product is real and actively developed. Include the meta-narrative that it was built by an AI agent.",
+      "acceptanceCriteria": [
+        "GET /changelog returns a styled changelog page with 200 status",
+        "Page lists at least 10 key milestones with dates (e.g., 'Apr 5 — Project scaffolded', 'Apr 6 — Python SDK', etc.)",
+        "Each entry has a date, title, and brief description",
+        "Page has unique <title> and <meta description>",
+        "Cloudflare Web Analytics beacon included",
+        "Page added to sitemap.xml",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-056",
+      "title": "OpenTelemetry-compatible trace ingestion",
+      "priority": 56,
+      "passes": true,
+      "description": "As a developer with existing OpenTelemetry instrumentation, I want to point my OTEL exporter at Nexus and have my traces appear in the dashboard without changing my application code. Accept OTLP/HTTP JSON format at POST /v1/traces (the OTEL standard path). Map OTEL ResourceSpans to Nexus trace/span model. Requires API key auth via x-api-key header. This is the single biggest adoption-unlocking feature — any developer already using OTEL can try Nexus with a one-line config change.",
+      "acceptanceCriteria": [
+        "POST /v1/traces accepts OTLP/HTTP JSON format (ExportTraceServiceRequest)",
+        "Maps OTEL resourceSpans[].scopeSpans[].spans[] to Nexus spans",
+        "Root span (no parentSpanId) creates a Nexus trace; child spans become Nexus spans",
+        "OTEL span attributes mapped to Nexus metadata",
+        "OTEL span status mapped to Nexus status (OK → ok, ERROR → error)",
+        "API key authentication via x-api-key header (same as existing trace ingestion)",
+        "Returns 200 with empty JSON on success (OTLP standard response)",
+        "Returns 400 for malformed OTLP payloads with descriptive error",
+        "Ingested traces appear correctly in the dashboard",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-057",
+      "title": "Dashboard trace filtering and search",
+      "priority": 57,
+      "passes": true,
+      "description": "As a developer monitoring my agents, I want to filter traces by status (ok/error), agent name, and date range on the dashboard traces page. Currently the traces page shows all recent traces in a flat list with no filtering. This is essential usability — once a user has more than 20-30 traces, they need to find specific ones quickly.",
+      "acceptanceCriteria": [
+        "Traces page has filter controls: status dropdown (all/ok/error), agent dropdown (populated from user's agents), date range (today/7d/30d/all)",
+        "Filters are applied via query parameters (e.g., ?status=error&agent=my-agent&range=7d)",
+        "Filtered results show count of matching traces",
+        "Filters persist across page loads via URL query params",
+        "Default view shows all traces from last 7 days",
+        "Empty state message when no traces match filters",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-058",
+      "title": "Span waterfall timeline on trace detail",
+      "priority": 58,
+      "passes": true,
+      "description": "As a developer debugging an agent execution, I want to see spans displayed as a horizontal waterfall/timeline on the trace detail page, similar to Jaeger or Chrome DevTools. Each span is a bar positioned by start_time and sized by duration, color-coded by status. This makes it immediately obvious where time was spent and which spans failed. Currently spans are shown as a flat list which is hard to parse visually.",
+      "acceptanceCriteria": [
+        "Trace detail page shows spans as horizontal bars in a waterfall layout",
+        "Each bar is positioned by span start_time relative to trace start, and sized by duration",
+        "Bars are color-coded: green for ok, red for error, gray for unset",
+        "Span name and duration label shown on or next to each bar",
+        "Parent-child span relationships shown via indentation (child spans indented under parent)",
+        "Hover/click on a span bar shows full span details (input, output, metadata, error)",
+        "Timeline scale shown at top (e.g., 0ms, 500ms, 1000ms)",
+        "Works correctly with overlapping and nested spans",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-059",
+      "title": "Public trace retrieval API",
+      "priority": 59,
+      "passes": true,
+      "description": "As a developer building automation around my agent monitoring, I want a REST API to query my traces so I can build custom alerts, reports, or integrations. GET /api/v1/traces returns traces filtered by query params. Authenticated with API key. Returns JSON. This enables the ecosystem: users can build Slack bots, custom dashboards, CI/CD integrations on top of Nexus data.",
+      "acceptanceCriteria": [
+        "GET /api/v1/traces returns JSON array of traces, authenticated via x-api-key header",
+        "Supports query params: agent_id, status (ok/error), since (ISO datetime), until (ISO datetime), limit (default 50, max 200)",
+        "Each trace object includes: id, agent_name, status, started_at, ended_at, duration_ms, span_count, metadata",
+        "GET /api/v1/traces/:id returns single trace with full span details",
+        "Returns 401 for missing/invalid API key",
+        "Returns 400 for invalid query params with descriptive error message",
+        "Pagination via cursor-based 'after' param (trace ID)",
+        "Response includes X-Total-Count header with total matching traces",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-060",
+      "title": "Dashboard auto-refresh with live indicator",
+      "priority": 60,
+      "passes": true,
+      "description": "As a developer actively monitoring an agent run, I want the dashboard to auto-refresh so I can watch traces arrive in real-time without manually reloading. The overview and traces pages should auto-refresh every 30 seconds with a visible 'live' indicator. Users can pause auto-refresh. This makes the dashboard feel responsive and useful for active monitoring sessions.",
+      "acceptanceCriteria": [
+        "Dashboard overview page auto-refreshes data every 30 seconds",
+        "Traces list page auto-refreshes every 30 seconds",
+        "Visible 'Live' indicator (pulsing dot or similar) when auto-refresh is active",
+        "User can pause/resume auto-refresh via a toggle button",
+        "Auto-refresh pauses when user is on trace detail page (to avoid disrupting reading)",
+        "New traces since last refresh are visually highlighted briefly",
+        "Auto-refresh state persists in session (localStorage)",
+        "Minimal client-side JavaScript — use meta refresh or lightweight script",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-061",
+      "title": "Sync GitHub repo with ACP-055-060 code",
+      "priority": 61,
+      "passes": true,
+      "description": "As a developer evaluating Nexus on GitHub, I want to see the latest code so I trust the project is active. The scobb/nexus GitHub repo was last synced at ACP-054 (covering through ACP-053). It's missing: changelog page (ACP-055), OTEL trace ingestion (ACP-056), dashboard trace filtering (ACP-057), span waterfall timeline (ACP-058), public trace retrieval API (ACP-059), and auto-refresh (ACP-060). These are major features that make the product credible.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains all code through ACP-060",
+        "README updated to mention OTEL support, trace filtering, public API, auto-refresh",
+        "No secrets (cfat_, sk_live_, whsec_, re_) in pushed code",
+        "Verify: git log on scobb/nexus shows the sync commit"
+      ]
+    },
+    {
+      "id": "ACP-062",
+      "title": "Guided onboarding checklist on dashboard",
+      "priority": 62,
+      "passes": true,
+      "description": "As a new user who just signed up, I need guidance on what to do next so I don't bounce from an empty dashboard. Show a step-by-step onboarding checklist on the overview page: (1) Create an API key, (2) Install the SDK, (3) Send your first trace, (4) Explore your data. Steps auto-complete as the user progresses (API key created = step 1 done, first trace received = step 3 done). Dismissible once complete or via an X button. This reduces time-to-first-trace and prevents the 'empty dashboard bounce' that kills conversion.",
+      "acceptanceCriteria": [
+        "New users see onboarding checklist on dashboard overview",
+        "Four steps shown: Create API Key (links to keys page), Install SDK (shows npm/pip commands), Send First Trace (links to quickstart), Explore Traces (links to traces page)",
+        "Steps show checkmark when completed: step 1 = user has at least 1 API key, step 3 = user has at least 1 trace",
+        "Checklist auto-hides when all steps complete",
+        "Checklist can be dismissed via X button (persisted in KV or cookie)",
+        "Returning users with traces do NOT see the checklist",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-063",
+      "title": "Webhook notifications for trace errors",
+      "priority": 63,
+      "passes": true,
+      "description": "As a developer monitoring agents in production, I want to be notified immediately when a trace errors so I can investigate without staring at a dashboard. Add a webhook URL field to dashboard settings. When a trace with status 'error' is ingested via the API, POST a JSON payload to the webhook URL. This enables Slack, Discord, PagerDuty, and custom integrations. This is the core alerting value prop — 'know when your agents fail' in real-time.",
+      "acceptanceCriteria": [
+        "Dashboard settings page has 'Webhook URL' input field with save button",
+        "Webhook URL stored in users table (new column via migration)",
+        "When trace with status='error' is ingested, POST fires to webhook URL",
+        "Webhook payload: {event: 'trace.error', trace_id, agent_name, error_message, started_at, dashboard_url}",
+        "Webhook fires async (waitUntil) — does not slow trace ingestion",
+        "Failed webhooks logged but do not retry (keep simple)",
+        "Settings page shows 'Send Test' button that fires a sample payload",
+        "Webhook URL validated (must start with https://)",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-064",
+      "title": "Traces-over-time chart on overview dashboard",
+      "priority": 64,
+      "passes": true,
+      "description": "As a developer monitoring my agents, I want to see a visual chart of trace volume over time so I can spot trends and anomalies at a glance. Add a bar chart to the overview dashboard showing traces per hour for the last 24 hours. Error traces shown in red overlay. Rendered as inline SVG — no external charting library needed. This is the most visual feature and critical for impressive screenshots in Show HN, Product Hunt, and marketing materials.",
+      "acceptanceCriteria": [
+        "Overview dashboard shows bar chart of traces per hour (last 24 hours)",
+        "Each bar represents one hour, height proportional to trace count",
+        "Error traces shown as red portion of each bar, success traces in green",
+        "X-axis shows hour labels (e.g., '2pm', '3pm')",
+        "Y-axis shows count scale",
+        "Chart renders as inline SVG (no external charting dependencies)",
+        "Responsive width (fills container)",
+        "Shows 'No trace data yet' message if no traces in period",
+        "Data fetched via SQL GROUP BY strftime('%H', started_at) query",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-065",
+      "title": "Agent health summary cards on overview",
+      "priority": 65,
+      "passes": true,
+      "description": "As a developer with multiple agents, I want to see per-agent health at a glance so I can identify which agents are failing. Show agent health cards on the overview dashboard below the chart: each agent gets a card showing name, traces (24h), success rate %, and last active timestamp. Agents with error rate > 10% highlighted with a red border. Cards link to traces page filtered by that agent.",
+      "acceptanceCriteria": [
+        "Overview dashboard shows per-agent health cards below the chart",
+        "Each card shows: agent name, trace count (last 24h), success rate percentage, last trace timestamp",
+        "Success rate calculated as (non-error traces / total traces) * 100 for last 24h",
+        "Cards with error rate > 10% have red left border or background tint",
+        "Clicking a card navigates to /dashboard/traces?agent=<id>",
+        "Cards arranged in responsive grid (2-3 per row)",
+        "Shows 'No agents yet' if user has no agents",
+        "SQL query uses GROUP BY agent_id with conditional COUNT for error rate",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-066",
+      "title": "Shareable public trace links",
+      "priority": 66,
+      "passes": true,
+      "description": "As a developer debugging an agent failure, I want to share a trace with my team or in a GitHub issue without requiring them to log in. Add a 'Share' button on trace detail that generates a public URL at /public/traces/:shareToken. The public page shows the trace detail (read-only) with Nexus branding and a 'Start monitoring your agents' CTA. This creates a viral growth loop — every shared trace link is a Nexus advertisement, similar to Sentry's shared error pages.",
+      "acceptanceCriteria": [
+        "Trace detail page has a 'Share' button",
+        "Clicking Share generates a random share token (32 hex chars) stored in D1",
+        "Public URL /public/traces/:shareToken shows trace detail (read-only, no auth)",
+        "Public page includes trace name, status, duration, span waterfall, metadata",
+        "Public page has 'Monitored by Nexus' branding and 'Start monitoring your agents — free' CTA with signup link",
+        "Share tokens are unguessable (crypto.getRandomValues)",
+        "New D1 migration adds share_token column to traces table",
+        "Each trace can have at most one share token",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-067",
+      "title": "Trace search by metadata and text",
+      "priority": 67,
+      "passes": true,
+      "description": "As a developer with many traces, I want to search for specific traces by metadata values, trace names, or error messages so I can find the exact trace I need. Add a search input on the traces page that searches across trace name, agent name, metadata JSON, and span error messages. Combined with existing filters (status, agent, date range).",
+      "acceptanceCriteria": [
+        "Traces page has a search input field above the filter bar",
+        "Search queries trace name (LIKE), agent name (LIKE), and metadata column (LIKE)",
+        "Search term preserved in URL as ?q= query parameter",
+        "Works in combination with existing filters (status, agent, date range)",
+        "Results update immediately on form submit",
+        "Empty search shows all traces (same as no search)",
+        "Search input pre-filled from URL query param on page load",
+        "tsc --noEmit passes",
+        "Deployed to production"
+      ]
+    },
+    {
+      "id": "ACP-068",
+      "title": "Sync GitHub repo with ACP-062-067 code",
+      "priority": 68,
+      "passes": true,
+      "description": "As a developer evaluating Nexus on GitHub, I want to see the latest code including onboarding checklist, webhook notifications, traces chart, agent health cards, shareable trace links, and trace search. Sync the ralph-bootstrap nexus/ directory to the scobb/nexus standalone repo on GitHub. Use the established rsync pattern (exclude node_modules, .wrangler, dist, .dev.vars, *.local).",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains all code through ACP-067",
+        "No secrets in the repo (grep for cfat_, npm_, sk_live, whsec_, re_)",
+        "All new files from ACP-062-067 are present (migrations/0005_share_token.sql, src/pages/publicTrace.ts, src/routes/publicTraces.ts, etc.)",
+        "git push succeeds to scobb/nexus main branch"
+      ]
+    },
+    {
+      "id": "ACP-069",
+      "title": "Steve's Launch Playbook",
+      "priority": 69,
+      "passes": true,
+      "description": "As Steve preparing to launch Nexus publicly, I want a single comprehensive document with every human action needed, in priority order, with copy-paste templates so I can execute the launch efficiently. Create nexus/launch/playbook.md with: pre-launch checklist (npm token fix, verify production), launch day steps (Show HN post body pre-written, Product Hunt listing pre-written, Twitter/X thread pre-written, dev.to article ready at nexus/launch/devto-article.md), post-launch steps (monitor analytics, respond to comments, submit awesome-list PRs). Include time estimates for each step.",
+      "acceptanceCriteria": [
+        "nexus/launch/playbook.md exists with complete launch playbook",
+        "Pre-launch checklist includes: fix npm token (granular access token with 2FA bypass), verify production URLs work, verify GitHub repo is current",
+        "Show HN post body is pre-written and copy-paste ready",
+        "Product Hunt listing (tagline, description, first comment) is pre-written",
+        "Twitter/X launch thread (3-5 tweets) is pre-written",
+        "Post-launch checklist includes: monitor Cloudflare analytics, respond to HN/PH comments, submit awesome-list PRs",
+        "Each step has estimated time (e.g., '5 min', '30 min')",
+        "Total estimated time for Steve is documented",
+        "tsc --noEmit passes (no TS changes expected but verify)"
+      ]
+    },
+    {
+      "id": "ACP-070",
+      "title": "Declare Nexus launch-ready — freeze features until user feedback",
+      "priority": 70,
+      "passes": true,
+      "description": "As the Nexus project owner, I want to formally mark the project as launch-ready and establish a feature freeze policy so Ralph stops adding stories and Steve can focus on distribution. Update projects.json status. Add a LAUNCH_READY.md file documenting what's built, what's deployed, known blockers for Steve, and the feature freeze policy (no new stories until: 1 external user signup, Steve feedback, or critical bug).",
+      "acceptanceCriteria": [
+        "projects.json nexus status updated to 'launch-ready'",
+        "nexus/LAUNCH_READY.md exists documenting: feature summary (70 stories), deployment status, known blockers (npm token, PyPI), feature freeze policy",
+        "Feature freeze policy states: no new stories until external user signup, Steve feedback, or critical production bug",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-079",
+      "title": "Fix Stripe billing upgrade flow — stripe_customer_failed error",
+      "priority": 79,
+      "passes": true,
+      "description": "The upgrade flow at /dashboard/billing returns ?error=stripe_customer_failed when attempting to subscribe. Debug the Stripe customer creation and checkout session flow. Likely causes: missing or invalid STRIPE_SECRET_KEY on the worker, customer creation failing before checkout redirect, or Stripe API error not being surfaced. Fix the root cause and ensure the upgrade flow works end-to-end.",
+      "acceptanceCriteria": [
+        "Clicking upgrade on /dashboard/billing successfully redirects to Stripe Checkout",
+        "Error handling surfaces the actual Stripe error message for debugging",
+        "STRIPE_SECRET_KEY verified as set on the worker",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-071",
+      "title": "COGS audit — D1 read optimization and usage report",
+      "priority": 71,
+      "passes": true,
+      "description": "Audit all D1 queries in Nexus for unnecessary reads. The dashboard, trace list, and retention job may be doing full table scans or redundant queries. Add KV caching where appropriate (dashboard metrics, agent lists). Generate a COGS report summarizing: current D1 reads/month, top query hotspots, optimization opportunities, projected costs at 100/1K/10K users. Email the report to Steve.",
+      "acceptanceCriteria": [
+        "All D1 queries audited with read counts documented",
+        "KV caching added for dashboard overview metrics (5-min TTL)",
+        "Agent list cached in KV (1-hour TTL)",
+        "COGS report generated as nexus/COGS-REPORT.md",
+        "Report emailed to steve@keylightdigital.dev via Resend",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-072",
+      "title": "Integration guide — OpenAI Agents SDK",
+      "priority": 72,
+      "passes": true,
+      "description": "Create an integration guide page at /docs/openai-agents showing how to instrument OpenAI Agents SDK with Nexus tracing. Include code examples for both TypeScript and Python SDKs.",
+      "acceptanceCriteria": [
+        "Page accessible at /docs/openai-agents",
+        "Shows TypeScript and Python integration code",
+        "Added to sitemap.xml",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-073",
+      "title": "Integration guide — AutoGen",
+      "priority": 73,
+      "passes": true,
+      "description": "Create an integration guide page at /docs/autogen showing how to add Nexus tracing to Microsoft AutoGen multi-agent workflows.",
+      "acceptanceCriteria": [
+        "Page accessible at /docs/autogen",
+        "Shows Python integration code",
+        "Added to sitemap.xml",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-074",
+      "title": "Integration guide — Pydantic AI",
+      "priority": 74,
+      "passes": true,
+      "description": "Create an integration guide page at /docs/pydantic-ai showing how to add Nexus tracing to Pydantic AI agent applications.",
+      "acceptanceCriteria": [
+        "Page accessible at /docs/pydantic-ai",
+        "Shows Python integration code with decorators",
+        "Added to sitemap.xml",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-075",
+      "title": "Blog post — How to monitor your AI agents in production",
+      "priority": 75,
+      "passes": true,
+      "description": "Write a blog post at /blog/monitor-ai-agents-production covering why agent observability matters, common failure modes, and how Nexus solves them. Target the search query \"monitor AI agents production\". Include real examples from Ralph dogfooding.",
+      "acceptanceCriteria": [
+        "Blog post accessible at /blog/monitor-ai-agents-production",
+        "At least 800 words",
+        "Includes code examples using Nexus SDK",
+        "Internal links to /docs and /pricing",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-076",
+      "title": "Blog post — Building an autonomous AI agent with observability",
+      "priority": 76,
+      "passes": true,
+      "description": "Write a blog post at /blog/autonomous-agent-observability about building Ralph as an autonomous agent and how Nexus traces helped debug issues. Real-world case study using actual trace data.",
+      "acceptanceCriteria": [
+        "Blog post accessible at /blog/autonomous-agent-observability",
+        "At least 800 words",
+        "References real Ralph trace patterns",
+        "Internal links to /demo and /docs",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-077",
+      "title": "Security audit and hardening",
+      "priority": 77,
+      "passes": true,
+      "description": "Audit Nexus for security issues: SQL injection (parameterized queries check), XSS in rendered HTML (escaping check), CSRF on POST routes, rate limiting on auth endpoints, API key hashing. Document findings and fix any issues found.",
+      "acceptanceCriteria": [
+        "All SQL queries verified as parameterized",
+        "All user-rendered HTML verified as escaped",
+        "Rate limiting on magic link endpoint verified",
+        "API keys stored hashed (or documented why not)",
+        "Security findings documented in nexus/SECURITY-AUDIT.md",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-078",
+      "title": "UX audit — dashboard usability improvements",
+      "priority": 78,
+      "passes": true,
+      "description": "Audit the Nexus dashboard for UX issues: empty states, loading states, error feedback, mobile responsiveness, navigation clarity. Fix the top 5 issues found.",
+      "acceptanceCriteria": [
+        "Empty states have helpful messages and CTAs",
+        "All pages work at 375px mobile width",
+        "Navigation has clear active state indicators",
+        "Error states show actionable messages",
+        "UX findings documented in nexus/UX-AUDIT.md",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-080",
+      "title": "Replace Tailwind CDN with build-time CSS",
+      "priority": 80,
+      "passes": true,
+      "description": "All Nexus pages use cdn.tailwindcss.com which is not meant for production — it adds load time and shows a console warning. Replace with a build-time Tailwind CSS setup: either inline a pre-built CSS file served from a route, or use Tailwind CLI to generate a minified CSS bundle that gets embedded in the worker. The goal is zero external CDN dependencies for styling.",
+      "acceptanceCriteria": [
+        "No pages reference cdn.tailwindcss.com",
+        "All pages still render correctly with Tailwind utility classes",
+        "CSS is served from the worker itself (no external CDN)",
+        "No console warnings about Tailwind CDN in production",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-081",
+      "title": "Fix dashboard timezone and metrics display bugs",
+      "priority": 81,
+      "passes": true,
+      "description": "Multiple display bugs on the dashboard overview: (1) The \"Traces — last 24 hours\" chart uses UTC times, so for US-timezone users, late evening traces appear at early morning positions on the chart. Either render chart labels in the browser local timezone via JS, or label the axis as UTC. (2) The plan limits show \"Free\" even for Pro users — the plan detection query may not be checking subscriptions correctly. (3) The agent health card shows an incorrect success rate (3% when most traces are green) — likely counting all-time traces but only recent successes, or the query logic is inverted. Fix all three.",
+      "acceptanceCriteria": [
+        "24-hour chart displays hours in browser local timezone (via client-side JS) or clearly labels as UTC",
+        "Plan limits correctly show Pro limits for Pro users (unlimited traces, unlimited agents)",
+        "Agent health success rate matches actual trace status distribution",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-082",
+      "title": "Fix landing page pricing messaging — conflicting free vs $9/mo",
+      "priority": 82,
+      "passes": true,
+      "description": "The landing page shows \"$9/mo\" for the Pro plan and then immediately below says \"Start monitoring your agents — free\". This is confusing — it reads like the $9 plan is free. Either remove the free CTA from the pricing section context, make the free tier more prominent with clear differentiation, or reword the CTA to say something like \"Start free\" with the pricing card clearly separate. The messaging should make it obvious: there is a free tier AND a paid tier, and the CTA leads to the free signup.",
+      "acceptanceCriteria": [
+        "No conflicting free/paid messaging in close proximity",
+        "Clear visual separation between pricing tiers and signup CTA",
+        "CTA still encourages free signup",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-083",
+      "title": "Add Sentry error tracking to Nexus",
+      "priority": 83,
+      "passes": true,
+      "description": "Nexus has no error tracking. Add @sentry/cloudflare to capture unhandled exceptions in the Worker. Create a new Sentry project called \"nexus\" in the keylight-digital org using the Sentry API or CLI. Add SENTRY_DSN as a worker secret. Wrap the Hono app with Sentry withSentry() handler. Scrub PII from events (emails, API keys, session tokens).",
+      "acceptanceCriteria": [
+        "Sentry project \"nexus\" exists in keylight-digital org",
+        "@sentry/cloudflare installed and configured",
+        "SENTRY_DSN set as worker secret",
+        "Unhandled exceptions captured with request context",
+        "PII scrubbed from Sentry events",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-084",
+      "title": "Fix login/register page for password manager compatibility",
+      "priority": 84,
+      "passes": true,
+      "description": "The login page is not properly detected by password managers like 1Password. Issues: (1) Login and register share the same form, confusing autofill heuristics. (2) Inputs may be missing autocomplete attributes. (3) The \"create account\" flow uses JS to change form action which password managers cannot follow. Fix: split into separate /login and /signup pages with distinct forms, add proper autocomplete attributes (username, current-password, new-password), use standard form structure that password managers recognize. Each page should link to the other.",
+      "acceptanceCriteria": [
+        "Separate /auth/login and /auth/signup pages",
+        "Login form has autocomplete=\"username\" on email and autocomplete=\"current-password\" on password",
+        "Signup form has autocomplete=\"username\" on email and autocomplete=\"new-password\" on password",
+        "1Password and other password managers detect the forms correctly",
+        "Magic link option available on both pages",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-085",
+      "title": "Redeploy production — close deploy gap for ACP-071 through ACP-084",
+      "priority": 85,
+      "passes": true,
+      "description": "Production is running code from approximately ACP-070. Since then, 14 stories have been committed including: build-time CSS replacing Tailwind CDN (ACP-080), timezone and metrics display fixes (ACP-081), pricing messaging fix (ACP-082), Sentry error tracking (ACP-083), and password manager compatibility (ACP-084). The Tailwind CDN removal is especially critical — if production still loads the CDN, users see a different (potentially broken) version than what was tested. Run wrangler deploy to push all changes live. Verify key routes work after deploy: /, /auth/login, /dashboard, /api/v1/traces, /blog, /docs, /pricing.",
+      "acceptanceCriteria": [
+        "wrangler deploy succeeds without errors",
+        "GET / returns the updated landing page (build-time CSS, not Tailwind CDN)",
+        "GET /auth/login and GET /auth/signup are separate pages (ACP-084 change)",
+        "GET /blog returns blog listing page",
+        "GET /pricing returns standalone pricing page",
+        "GET /health returns {status: 'ok'}",
+        "Sentry DSN is configured as worker secret (ACP-083)"
+      ]
+    },
+    {
+      "id": "ACP-086",
+      "title": "Sync GitHub repo scobb/nexus with ACP-071 through ACP-084",
+      "priority": 86,
+      "passes": true,
+      "description": "The scobb/nexus GitHub repo was last synced at ACP-068. Since then, 16 stories have been committed including: COGS audit (ACP-071), 3 new integration guides (ACP-072-074), 2 blog posts (ACP-075-076), security hardening (ACP-077), UX improvements (ACP-078), Stripe billing fix (ACP-079), build-time CSS (ACP-080), 2 bug fixes (ACP-081-082), Sentry (ACP-083), and password auth (ACP-084). Anyone visiting from npm or the README sees stale code. Copy the nexus/ directory contents to the GitHub repo and push.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains all code through ACP-084",
+        "README is up to date with current features",
+        "package.json version reflects current state",
+        "git push succeeds without errors"
+      ]
+    },
+    {
+      "id": "ACP-087",
+      "title": "Google Search Console and Bing Webmaster verification setup",
+      "priority": 87,
+      "passes": true,
+      "description": "Google has not indexed nexus.keylightdigital.dev despite having robots.txt and sitemap.xml (ACP-032). The site needs Search Console verification so Steve can submit the sitemap and request indexing. Add a Google site verification meta tag placeholder in the HTML head (Steve will replace with his actual verification code). Also add a BingSiteAuth.xml file for Bing Webmaster Tools. Create a /search-console-setup page (auth-protected, admin only) that shows Steve step-by-step instructions for completing verification.",
+      "acceptanceCriteria": [
+        "HTML head includes a placeholder google-site-verification meta tag with instructions in a comment",
+        "BingSiteAuth.xml served at /BingSiteAuth.xml with placeholder",
+        "Instructions page at /admin/search-console-setup (auth-protected) explains verification steps",
+        "sitemap.xml URL is included in robots.txt (already done in ACP-032, verify)",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-088",
+      "title": "Structured data expansion — Article and HowTo schema for content pages",
+      "priority": 88,
+      "passes": true,
+      "description": "ACP-032 added basic structured data (Organization, WebSite) but blog posts and integration guides lack page-specific schema. Blog posts (ACP-075, ACP-076, ACP-044) should have Article schema (headline, author, datePublished, description). Integration guides (ACP-050-053, ACP-072-074) should have HowTo schema (name, step[]).  The /pricing page should have Product schema with Offer. These enable Google rich results — featured snippets, how-to carousels, and pricing cards — which significantly increase click-through rates.",
+      "acceptanceCriteria": [
+        "Blog posts include JSON-LD Article schema with headline, author, datePublished, description, publisher",
+        "Integration guide pages include JSON-LD HowTo schema with name and steps",
+        "/pricing includes JSON-LD Product schema with Offer (price, priceCurrency)",
+        "All JSON-LD validates at schema.org standards (no missing required fields)",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-089",
+      "title": "Internal cross-linking between all content pages",
+      "priority": 89,
+      "passes": true,
+      "description": "Nexus has 15+ content pages (blog posts, comparison pages, integration guides, docs, pricing, alternatives) but they likely don't link to each other effectively. Internal linking is one of the strongest on-page SEO signals. Add contextual cross-links: blog posts should link to relevant integration guides and comparison pages. Comparison pages should link to the alternatives hub, pricing, and relevant integration guides. Integration guides should link to the getting started docs, relevant blog posts, and comparison with the framework's native observability. The /alternatives page should be the hub linking to all /vs/* pages. Add a 'Related content' section at the bottom of blog posts and guides.",
+      "acceptanceCriteria": [
+        "Each blog post has a 'Related' section linking to 2-3 relevant guides or comparison pages",
+        "Each comparison page links to /alternatives, /pricing, and at least one integration guide",
+        "Each integration guide links to /docs (getting started), at least one blog post, and /pricing",
+        "/alternatives page links to all /vs/* pages",
+        "No broken internal links",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-090",
+      "title": "HTTP caching headers and performance optimization",
+      "priority": 90,
+      "passes": true,
+      "description": "Set appropriate Cache-Control headers to improve page load performance and reduce D1 reads. Static content pages (blog posts, comparison pages, integration guides, docs, pricing) rarely change and should be cached at the edge. The built CSS file (ACP-080) should have long cache TTL with content hash in filename for cache busting. API responses and dashboard pages should not be cached. Add preload hints for critical CSS. This improves Core Web Vitals (LCP, FID) which directly impacts Google search ranking.",
+      "acceptanceCriteria": [
+        "Static content pages (blog, /vs/*, /docs/*, /pricing, /alternatives) return Cache-Control: public, max-age=3600, s-maxage=86400",
+        "CSS assets return Cache-Control: public, max-age=31536000, immutable (with content hash in filename)",
+        "API routes (/api/*) return Cache-Control: no-store",
+        "Dashboard routes return Cache-Control: no-store, private",
+        "Landing page (/) returns Cache-Control: public, max-age=300, s-maxage=3600",
+        "Critical CSS is preloaded via Link header or <link rel=preload>",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-091",
+      "title": "Redeploy production — close deploy gap (ACP-087-090)",
+      "priority": 91,
+      "passes": true,
+      "description": "Production is stale AGAIN (4th time). ACP-087-090 added Google/Bing verification meta tags, structured data (Article + HowTo JSON-LD), internal cross-linking between all content pages, and HTTP caching headers. None of these are live. The caching headers in particular are critical — without them, every page load hits D1 and Core Web Vitals suffer, hurting SEO ranking. Run npm run deploy from nexus/ directory to build CSS and deploy to Cloudflare Workers. Verify key routes return correct Cache-Control headers and structured data.",
+      "acceptanceCriteria": [
+        "npm run deploy succeeds from nexus/ directory",
+        "GET / returns Cache-Control header with max-age=300",
+        "GET /blog/introducing-nexus returns Cache-Control with max-age=3600 and contains Article JSON-LD",
+        "GET /docs/langchain returns Cache-Control with max-age=3600 and contains HowTo JSON-LD",
+        "GET /BingSiteAuth.xml returns 200",
+        "GET /health returns {status: 'ok'}",
+        "Blog posts contain Related section with cross-links"
+      ]
+    },
+    {
+      "id": "ACP-092",
+      "title": "Sync GitHub repo with ACP-087-090 code",
+      "priority": 92,
+      "passes": true,
+      "description": "The scobb/nexus GitHub repo was last synced at ACP-086 (through ACP-084). Four stories (ACP-087-090) have been implemented since: search console verification setup, structured data expansion, internal cross-linking, and HTTP caching headers. Anyone visiting from npm or PyPI sees stale code missing these SEO optimizations. Clone scobb/nexus, rsync the nexus/ directory (excluding node_modules, .wrangler, .dev.vars, tailwind/output.css), commit, and push.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-087-090 changes",
+        "src/index.ts includes caching middleware and BingSiteAuth route",
+        "src/pages/blog.ts includes Article JSON-LD and Related sections",
+        "src/pages/guides.ts includes HowTo JSON-LD",
+        "src/pages/comparison.ts includes cross-linking helper",
+        "Commit message references ACP-087-090",
+        "Push succeeds to scobb/nexus main branch"
+      ]
+    },
+    {
+      "id": "ACP-093",
+      "title": "Blog RSS/Atom feed with auto-discovery",
+      "priority": 93,
+      "passes": true,
+      "description": "The blog has no RSS or Atom feed, which means feed readers (Feedly, Inoreader, NewsBlur), aggregators, and automated syndication tools cannot discover or subscribe to new content. RSS feeds are also crawled by Google and can accelerate indexing of new blog posts. Add a /blog/feed.xml Atom feed route that includes all blog posts with title, summary, published date, author, and canonical URL. Add <link rel='alternate' type='application/atom+xml'> auto-discovery tags to the blog listing page and all blog post pages so feed readers can auto-detect the feed.",
+      "acceptanceCriteria": [
+        "GET /blog/feed.xml returns valid Atom XML with Content-Type: application/atom+xml",
+        "Feed includes all blog posts with title, summary, published date, author name, and link to full post",
+        "Feed has proper <feed> root element with xmlns='http://www.w3.org/2005/Atom'",
+        "Blog listing page (/blog) includes <link rel='alternate' type='application/atom+xml' href='/blog/feed.xml'> in <head>",
+        "Each blog post page includes the same auto-discovery link tag",
+        "Feed entries are ordered by published date (newest first)",
+        "Cache-Control header on feed: public, max-age=3600, s-maxage=86400",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-094",
+      "title": "Production uptime monitoring via Cloudflare Workers cron",
+      "priority": 94,
+      "passes": true,
+      "description": "There is no automated alerting when production goes down. If the Cloudflare Worker fails or the D1 database becomes unavailable, Steve would only discover it by manually checking. Add a Cloudflare Workers cron trigger (scheduled handler) that runs every 5 minutes, hits /health, and sends an alert email via Resend if the response is not 200 with status 'ok'. Use KV to track state so only the first failure sends an email, with a recovery email when service restores. This is operational infrastructure, not a product feature.",
+      "acceptanceCriteria": [
+        "wrangler.toml includes a [triggers] crons entry for every-5-minute schedule",
+        "Scheduled handler fetches the Worker's own /health endpoint",
+        "On first failure: sends email to steve@keylightdigital.dev via Resend with subject 'Nexus production is DOWN' and details",
+        "On recovery after failure: sends email with subject 'Nexus production recovered'",
+        "KV key 'uptime:last_status' tracks ok/down state to prevent duplicate alerts",
+        "KV key 'uptime:last_checked' stores ISO timestamp of last check",
+        "Normal operation (health OK) does not send any email",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-095",
+      "title": "Sitemap expansion and search engine ping",
+      "priority": 95,
+      "passes": true,
+      "description": "The sitemap.xml was created in ACP-032 but may be incomplete — since then, 60+ stories have added new routes including /changelog, /docs, 3 more integration guides, 4 comparison pages, 3 blog posts, and /pricing. An incomplete sitemap means Google doesn't know about these pages. Additionally, the sitemap should be dynamically generated from actual routes (not hardcoded) to stay current. After generating, ping Google and Bing sitemap endpoints to request crawling. This is the most direct action Ralph can take to unblock Google indexing.",
+      "acceptanceCriteria": [
+        "GET /sitemap.xml dynamically generates sitemap from all public routes",
+        "Sitemap includes all public pages: /, /blog, /blog/*, /pricing, /docs, /docs/*, /vs/*, /alternatives, /changelog, /demo",
+        "Each URL entry includes <lastmod> with a reasonable date and <changefreq> (weekly for content, monthly for static)",
+        "Sitemap does NOT include /dashboard/*, /auth/*, /api/*, /admin/*",
+        "After generating sitemap, implementation pings Google (GET https://www.google.com/ping?sitemap=...) and Bing (GET https://www.bing.com/ping?sitemap=...)",
+        "Sitemap response has Cache-Control: public, max-age=3600",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-096",
+      "title": "Redeploy production — ACP-093-095 not live",
+      "priority": 96,
+      "passes": true,
+      "description": "ACP-093-095 added RSS/Atom feed, uptime monitoring cron, and sitemap improvements with search engine pings. None of this is live. The uptime cron trigger (*/5 * * * *) won't fire until the Worker is redeployed with the updated wrangler.toml. The RSS feed and sitemap pings are also not serving. Run npm run deploy from the nexus/ directory to push all changes to production. Verify /blog/feed.xml returns valid Atom XML, /health returns 200, and /sitemap.xml returns updated sitemap with cache headers.",
+      "acceptanceCriteria": [
+        "npm run deploy succeeds from nexus/ directory",
+        "GET https://nexus.keylightdigital.dev/health returns 200 with {status: 'ok'}",
+        "GET https://nexus.keylightdigital.dev/blog/feed.xml returns valid Atom XML",
+        "GET https://nexus.keylightdigital.dev/sitemap.xml returns sitemap with Cache-Control header",
+        "Uptime cron trigger (*/5 * * * *) is registered (visible in wrangler tail or Cloudflare dashboard)"
+      ]
+    },
+    {
+      "id": "ACP-097",
+      "title": "Sync GitHub repo scobb/nexus with ACP-093-095",
+      "priority": 97,
+      "passes": true,
+      "description": "The GitHub repo scobb/nexus was last synced at ACP-092 (through ACP-090). Three stories (ACP-093: RSS feed, ACP-094: uptime monitoring, ACP-095: sitemap pings) are missing. Clone the repo, rsync the nexus/ directory (excluding node_modules, .wrangler, .dev.vars, tailwind/output.css), commit, and push. This keeps GitHub credible for visitors from npm/PyPI.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-093-095 changes",
+        "RSS feed code (blog feed.xml route) present in pushed code",
+        "Uptime monitoring code (cron trigger, health check) present in pushed code",
+        "Sitemap ping code present in pushed code",
+        "No secrets (.dev.vars, API keys) in pushed code"
+      ]
+    },
+    {
+      "id": "ACP-098",
+      "title": "GitHub Actions CD — auto-deploy to Cloudflare on push to main",
+      "priority": 98,
+      "passes": true,
+      "description": "The chronic deploy gap (5 occurrences, 5 separate deploy stories) is a structural problem. Fix it permanently by adding a deploy job to the existing CI workflow (.github/workflows/ci.yml). On push to main, after typecheck passes, deploy to Cloudflare Workers using wrangler. Requires adding CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as GitHub repository secrets via the GitHub API. The deploy job should: npm ci, npm run build:css, npx wrangler deploy. This means every GitHub sync automatically deploys — no more separate deploy stories.",
+      "acceptanceCriteria": [
+        "ci.yml has a 'deploy' job that runs after typecheck passes on push to main (not on PRs)",
+        "Deploy job runs: npm ci, npm run build:css (if script exists), npx wrangler deploy",
+        "CLOUDFLARE_API_TOKEN added as GitHub repository secret via GitHub API",
+        "CLOUDFLARE_ACCOUNT_ID added as GitHub repository secret via GitHub API",
+        "Deploy job uses wrangler-action or direct npx wrangler deploy with env vars",
+        "Deploy only triggers on push to main, not on pull_request events"
+      ]
+    },
+    {
+      "id": "ACP-099",
+      "title": "IndexNow URL submission for Bing/Yandex search discovery",
+      "priority": 99,
+      "passes": true,
+      "description": "Google Search Console requires manual verification (blocked), but Bing/Yandex support IndexNow — a protocol for instant URL submission without verification. Generate an IndexNow API key, host it at /{key}.txt on the site, and submit all site URLs via the IndexNow API (POST https://api.indexnow.org/indexnow). Add a route to serve the key file. Then make the API call with all known URLs from the sitemap. This is the most direct automated path to search engine discoverability while Google Search Console remains blocked.",
+      "acceptanceCriteria": [
+        "IndexNow API key generated (random 32-char hex string) and stored as a constant",
+        "GET /{key}.txt returns the key value (required by IndexNow protocol for verification)",
+        "POST to https://api.indexnow.org/indexnow succeeds with all site URLs",
+        "At least 15 URLs submitted (landing page, blog posts, docs, comparison pages, pricing, etc.)",
+        "Submission logged to console or response captured for verification",
+        "Key file route does not interfere with existing routes"
+      ]
+    },
+    {
+      "id": "ACP-100",
+      "title": "Create v1.0.0 GitHub Release on scobb/nexus",
+      "priority": 100,
+      "passes": true,
+      "description": "As Ralph, I need to create a proper v1.0.0 tagged release on the scobb/nexus GitHub repo with a comprehensive changelog. Tagged releases appear in GitHub feeds, watchers' notifications, and GitHub search results. This is the single strongest signal that a project is production-ready. Use the GitHub API to create a git tag and release with a structured changelog covering all major features (OTEL ingestion, TypeScript + Python SDKs, dashboard with filtering/waterfall/search, webhook alerts, Stripe billing, SEO content).",
+      "acceptanceCriteria": [
+        "Git tag v1.0.0 created on scobb/nexus main branch via GitHub API",
+        "GitHub Release created with title 'Nexus v1.0.0 — AI Agent Control Plane' and structured changelog",
+        "Changelog organized by category: Core (ingestion, dashboard, auth), SDKs (TypeScript, Python), Integrations (OTEL, webhooks), Content (blog, docs, comparison pages)",
+        "Release is not marked as pre-release or draft — it is a full production release",
+        "Release body includes links to: live site, npm package, PyPI package, documentation"
+      ]
+    },
+    {
+      "id": "ACP-101",
+      "title": "Submit scobb/nexus to relevant awesome lists via GitHub PRs",
+      "priority": 101,
+      "passes": true,
+      "description": "As Ralph, I need to submit Nexus to 3-5 relevant awesome lists on GitHub by forking each list repo and creating a pull request. Awesome lists are curated directories that developers actively browse for tool discovery. Target lists: awesome-selfhosted, awesome-cloudflare, awesome-ai-agents or similar AI/ML tool lists. Each PR should follow the list's contribution guidelines and include a one-line description of Nexus.",
+      "acceptanceCriteria": [
+        "At least 3 awesome-list repos forked to scobb account via GitHub API",
+        "Pull requests created on each with Nexus entry following the list's format/guidelines",
+        "Each PR includes: project name, link to scobb/nexus, one-line description, license info",
+        "PR descriptions explain what Nexus is and why it fits the list",
+        "List of submitted PRs with URLs logged in progress.txt"
+      ]
+    },
+    {
+      "id": "ACP-102",
+      "title": "Enable GitHub Discussions and create starter community threads",
+      "priority": 102,
+      "passes": true,
+      "description": "As Ralph, I need to enable GitHub Discussions on scobb/nexus and create 2-3 starter threads to establish a community presence. GitHub Discussions serves as a lightweight community home — it signals an active project and gives potential users a place to ask questions. Enable via GitHub API, set up categories (Q&A, Show & Tell, Ideas/Feature Requests), and create intro threads: a welcome/getting-started thread, a roadmap discussion, and an 'Ask anything' Q&A thread.",
+      "acceptanceCriteria": [
+        "GitHub Discussions enabled on scobb/nexus repository via GitHub API",
+        "At least 2 discussion categories configured (Q&A, General or Show & Tell)",
+        "Welcome/introduction discussion created explaining what Nexus is and how to get started",
+        "Roadmap or 'What should we build next?' discussion created to invite community input",
+        "All discussions are created from the scobb account (the repo owner)"
+      ]
+    },
+    {
+      "id": "ACP-103",
+      "title": "Mobile audit — fix all pages for 375px viewport",
+      "priority": 103,
+      "passes": true,
+      "description": "As a developer using Nexus on my phone, every page should be fully usable at 375px width. The prior UX audit (ACP-078) claimed mobile was done but was not properly verified. This story requires actually testing every page and fixing real issues: overflow, truncation, tap targets, navigation, forms, tables, and modals. This is table-stakes quality — do not mark as done without actually verifying each page.",
+      "acceptanceCriteria": [
+        "Landing page (/) — no horizontal overflow at 375px, pricing table stacks vertically, CTAs are full-width and tappable",
+        "Login/register pages — forms are usable, inputs are full-width, password fields work with mobile keyboards",
+        "Dashboard overview — stats cards stack vertically, chart is readable, no overflow",
+        "Traces list — table or list adapts to narrow width (no horizontal scroll), filters are accessible",
+        "Trace detail — span waterfall is readable at 375px, metadata doesn't overflow, expandable sections work",
+        "Agent cards — grid collapses to single column",
+        "Settings/API keys page — forms and key list usable at 375px",
+        "Docs page — code blocks don't overflow, copy buttons reachable",
+        "Comparison pages (/vs/*) — feature tables readable on mobile",
+        "Blog pages — readable, images don't overflow",
+        "Navigation — hamburger menu or equivalent works on mobile, all nav items reachable",
+        "All tap targets >= 44px",
+        "No text truncated in a way that loses meaning",
+        "Document every fix in the commit message",
+        "tsc --noEmit passes"
+      ]
+    },
+    {
+      "id": "ACP-104",
+      "title": "Sync GitHub repo scobb/nexus with ACP-103 mobile audit",
+      "priority": 104,
+      "passes": true,
+      "description": "As Ralph, I need to sync the ACP-103 mobile audit changes to the scobb/nexus GitHub repo. ACP-103 added hamburger menus to all 13 pages, fixed span waterfall overflow, and adjusted content padding for 375px viewports. These changes are committed locally but not on GitHub. Since ACP-098 set up auto-deploy via GitHub Actions, pushing to scobb/nexus main will automatically deploy to production. This is the final sync needed to make the mobile-responsive experience live.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-103 changes (hamburger nav, overflow fixes, padding adjustments)",
+        "All page files updated: agents.ts, billing.ts, blog.ts, changelog.ts, comparison.ts, dashboard.ts, demo.ts, docs.ts, guides.ts, keys.ts, landing.ts, pricing.ts, publicTrace.ts, settings.ts, traces.ts",
+        "generated-styles.ts includes new Tailwind classes (md:hidden, md:flex, sm:hidden, sm:flex)",
+        "No secrets in pushed code",
+        "GitHub Actions CI triggers on push (typecheck + deploy)"
+      ]
+    },
+    {
+      "id": "ACP-105",
+      "title": "Fix dashboard hourly chart to show rolling 24h window",
+      "priority": 105,
+      "passes": true,
+      "description": "As a user, I expect the hourly bar chart on the dashboard overview to show a rolling 24-hour window ending at the current hour, not a static 00-23 display. Currently the chart always starts at 00:00 regardless of the current time, which makes the rightmost bars empty/misleading during the first half of the day. Fix: start the hour array from (currentHour + 1) so the rightmost bar is always the current hour. The fix is already written in dashboard.ts and needs to be committed and synced to GitHub (which auto-deploys via ACP-098).",
+      "acceptanceCriteria": [
+        "Dashboard hourly bar chart displays hours starting from (currentHour + 1) through currentHour (rolling 24h window)",
+        "The rightmost bar always represents the current UTC hour",
+        "Chart correctly wraps around midnight (e.g., if current hour is 14, shows 15,16,...23,00,01,...14)",
+        "Changes synced to scobb/nexus GitHub repo (auto-deploys via ACP-098)",
+        "No secrets in pushed code"
+      ]
+    },
+    {
+      "id": "ACP-106",
+      "title": "Custom 404 page with navigation and search suggestions",
+      "priority": 106,
+      "passes": true,
+      "description": "As a visitor who hits a broken or non-existent URL, I should see a branded 404 page with navigation links to popular pages (docs, demo, pricing, blog) instead of a generic error. This is table-stakes quality for any production site. The 404 page should match the site design, include the standard nav bar, and suggest helpful links.",
+      "acceptanceCriteria": [
+        "GET /nonexistent returns HTTP 404 with a branded HTML page (not plain text or generic error)",
+        "404 page includes standard site navigation (same as other pages)",
+        "404 page shows helpful links: docs, demo, pricing, blog, landing page",
+        "404 page includes a clear message explaining the page was not found",
+        "Mobile responsive at 375px — no horizontal overflow",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-107",
+      "title": "Integration guide — LlamaIndex",
+      "priority": 107,
+      "passes": true,
+      "description": "As a developer using LlamaIndex for RAG and agent workflows, I want a dedicated integration guide at /docs/llamaindex showing how to add Nexus observability to my LlamaIndex application. LlamaIndex is one of the most popular AI frameworks (especially for RAG) and is a major gap in our docs. Include callback handler setup, query engine tracing, and agent tracing examples.",
+      "acceptanceCriteria": [
+        "GET /docs/llamaindex returns a full integration guide page",
+        "Guide includes: npm/pip install steps, callback handler configuration, query engine tracing example, agent tracing example",
+        "Page has proper SEO meta tags targeting 'llamaindex observability', 'llamaindex tracing', 'llamaindex monitoring'",
+        "Page has HowTo structured data (JSON-LD)",
+        "Internal links to /docs and other guides",
+        "Added to sitemap",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-108",
+      "title": "Integration guide — DSPy",
+      "priority": 108,
+      "passes": true,
+      "description": "As a developer using DSPy for LLM programming, I want a dedicated integration guide at /docs/dspy showing how to add Nexus observability to my DSPy programs. DSPy is growing rapidly as a framework for building LLM applications with optimized prompting. Include module tracing, optimizer observability, and evaluation monitoring.",
+      "acceptanceCriteria": [
+        "GET /docs/dspy returns a full integration guide page",
+        "Guide includes: install steps, module tracing setup, optimizer observability, evaluation monitoring example",
+        "Page has proper SEO meta tags targeting 'dspy observability', 'dspy tracing', 'dspy monitoring'",
+        "Page has HowTo structured data (JSON-LD)",
+        "Internal links to /docs and other guides",
+        "Added to sitemap",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-109",
+      "title": "Competitor comparison — vs/helicone",
+      "priority": 109,
+      "passes": true,
+      "description": "As a developer evaluating observability tools, I want to see how Nexus compares to Helicone at /vs/helicone. Helicone is an AI gateway and observability platform. The comparison should be honest and highlight where Nexus wins (simpler, cheaper, agent-focused) and where Helicone differs (proxy-based, gateway features, request logging). Targets 'helicone alternative' and 'helicone vs' searches.",
+      "acceptanceCriteria": [
+        "GET /vs/helicone returns a comparison page",
+        "Honest feature comparison table covering: pricing, setup complexity, agent tracing, gateway features, self-hosting, open-source",
+        "SEO meta tags targeting 'helicone alternative', 'helicone vs nexus'",
+        "Structured data for comparison content",
+        "Internal links to /alternatives hub, /pricing, /demo",
+        "Added to sitemap and /alternatives page",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-110",
+      "title": "Competitor comparison — vs/braintrust",
+      "priority": 110,
+      "passes": true,
+      "description": "As a developer evaluating AI evaluation and tracing tools, I want to see how Nexus compares to Braintrust at /vs/braintrust. Braintrust focuses on LLM evaluation, experiment tracking, and production tracing. The comparison should highlight Nexus advantages (simpler setup, agent-focused, indie-friendly pricing) vs Braintrust strengths (evaluation framework, experiment tracking, enterprise features). Targets 'braintrust alternative' searches.",
+      "acceptanceCriteria": [
+        "GET /vs/braintrust returns a comparison page",
+        "Honest feature comparison table covering: pricing, evaluation features, agent tracing, experiment tracking, setup complexity, open-source",
+        "SEO meta tags targeting 'braintrust alternative', 'braintrust ai alternative'",
+        "Structured data for comparison content",
+        "Internal links to /alternatives hub, /pricing, /demo",
+        "Added to sitemap and /alternatives page",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-111",
+      "title": "Blog post — Monitoring RAG pipelines: a practical guide",
+      "priority": 111,
+      "passes": true,
+      "description": "As a developer building RAG (retrieval-augmented generation) applications, I want a detailed blog post explaining how to monitor RAG pipelines in production. RAG monitoring is a high-intent search topic. Cover: what can go wrong in RAG (retrieval failures, context window issues, hallucinations from bad context), what to monitor (retrieval latency, relevance scores, generation quality), and how Nexus traces help diagnose RAG issues. Include practical code examples.",
+      "acceptanceCriteria": [
+        "New blog post accessible at /blog/monitoring-rag-pipelines",
+        "Content covers: RAG failure modes, what to monitor, tracing retrieval and generation steps, practical Nexus SDK examples",
+        "Proper SEO meta tags targeting 'RAG monitoring', 'RAG observability', 'monitor RAG pipeline'",
+        "Article structured data (JSON-LD)",
+        "Reading time estimate shown",
+        "Internal links to /docs, /demo, integration guides",
+        "Added to blog index and RSS feed",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-112",
+      "title": "Landing page social proof and trust signals",
+      "priority": 112,
+      "passes": true,
+      "description": "As a first-time visitor to the Nexus landing page, I want to see trust signals that make me confident this is a real, maintained product. Add: GitHub repo link with star count badge, 'open-source' badge, live uptime badge (from ACP-094 monitoring), framework logos showing integrations (LangChain, CrewAI, OpenAI, Anthropic, LlamaIndex, DSPy), and a 'Built on Cloudflare' infrastructure badge. These signals improve conversion from visitor to signup.",
+      "acceptanceCriteria": [
+        "Landing page includes a GitHub star badge linking to scobb/nexus",
+        "Landing page includes an 'Open Source' or MIT license badge",
+        "Landing page includes framework/integration logos or names (at least 6 frameworks)",
+        "Landing page includes 'Built on Cloudflare Workers' infrastructure signal",
+        "Trust signals section is visually clean and doesn't clutter the page",
+        "Mobile responsive at 375px — badges wrap properly",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-113",
+      "title": "Sync GitHub repo scobb/nexus with ACP-106-112 changes",
+      "priority": 113,
+      "passes": true,
+      "description": "As the product owner, I need ACP-106-112 changes (404 page, LlamaIndex guide, DSPy guide, Helicone comparison, Braintrust comparison, RAG blog post, landing page trust signals) deployed to production. Push all changes to scobb/nexus GitHub repo, which triggers auto-deploy via GitHub Actions (ACP-098). Verify no secrets in pushed code.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains all ACP-106-112 changes",
+        "No secrets in pushed code (API keys, tokens, etc.)",
+        "GitHub Actions CI triggers on push (typecheck + deploy)",
+        "All new pages included in sitemap"
+      ]
+    },
+    {
+      "id": "ACP-114",
+      "title": "Production route audit — verify all public routes on live site",
+      "priority": 114,
+      "passes": true,
+      "description": "As the product owner, I need to verify that the deployed production site at nexus.keylightdigital.dev actually works. Curl every registered public route and verify it returns HTTP 200 with non-empty HTML. Test API endpoints with invalid inputs to verify proper error codes (401 for bad auth, 400 for bad input). Check sitemap.xml is valid and contains all routes. Check robots.txt. Check RSS feed. Log any failures. Fix any issues found.",
+      "acceptanceCriteria": [
+        "All public routes (landing, pricing, docs, blog posts, comparison pages, guides, changelog, demo, 404) return HTTP 200",
+        "API endpoint POST /api/v1/traces returns 401 with no auth header",
+        "sitemap.xml returns HTTP 200 and contains all registered URLs",
+        "robots.txt returns HTTP 200",
+        "RSS/Atom feed returns HTTP 200 with valid XML",
+        "/health returns HTTP 200 with JSON",
+        "Any broken routes discovered are fixed",
+        "Audit results logged in progress.txt"
+      ]
+    },
+    {
+      "id": "ACP-115",
+      "title": "Blog post — How to debug AI agents in production",
+      "priority": 115,
+      "passes": true,
+      "description": "As a developer searching for 'how to debug AI agents' or 'debug LLM agents production', I want a practical guide that covers common agent failure modes, debugging strategies, and how observability tools like Nexus help. This is a high-intent, problem-focused topic — people search for it when they have a real problem. Existing blog posts cover monitoring and RAG specifically, but not general debugging strategies.",
+      "acceptanceCriteria": [
+        "Blog post at /blog/debugging-ai-agents-in-production",
+        "Covers: 5 common agent failure modes (tool call errors, context overflow, infinite loops, hallucinated actions, latency spikes)",
+        "Covers: debugging strategies (trace-first debugging, span analysis, input/output inspection, replay)",
+        "Includes Nexus SDK code examples showing how to add debugging-friendly traces",
+        "SEO meta tags targeting 'debug AI agents', 'AI agent debugging', 'LLM agent troubleshooting'",
+        "JSON-LD Article structured data",
+        "Added to POSTS array, blogPostPage dispatch, SITE_URLS, and sitemap",
+        "Internal links to /docs, /demo, existing guides",
+        "Mobile responsive at 375px",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "ACP-116",
+      "title": "Sync GitHub repo scobb/nexus with ACP-114-115 changes",
+      "priority": 116,
+      "passes": true,
+      "description": "Push ACP-114-115 changes to scobb/nexus GitHub repo, triggering auto-deploy via GitHub Actions (ACP-098). Verify no secrets in pushed code.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains all ACP-114-115 changes",
+        "No secrets in pushed code",
+        "GitHub Actions CI triggers on push",
+        "All new pages included in sitemap"
+      ]
+    },
+    {
+      "id": "ACP-117",
+      "title": "Fix D1 datetime format and Beam analytics domain",
+      "priority": 117,
+      "passes": true,
+      "description": "Fix two bugs in production: (1) SQL queries use datetime() which returns 'YYYY-MM-DD HH:MM:SS' format, but D1 stores ISO 8601 timestamps with T separator and Z suffix. Replace with strftime('%Y-%m-%dT%H:%M:%SZ', ...) across all date-comparison queries (dashboard stats, agent 24h counts, billing month counts, retention cleanup). (2) Beam analytics tracking script URL changed from beam.keylightdigital.dev to beam-privacy.com — update across all pages.",
+      "acceptanceCriteria": [
+        "All datetime() calls in SQL queries replaced with strftime ISO 8601 format",
+        "Beam analytics script URL updated to beam-privacy.com in all pages",
+        "typecheck passes",
+        "Changes committed"
+      ]
+    },
+    {
+      "id": "ACP-118",
+      "title": "Sync ACP-117 fixes to GitHub",
+      "priority": 118,
+      "passes": true,
+      "description": "Push ACP-117 bug fixes to scobb/nexus GitHub repo, triggering auto-deploy via GitHub Actions (ACP-098). Verify no secrets in pushed code.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-117 changes",
+        "No secrets in pushed code",
+        "GitHub Actions CI triggers on push"
+      ]
+    },
+    {
+      "id": "ACP-119",
+      "title": "Edge cache all static pages with Cache-Control headers",
+      "priority": 119,
+      "passes": true,
+      "description": "Add Cache-Control headers to all static HTML pages (landing, docs, guides, blog, comparison, pricing, changelog, 404, alternatives). These pages only change on deploy. Add 'Cache-Control: public, max-age=3600, s-maxage=86400' to reduce Worker invocations and D1 reads. Authenticated dashboard pages should NOT be cached. This is COGS optimization — reduces Cloudflare Worker CPU time for repeat visitors.",
+      "acceptanceCriteria": [
+        "All static public pages return Cache-Control: public, max-age=3600, s-maxage=86400",
+        "Dashboard/authenticated pages do NOT have public cache headers",
+        "API endpoints do NOT have public cache headers",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-120",
+      "title": "Pillar blog post — AI Observability Tools Compared: 2026 Guide",
+      "priority": 120,
+      "passes": true,
+      "description": "Write a comprehensive comparison/buyer's guide blog post at /blog/ai-observability-tools-compared covering Langfuse, LangSmith, Helicone, Braintrust, Arize Phoenix, AgentOps, and Nexus. Link to individual /vs pages. Target keywords: 'AI observability tools', 'LLM monitoring tools', 'AI agent monitoring comparison'. This serves as a pillar page that consolidates link equity from all individual comparison pages.",
+      "acceptanceCriteria": [
+        "Blog post live at /blog/ai-observability-tools-compared",
+        "Covers at least 6 tools with honest pros/cons",
+        "Links to all existing /vs/* pages",
+        "SEO meta tags and Article JSON-LD structured data",
+        "Added to POSTS array, sitemap, SITE_URLS",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-121",
+      "title": "Blog post — 5 Metrics Every AI Agent Team Should Track",
+      "priority": 121,
+      "passes": true,
+      "description": "Write an educational blog post at /blog/ai-agent-metrics targeting teams evaluating AI monitoring solutions. Cover: latency (p50/p95/p99), token cost per request, error rate by tool/agent, trace completion rate, and context window utilization. Each metric should explain why it matters, how to measure it, and include a Nexus SDK code example. Target keywords: 'AI agent metrics', 'LLM monitoring metrics', 'what to monitor AI agents'.",
+      "acceptanceCriteria": [
+        "Blog post live at /blog/ai-agent-metrics",
+        "Covers 5 metrics with code examples",
+        "SEO meta tags and Article JSON-LD structured data",
+        "Internal links to /docs, /demo, relevant guides",
+        "Added to POSTS array, sitemap, SITE_URLS",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-122",
+      "title": "Add FAQ JSON-LD schema to pricing and alternatives pages",
+      "priority": 122,
+      "passes": true,
+      "description": "Add FAQPage JSON-LD structured data to /pricing (pricing FAQs) and /alternatives (tool selection FAQs). Google surfaces FAQ rich results in search, which significantly increase CTR. Extract existing FAQ content from the pages or add relevant Q&As if not present.",
+      "acceptanceCriteria": [
+        "/pricing page includes FAQPage JSON-LD with at least 4 Q&As",
+        "/alternatives page includes FAQPage JSON-LD with at least 3 Q&As",
+        "JSON-LD is valid (well-formed JSON in script type=application/ld+json)",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-123",
+      "title": "Sync ACP-119-124 to GitHub and deploy",
+      "priority": 123,
+      "passes": true,
+      "description": "Push ACP-119-124 changes to scobb/nexus GitHub repo, triggering auto-deploy via GitHub Actions (ACP-098). Verify no secrets in pushed code.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-119-122 changes",
+        "No secrets in pushed code",
+        "GitHub Actions CI triggers on push"
+      ]
+    },
+    {
+      "id": "ACP-124",
+      "title": "Billing improvements — cancel_at migration, cancellation UX, promo codes",
+      "priority": 124,
+      "passes": true,
+      "description": "Three billing improvements: (1) Add D1 migration 0007_cancel_at.sql to add cancel_at TEXT column to subscriptions table. (2) Update webhook handler to store cancel_at from Stripe subscription events and handle nullable current_period_end. (3) Update billing page to show cancellation date with yellow warning when subscription is set to cancel. (4) Enable promo codes on Stripe checkout (allow_promotion_codes: true). Code changes are already in the working tree — just need the migration file created, typecheck verified, and committed.",
+      "acceptanceCriteria": [
+        "D1 migration 0007_cancel_at.sql adds cancel_at TEXT column to subscriptions table",
+        "Webhook handler stores cancel_at from Stripe subscription events",
+        "Billing page shows cancellation date when cancel_at is set",
+        "Stripe checkout enables promo codes (allow_promotion_codes: true)",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-125",
+      "title": "Competitor comparison page — /vs/datadog",
+      "priority": 125,
+      "passes": true,
+      "description": "Create a comparison page at /vs/datadog comparing Nexus to Datadog LLM Monitoring. Datadog is the largest APM brand and recently added LLM observability — 'datadog alternative AI agents' is a high-value search query. Key differentiators: purpose-built vs bolted-on, $9/mo flat vs usage-based pricing (Datadog LLM costs scale with log volume), lightweight SDK vs heavyweight agent, AI-native trace model vs generic APM traces.",
+      "acceptanceCriteria": [
+        "GET /vs/datadog returns comparison page with TL;DR, pricing table, feature comparison (10+ features), honest take section",
+        "SEO meta tags targeting 'datadog alternative AI agents', 'datadog LLM monitoring alternative'",
+        "JSON-LD structured data (WebPage + ItemList)",
+        "Added to alternativesPage() card grid",
+        "Route registered in index.ts, added to SITE_URLS and sitemap",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-126",
+      "title": "Competitor comparison page — /vs/wandb",
+      "priority": 126,
+      "passes": true,
+      "description": "Create a comparison page at /vs/wandb comparing Nexus to Weights & Biases Weave. W&B is a major ML platform and Weave is their AI tracing/evaluation tool. Key differentiators: production monitoring focus (Nexus) vs experiment tracking focus (W&B), simple trace/span model vs complex run/artifact model, $9/mo flat vs usage-based, instant setup vs W&B ecosystem lock-in.",
+      "acceptanceCriteria": [
+        "GET /vs/wandb returns comparison page with TL;DR, pricing table, feature comparison (10+ features), honest take",
+        "SEO meta tags targeting 'weights and biases alternative', 'wandb weave alternative', 'wandb AI monitoring'",
+        "JSON-LD structured data (WebPage + ItemList)",
+        "Added to alternativesPage() card grid",
+        "Route registered in index.ts, added to SITE_URLS and sitemap",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-127",
+      "title": "Blog post — How to Add Tracing to Your LangChain Agent in 5 Minutes",
+      "priority": 127,
+      "passes": true,
+      "description": "Write a practical, tutorial-style blog post targeting 'langchain tracing tutorial', 'langchain monitoring how to', 'add observability langchain' searches. Step-by-step: install SDK, create API key, wrap agent with tracing, view traces in dashboard. Include complete working code examples. Link to /docs/langchain for full reference.",
+      "acceptanceCriteria": [
+        "Blog post at /blog/langchain-tracing-tutorial with POSTS entry, dispatch, and function",
+        "Step-by-step tutorial format with numbered steps and complete code examples",
+        "SEO meta tags targeting 'langchain tracing tutorial', 'langchain monitoring how to'",
+        "Article JSON-LD structured data",
+        "Internal links to /docs/langchain, /docs, /demo, /register",
+        "Added to SITE_URLS in index.ts",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-128",
+      "title": "Blog post — OpenTelemetry for AI Agents: Why Standard APM Falls Short",
+      "priority": 128,
+      "passes": true,
+      "description": "Write a thought-leadership blog post targeting the OTEL community — 'opentelemetry AI agents', 'opentelemetry LLM monitoring', 'APM for AI agents'. Explain why standard APM/OTEL instrumentation misses AI-specific failure modes: token usage tracking, prompt/response capture, agent loop detection, tool call tracing, hallucination monitoring. Position Nexus as purpose-built for AI agent traces while being OTEL-inspired.",
+      "acceptanceCriteria": [
+        "Blog post at /blog/opentelemetry-ai-agents with POSTS entry, dispatch, and function",
+        "Covers: what OTEL gets right, 5 things standard APM misses for AI agents, how Nexus fills the gap",
+        "SEO meta tags targeting 'opentelemetry AI agents', 'opentelemetry LLM', 'APM AI agents'",
+        "Article JSON-LD structured data",
+        "Internal links to /docs, /demo, /vs/datadog, /blog/ai-observability-tools-compared",
+        "Added to SITE_URLS in index.ts",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-129",
+      "title": "Blog post — How Much Does It Cost to Run AI Agents? A Token Economics Guide",
+      "priority": 129,
+      "passes": true,
+      "description": "Write a practical blog post targeting 'AI agent cost', 'LLM token cost', 'AI agent token economics' searches. Cover: typical cost ranges for different agent types (simple chatbot vs multi-tool agent vs multi-agent system), how to calculate token costs, hidden costs (retries, context overflow, unnecessary tool calls), how to monitor and reduce costs with tracing. Include Nexus SDK examples for cost tracking.",
+      "acceptanceCriteria": [
+        "Blog post at /blog/ai-agent-cost-guide with POSTS entry, dispatch, and function",
+        "Covers: cost ranges by agent type, token cost calculation, hidden cost patterns, monitoring with Nexus",
+        "SEO meta tags targeting 'AI agent cost', 'LLM token cost monitoring', 'AI agent economics'",
+        "Article JSON-LD structured data",
+        "Internal links to /pricing, /docs, /blog/ai-agent-metrics, /register",
+        "Added to SITE_URLS in index.ts",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-130",
+      "title": "Integration guide — Google Agent Development Kit (ADK)",
+      "priority": 130,
+      "passes": true,
+      "description": "Create a guide at /docs/google-adk for integrating Nexus with Google's Agent Development Kit. Google ADK is a growing framework for building AI agents on Vertex AI. The guide should cover: pip install, API key setup, wrapping ADK agent runs with Nexus traces, tracing tool calls and LLM interactions within ADK pipelines. Target 'google adk monitoring', 'google agent development kit observability' searches.",
+      "acceptanceCriteria": [
+        "GET /docs/google-adk returns integration guide page",
+        "Covers: installation, API key setup, agent run tracing, tool call spans, viewing traces",
+        "SEO meta tags targeting 'google adk monitoring', 'google agent development kit tracing'",
+        "HowTo JSON-LD structured data",
+        "Route registered in index.ts, added to SITE_URLS and sitemap",
+        "typecheck passes"
+      ]
+    },
+    {
+      "id": "ACP-131",
+      "title": "Sync ACP-125-130 to GitHub and deploy",
+      "priority": 131,
+      "passes": true,
+      "description": "Push ACP-125-130 changes to scobb/nexus GitHub repo, triggering auto-deploy via GitHub Actions (ACP-098). Verify no secrets in pushed code. rsync nexus/ to /tmp/nexus-standalone/, commit, and push.",
+      "acceptanceCriteria": [
+        "scobb/nexus GitHub repo contains ACP-125-130 changes",
+        "No secrets in pushed code (grep for re_/sk_live/sk_test/ghp_/whsec_/cfat_ patterns)",
+        "GitHub Actions CI triggers on push"
+      ]
+    },
+    {
+      "id": "ACP-132",
+      "title": "GitHub repo metadata optimization — homepage URLs + topics",
+      "priority": 132,
+      "passes": true,
+      "description": "As Ralph, I need to set homepage URLs and add discoverable topics on both scobb/nexus and scobb/beam GitHub repos via the GitHub API. Currently neither repo has a homepage URL set — visitors see the repo but can't click through to the live product. This is the simplest possible conversion improvement.",
+      "acceptanceCriteria": [
+        "scobb/nexus homepage set to https://nexus.keylightdigital.dev via GitHub API PATCH /repos/scobb/nexus",
+        "scobb/beam homepage set to https://beam-privacy.com via GitHub API PATCH /repos/scobb/beam",
+        "scobb/nexus topics updated to include: ai-agents, observability, tracing, llm, cloudflare-workers, developer-tools, typescript, open-source, monitoring, ai-observability",
+        "scobb/beam topics updated to include: analytics, web-analytics, privacy, cloudflare-workers, gdpr, cookie-free, open-source, typescript, self-hosted, privacy-first",
+        "Verify both repos show homepage link in the About section on GitHub"
+      ]
+    },
+    {
+      "id": "ACP-133",
+      "title": "Accessibility quick wins — lang, alt text, semantic HTML, skip nav",
+      "priority": 133,
+      "passes": true,
+      "description": "As Ralph, I need to audit all Nexus HTML pages for basic WCAG AA accessibility compliance. Google uses accessibility signals for ranking (Core Web Vitals). Key fixes: lang attribute on <html>, skip-to-content links, ARIA labels on interactive elements, semantic heading hierarchy. This is table-stakes quality that affects both SEO and usability.",
+      "acceptanceCriteria": [
+        "All HTML documents have lang='en' on the <html> element",
+        "All pages have a skip-to-content link as the first focusable element",
+        "All interactive elements (buttons, links, form inputs) have accessible names (aria-label or visible text)",
+        "Heading hierarchy is correct (h1 → h2 → h3, no skipped levels) on all pages",
+        "All form inputs have associated <label> elements or aria-label",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-134",
+      "title": "Sync ACP-132-133 to GitHub and deploy",
+      "priority": 134,
+      "passes": true,
+      "description": "As Ralph, I need to sync ACP-132-133 changes to the scobb/nexus GitHub repo, which triggers auto-deploy via GitHub Actions (ACP-098).",
+      "acceptanceCriteria": [
+        "rsync nexus/ to /tmp/nexus-standalone/ (excluding .git, node_modules, .wrangler, .dev.vars, tailwind/output.css)",
+        "No secrets in pushed code (verify with grep for re_/sk_live/sk_test/ghp_/whsec_/cfat_ patterns)",
+        "Committed and pushed to scobb/nexus main",
+        "GitHub Actions CI+deploy triggered"
+      ]
+    },
+    {
+      "id": "ACP-135",
+      "title": "Standalone example project on GitHub — nexus-example repo",
+      "priority": 135,
+      "passes": true,
+      "description": "Create a scobb/nexus-example GitHub repository with a complete, working TypeScript project that demonstrates Nexus agent tracing with a LangChain agent. Includes package.json, src/index.ts with a working agent + Nexus trace/span setup, .env.example, and a clean README with 'Run in 2 minutes' instructions. This is discoverable distribution content — developers searching for 'langchain observability example' or 'AI agent tracing example' on GitHub can find and clone this.",
+      "acceptanceCriteria": [
+        "GitHub repo scobb/nexus-example created via API with description, homepage, and topics",
+        "package.json with @keylightdigital/nexus, langchain, @langchain/openai dependencies",
+        "src/index.ts with a working LangChain agent wrapped in Nexus trace + spans",
+        "README.md with badges, prerequisites, 'Run in 2 minutes' setup steps, what you'll see in dashboard, links to docs",
+        ".env.example with NEXUS_API_KEY and OPENAI_API_KEY placeholders",
+        "tsconfig.json with correct TypeScript config",
+        "Topics include: nexus, ai-agents, langchain, observability, tracing, example"
+      ]
+    },
+    {
+      "id": "ACP-136",
+      "title": "Security response headers — HSTS + Permissions-Policy",
+      "priority": 136,
+      "passes": true,
+      "description": "Add Strict-Transport-Security and Permissions-Policy response headers to all responses. The site already has X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy but is missing HSTS (which tells browsers to always use HTTPS) and Permissions-Policy (which disables unnecessary browser APIs like camera, microphone, geolocation). These are table-stakes security headers that security-conscious developers will check when evaluating the product.",
+      "acceptanceCriteria": [
+        "All responses include Strict-Transport-Security: max-age=31536000; includeSubDomains",
+        "All responses include Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()",
+        "Existing security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy) unchanged",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-137",
+      "title": "Sync ACP-135-136 to GitHub and deploy",
+      "priority": 137,
+      "passes": true,
+      "description": "Sync all ACP-135-136 changes to scobb/nexus GitHub repo. This triggers auto-deploy via GitHub Actions (ACP-098).",
+      "acceptanceCriteria": [
+        "rsync nexus/ to /tmp/nexus-standalone/ (excluding .git, node_modules, .wrangler, .dev.vars, tailwind/output.css)",
+        "No secrets in pushed code (grep for re_/sk_live/sk_test/ghp_/whsec_/cfat_ patterns)",
+        "Committed and pushed to scobb/nexus main",
+        "GitHub Actions CI+deploy triggered"
+      ]
+    },
+    {
+      "id": "ACP-138",
+      "title": "Python quickstart guide — /docs/python-quickstart",
+      "priority": 138,
+      "passes": true,
+      "description": "Create a dedicated Python quickstart guide at /docs/python-quickstart. Python is the dominant language for AI agent development, and while we have framework-specific guides (LangChain, CrewAI, DSPy, LlamaIndex), there's no general-purpose Python quickstart showing how to instrument any Python agent with the Nexus SDK. This is the #1 onboarding gap for the majority of potential users.",
+      "acceptanceCriteria": [
+        "GET /docs/python-quickstart returns a complete guide page",
+        "Covers: pip install, API key setup, basic trace creation, adding spans, error handling, viewing traces in dashboard",
+        "Python code examples use the keylightdigital-nexus PyPI package",
+        "Includes both sync and async Python examples",
+        "SEO meta tags targeting 'python AI agent tracing', 'python LLM monitoring'",
+        "HowTo JSON-LD structured data",
+        "Internal links to framework-specific guides (/docs/langchain, /docs/crewai, etc.)",
+        "Added to SITE_URLS and sitemap",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-139",
+      "title": "Microsoft AutoGen integration guide — /docs/autogen",
+      "priority": 139,
+      "passes": true,
+      "description": "Create an integration guide for Microsoft AutoGen (AG2) at /docs/autogen. AutoGen is one of the top multi-agent frameworks with significant Microsoft backing and enterprise adoption. The guide should show how to instrument AutoGen's ConversableAgent, GroupChat, and tool calls with Nexus traces and spans.",
+      "acceptanceCriteria": [
+        "GET /docs/autogen returns a complete integration guide page",
+        "Covers: pip install, Nexus client setup, wrapping ConversableAgent with traces, instrumenting GroupChat multi-agent conversations, tool call span capture",
+        "Code examples in Python using autogen and keylightdigital-nexus packages",
+        "SEO meta tags targeting 'autogen monitoring', 'autogen tracing', 'microsoft autogen observability'",
+        "HowTo JSON-LD structured data",
+        "Internal links to other guides and relevant blog posts",
+        "Added to SITE_URLS and sitemap",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-140",
+      "title": "Pydantic AI integration guide — /docs/pydantic-ai",
+      "priority": 140,
+      "passes": true,
+      "description": "Create an integration guide for Pydantic AI at /docs/pydantic-ai. Pydantic AI is the fastest-growing Python AI agent framework, built by the Pydantic team with strong type safety focus. The guide should show how to instrument Pydantic AI agents, tool calls, and structured outputs with Nexus traces.",
+      "acceptanceCriteria": [
+        "GET /docs/pydantic-ai returns a complete integration guide page",
+        "Covers: pip install, agent setup with Nexus tracing, instrumenting Agent.run() calls, tool call span capture, structured output tracing",
+        "Code examples in Python using pydantic-ai and keylightdigital-nexus packages",
+        "SEO meta tags targeting 'pydantic ai monitoring', 'pydantic ai tracing', 'pydantic ai observability'",
+        "HowTo JSON-LD structured data",
+        "Internal links to Python quickstart and other guides",
+        "Added to SITE_URLS and sitemap",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-141",
+      "title": "Portkey competitor comparison page — /vs/portkey",
+      "priority": 141,
+      "passes": true,
+      "description": "Create a competitor comparison page for Portkey AI at /vs/portkey. Portkey is an AI gateway and observability platform gaining traction, particularly for its proxy-based approach and model routing features. The key differentiator: Portkey is gateway-first (routing, fallbacks, load balancing) while Nexus is observability-first (trace/span instrumentation for debugging). Different primary use cases.",
+      "acceptanceCriteria": [
+        "GET /vs/portkey returns a branded comparison page",
+        "TL;DR choose-if grid: Portkey for gateway/routing, Nexus for deep agent tracing",
+        "Pricing table comparing Portkey's usage-based pricing vs Nexus $9/mo flat",
+        "Feature comparison table (12+ features)",
+        "Honest take section acknowledging Portkey's strengths",
+        "SEO meta tags targeting 'portkey alternative', 'portkey ai alternative'",
+        "JSON-LD structured data",
+        "Added Portkey row to /alternatives summary table",
+        "Added to SITE_URLS and sitemap",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-142",
+      "title": "Blog post — How to Choose an AI Observability Tool in 2026",
+      "priority": 142,
+      "passes": true,
+      "description": "Write a buyer's guide blog post targeting developers actively evaluating AI observability tools. This is bottom-of-funnel content for people ready to make a decision. Cover evaluation criteria (not just product comparisons), with a decision framework that naturally leads to Nexus for the indie/startup segment.",
+      "acceptanceCriteria": [
+        "GET /blog/choose-ai-observability-tool returns a complete blog post",
+        "Covers: 5 evaluation criteria (cost model, integration depth, data privacy, setup time, team size fit), decision matrix for different team sizes/use cases, common mistakes when evaluating tools",
+        "Honest and balanced — acknowledges when competitors are the better choice",
+        "Links to all existing /vs/* comparison pages",
+        "SEO meta tags targeting 'choose AI observability tool', 'best AI monitoring tool 2026', 'AI observability comparison guide'",
+        "Article JSON-LD structured data",
+        "Added to POSTS array and SITE_URLS",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-143",
+      "title": "Blog post — Building Multi-Agent Systems: Observability Patterns",
+      "priority": 143,
+      "passes": true,
+      "description": "Write a technical blog post about observability patterns for multi-agent architectures. Multi-agent systems (AutoGen, CrewAI, custom) are the next wave of AI development and have unique monitoring challenges: agent-to-agent communication, delegation chains, consensus patterns, shared state. This targets the 'multi-agent' search space which is growing rapidly.",
+      "acceptanceCriteria": [
+        "GET /blog/multi-agent-observability-patterns returns a complete blog post",
+        "Covers: 4+ multi-agent patterns (supervisor, peer-to-peer, hierarchical, consensus) with observability approaches for each",
+        "Code examples showing trace/span instrumentation for multi-agent communication",
+        "Links to relevant framework guides (/docs/autogen, /docs/crewai, /docs/langchain)",
+        "SEO meta tags targeting 'multi-agent observability', 'multi-agent monitoring', 'multi-agent system debugging'",
+        "Article JSON-LD structured data",
+        "Added to POSTS array and SITE_URLS",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-144",
+      "title": "Sync ACP-138-143 to GitHub and deploy",
+      "priority": 144,
+      "passes": true,
+      "description": "Sync all ACP-138-143 changes to scobb/nexus GitHub repo. This triggers auto-deploy via GitHub Actions (ACP-098).",
+      "acceptanceCriteria": [
+        "rsync nexus/ to /tmp/nexus-standalone/ (excluding .git, node_modules, .wrangler, .dev.vars, tailwind/output.css)",
+        "No secrets in pushed code (grep for re_/sk_live/sk_test/ghp_/whsec_/cfat_ patterns)",
+        "Committed and pushed to scobb/nexus main",
+        "GitHub Actions CI+deploy triggered"
+      ]
+    },
+    {
+      "id": "ACP-145",
+      "title": "Cross-promotion — Link Beam and Nexus on both landing pages",
+      "priority": 145,
+      "passes": true,
+      "description": "Add an 'Also from Keylight Digital' section near the footer of both the Nexus and Beam landing pages, linking to the other product. This creates real cross-domain backlinks between two properties we control, improves discoverability for visitors of either product, and signals a portfolio of tools (not just a one-off project). On Nexus: link to Beam with a one-line description. On Beam: link to Nexus with a one-line description.",
+      "acceptanceCriteria": [
+        "Nexus landing page (nexus/src/pages/landing.ts) has an 'Also from Keylight Digital' section above the footer linking to beam-privacy.com with description 'Beam — Privacy-first web analytics. Cookie-free, GDPR-compliant.'",
+        "Beam landing page (worktrees/beam/beam/src/landing.ts) has an 'Also from Keylight Digital' section above the footer linking to nexus.keylightdigital.dev with description 'Nexus — AI agent observability. Trace, monitor, and debug your AI agents.'",
+        "Both sections use minimal styling consistent with the existing footer/page design",
+        "Mobile responsive at 375px",
+        "typecheck passes on both projects (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-146",
+      "title": "IndexNow resubmission — Submit all new URLs since ACP-099",
+      "priority": 146,
+      "passes": true,
+      "description": "ACP-099 submitted the original set of URLs to IndexNow (Bing, Yandex). Since then, 45+ stories have added new pages: 5 blog posts, 4 comparison pages, 4 integration guides, and assorted other pages. These new URLs have never been submitted to search engines. Resubmit the complete URL list via IndexNow API to Bing and Yandex for indexing.",
+      "acceptanceCriteria": [
+        "Read SITE_URLS from nexus/src/index.ts to get the complete current URL list",
+        "Submit all URLs via IndexNow batch API to api.indexnow.org",
+        "Log submission results (HTTP status codes) in progress.txt",
+        "Verify submission was accepted (HTTP 200 or 202)"
+      ]
+    },
+    {
+      "id": "ACP-147",
+      "title": "Blog post — Detecting AI Hallucinations in Production with Trace Analysis",
+      "priority": 147,
+      "passes": true,
+      "description": "Write a technical blog post about detecting and monitoring AI hallucinations in production using trace analysis. Hallucination detection is one of the hottest topics in AI reliability and directly connects to observability. Cover: types of hallucinations (factual, logical, context), detection patterns using traces (output-vs-source comparison spans, confidence scoring, retrieval-augmented verification), practical monitoring strategies. This targets 'AI hallucination detection', 'LLM hallucination monitoring' searches — a genuinely novel topic not covered by existing content.",
+      "acceptanceCriteria": [
+        "GET /blog/detecting-ai-hallucinations returns a complete blog post",
+        "Covers: 3+ types of hallucinations, detection patterns using trace analysis, practical Nexus SDK code examples for hallucination monitoring spans, real-world monitoring strategies",
+        "Code examples showing: output verification spans, confidence score logging, retrieval vs generation comparison tracing",
+        "SEO meta tags targeting 'AI hallucination detection', 'LLM hallucination monitoring', 'detect AI hallucinations production'",
+        "Article JSON-LD structured data",
+        "Internal links to /docs, /demo, /blog/monitoring-rag-pipelines, /blog/ai-agent-metrics",
+        "Added to POSTS array and SITE_URLS",
+        "typecheck passes (tsc --noEmit)"
+      ]
+    },
+    {
+      "id": "ACP-148",
+      "title": "Sync ACP-145-147 to GitHub and deploy",
+      "priority": 148,
+      "passes": true,
+      "description": "Sync all ACP-145-147 changes to scobb/nexus GitHub repo. This triggers auto-deploy via GitHub Actions (ACP-098).",
+      "acceptanceCriteria": [
+        "rsync nexus/ to /tmp/nexus-standalone/ (excluding .git, node_modules, .wrangler, .dev.vars, tailwind/output.css)",
+        "No secrets in pushed code (grep for re_/sk_live/sk_test/ghp_/whsec_/cfat_ patterns)",
+        "Committed and pushed to scobb/nexus main",
+        "GitHub Actions CI+deploy triggered"
+      ]
+    },
+    {
+      "id": "ACP-149",
+      "title": "Fix incomplete sitemap — add missing blog URLs",
+      "priority": 149,
+      "passes": true,
+      "description": "The sitemap.xml only contains 8 of the 13 published blog posts. The 5 missing URLs are not discoverable by Google. Audit the sitemap generation code and add ALL published blog post URLs. Also verify all docs/guides and comparison pages are included.",
+      "acceptanceCriteria": [
+        "All 13 blog post URLs present in /sitemap.xml",
+        "All /docs/* guide URLs present in /sitemap.xml",
+        "All /vs/* comparison page URLs present in /sitemap.xml",
+        "Sitemap validates as valid XML",
+        "curl /sitemap.xml returns 200 with correct content-type"
+      ]
+    },
+    {
+      "id": "ACP-150",
+      "title": "Blog RSS/Atom feed at /blog/rss.xml",
+      "priority": 150,
+      "passes": true,
+      "description": "/blog/rss.xml returns 404. Create an RSS 2.0 (or Atom) feed for the blog. This enables syndication to dev.to, Hashnode, feed aggregators, and newsletter tools. Include all blog posts with title, description, link, and pubDate. Add <link rel='alternate' type='application/rss+xml'> to the blog page head.",
+      "acceptanceCriteria": [
+        "GET /blog/rss.xml returns 200 with application/xml content-type",
+        "Feed contains all 13 blog posts with title, link, description, pubDate",
+        "Feed validates as valid RSS 2.0 or Atom XML",
+        "Blog page HTML includes <link rel='alternate'> tag pointing to the feed",
+        "Landing page footer or blog page links to RSS feed"
+      ]
+    },
+    {
+      "id": "ACP-151",
+      "title": "Privacy Policy page at /privacy",
+      "priority": 151,
+      "passes": true,
+      "description": "/privacy returns 404. A SaaS product handling user data (accounts, AI agent traces) and processing payments (Stripe) must have a privacy policy. This is required for GDPR compliance and Stripe's merchant agreement. Create a clear, honest privacy policy page covering: data collected (email, password hash, traces), data storage (Cloudflare D1/R2), third-party services (Stripe, Cloudflare), cookies (auth session), data retention, and user rights.",
+      "acceptanceCriteria": [
+        "GET /privacy returns 200 with proper HTML page",
+        "Covers: data collected, storage, third-party services, cookies, retention, user rights",
+        "Footer on all pages links to /privacy",
+        "Signup/login page links to privacy policy",
+        "Page is mobile-responsive at 375px"
+      ]
+    },
+    {
+      "id": "ACP-152",
+      "title": "Terms of Service page at /terms",
+      "priority": 152,
+      "passes": true,
+      "description": "/terms returns 404. A SaaS product with paid plans must have terms of service. Create a clear terms page covering: service description, account responsibilities, acceptable use, billing/refunds (Stripe), data handling, disclaimers, liability limitations, and termination. Use plain language, not dense legalese.",
+      "acceptanceCriteria": [
+        "GET /terms returns 200 with proper HTML page",
+        "Covers: service description, accounts, acceptable use, billing, data, liability, termination",
+        "Footer on all pages links to /terms",
+        "Signup page links to terms of service",
+        "Page is mobile-responsive at 375px"
+      ]
+    },
+    {
+      "id": "ACP-153",
+      "title": "Sync and deploy ACP-149-152 to GitHub",
+      "priority": 153,
+      "passes": true,
+      "description": "Sync all ACP-149-152 changes to scobb/nexus GitHub repo. This triggers auto-deploy via GitHub Actions (ACP-098). Verify sitemap, RSS feed, privacy policy, and terms pages are live after deploy.",
+      "acceptanceCriteria": [
+        "rsync nexus/ to /tmp/nexus-standalone/ (excluding .git, node_modules, .wrangler, .dev.vars, tailwind/output.css)",
+        "No secrets in pushed code",
+        "Committed and pushed to scobb/nexus main",
+        "GitHub Actions CI+deploy triggered",
+        "Verify /sitemap.xml, /blog/rss.xml, /privacy, /terms return 200 on production"
+      ]
+    },
+    {
+      "id": "ACP-154",
+      "title": "API end-to-end smoke test on production",
+      "priority": 154,
+      "passes": true,
+      "description": "As Ralph, I need to verify the complete Nexus user journey works on production by testing every documented API endpoint with real HTTP requests. This is table-stakes quality verification (priority a2) that has never been done — 153 stories built but the actual API flow (create trace → add spans → query dashboard) has never been tested end-to-end on the live deployment. Test: POST /api/v1/traces with a valid API key, POST spans to the trace, GET dashboard data, verify correct responses. Document any failures.",
+      "acceptanceCriteria": [
+        "POST /api/v1/traces returns 201 with trace_id when given valid Bearer token and valid payload",
+        "POST /api/v1/traces/:id/spans returns 201 with span_id",
+        "POST /api/v1/traces with invalid/missing auth returns 401",
+        "POST /api/v1/traces with invalid payload returns 400 with field-level errors",
+        "Rate limit (429) response verified for free-tier trace limit enforcement",
+        "All public pages return 200: /, /pricing, /demo, /docs, /blog, /privacy, /terms, /health",
+        "All /vs/* comparison pages return 200",
+        "All /docs/* integration guides return 200",
+        "All /blog/* posts return 200",
+        "Sitemap.xml returns valid XML with all URLs",
+        "RSS feed returns valid XML",
+        "Any failures documented in progress.txt with reproduction steps"
+      ],
+      "notes": "Use an existing API key from D1 or the demo key if available. If no API key is accessible, test only public endpoints and document the gap. Do NOT create test users on production."
+    },
+    {
+      "id": "ACP-155",
+      "title": "Create scobb/nexus-examples repo with working SDK examples",
+      "priority": 155,
+      "passes": true,
+      "description": "As Ralph, I need to create a scobb/nexus-examples GitHub repo containing working example projects that demonstrate real Nexus SDK usage. Example repos are the last untapped autonomous distribution channel — they create new GitHub search surfaces for queries like 'langchain tracing example' and 'ai agent monitoring python'. Each example must include a README with quickstart instructions, dependency files, and working code that sends traces to a Nexus instance. Three examples: (1) Node.js/TypeScript with @keylightdigital/nexus, (2) Python with keylightdigital-nexus, (3) LangChain + Nexus integration.",
+      "acceptanceCriteria": [
+        "GitHub repo scobb/nexus-examples exists and is public",
+        "README.md with overview, links to each example, and link back to nexus.keylightdigital.dev",
+        "examples/nodejs/ directory with: package.json depending on @keylightdigital/nexus, index.ts showing trace+span creation, README with quickstart",
+        "examples/python/ directory with: requirements.txt depending on keylightdigital-nexus, main.py showing trace+span creation, README with quickstart",
+        "examples/langchain/ directory with: requirements.txt depending on keylightdigital-nexus and langchain, agent.py showing a simple LangChain agent with Nexus tracing callback, README with quickstart",
+        "GitHub repo has topics: ai-agents, observability, tracing, langchain, monitoring, typescript, python",
+        "GitHub repo description set to 'Working examples for Nexus AI agent observability SDK'",
+        "GitHub repo homepage URL set to https://nexus.keylightdigital.dev/docs"
+      ],
+      "notes": "Use the published SDK packages (@keylightdigital/nexus v0.1.0 on npm, keylightdigital-nexus v0.1.0 on PyPI). Examples should work against any Nexus instance — use environment variable NEXUS_API_KEY and NEXUS_API_URL for configuration."
+    },
+    {
+      "id": "ACP-156",
+      "title": "Cross-link examples from main repo README and docs page",
+      "priority": 156,
+      "passes": true,
+      "description": "As Ralph, I need to update the scobb/nexus GitHub repo README and the /docs page on the live site to link to the nexus-examples repo. Also add discoverability-optimized GitHub topics to the main scobb/nexus repo. This closes the loop: developers who find the main repo or docs page can immediately access working examples, and the examples link back to the main product.",
+      "acceptanceCriteria": [
+        "scobb/nexus README.md includes an 'Examples' section linking to scobb/nexus-examples with brief descriptions of each example",
+        "GET /docs page includes an 'Examples' or 'Quick Start Examples' section with links to the GitHub examples repo",
+        "scobb/nexus GitHub topics include: ai-agents, observability, tracing, cloudflare-workers, typescript, monitoring",
+        "scobb/nexus-examples README links back to nexus.keylightdigital.dev and scobb/nexus",
+        "All cross-links use absolute URLs and are not broken (verified by curl)",
+        "Changes synced to GitHub (triggers auto-deploy for site changes)"
+      ]
+    },
+    {
+      "id": "ACP-157",
+      "title": "Staging environment with Stripe test mode",
+      "priority": 157,
+      "passes": true,
+      "description": "As Steve, I need a staging environment for Nexus so I can test billing flows without using a real credit card. Set up a staging Worker with its own D1 database, KV namespace, and Stripe test-mode keys. The staging site should be accessible at a preview URL and be completely isolated from production data.",
+      "acceptanceCriteria": [
+        "wrangler.toml has [env.staging] section with separate D1 database (nexus-db-staging) and KV namespace",
+        "Staging Worker deployed at nexus-staging.stevencolecobb.workers.dev (or similar preview URL)",
+        "Staging uses Stripe test-mode keys (sk_test_*, pk_test_*) — NOT live keys",
+        "Staging D1 database created and schema migrations applied",
+        "Staging KV namespace created and bound",
+        "Staging ENVIRONMENT var set to staging",
+        "npm run deploy:staging script added to package.json",
+        "Staging webhook endpoint registered in Stripe (test mode) pointing to staging URL",
+        "STRIPE_WEBHOOK_SECRET for staging set as wrangler secret for staging env",
+        "A test user can register, log in, and access dashboard on staging",
+        "Document staging setup in README or AGENTS.md"
+      ]
+    },
+    {
+      "id": "ACP-158",
+      "title": "Stripe webhook E2E test suite on staging",
+      "priority": 158,
+      "passes": true,
+      "description": "As Steve, I need automated tests that verify the full Stripe billing lifecycle works end-to-end on staging. Using Stripe test mode, simulate checkout completion, subscription updates, cancellation, and payment failures. Verify D1 records update correctly after each webhook event.",
+      "acceptanceCriteria": [
+        "Test script that creates a Stripe test-mode checkout session and completes it using Stripe test card (tok_visa)",
+        "After checkout.session.completed webhook fires, verify: subscription row created in D1 with plan=pro and status=active",
+        "Simulate subscription cancellation via Stripe API, verify: D1 cancel_at is set, billing page shows Cancels date",
+        "Simulate subscription reactivation, verify: D1 cancel_at is cleared, billing page shows Active/Renews",
+        "Simulate customer.subscription.deleted, verify: D1 status=canceled, user downgraded to free plan",
+        "All tests run against staging environment (not production)",
+        "Test script can be run manually: npm run test:webhooks or similar",
+        "Tests verify both Stripe state AND D1 state after each event",
+        "Tests pass with Stripe test clock or direct API simulation if test clocks unavailable"
+      ]
+    },
+    {
+      "id": "ACP-159",
+      "title": "Comprehensive smoke test suite for all core user flows",
+      "priority": 159,
+      "passes": false,
+      "description": "Audit all existing functionality using git history, the PRD, and Playwright exploration. Identify every primary user flow (signup, login, create agent, create API key, send traces, view dashboard, Stripe checkout, webhook handling, etc.) and write Playwright smoke tests that verify each one works end-to-end against a live deployment. These tests become the regression suite that runs on every future deploy. Update CLAUDE.md with the smoke test location and how to run them.",
+      "acceptanceCriteria": [
+        "All primary user flows identified and documented",
+        "Playwright smoke test for each core flow (signup, login, API key management, trace ingestion, dashboard viewing, Stripe payment flow with test cards)",
+        "Tests run against a configurable base URL (staging or prod)",
+        "Full suite passes against current production deployment",
+        "CLAUDE.md updated with smoke test location and run command",
+        "Test results logged to progress.txt"
+      ],
+      "notes": "No existing smoke tests in nexus. Start from scratch. Use Playwright MCP tools. Check existing Stripe test mode setup (ACP-157, ACP-158)."
+    }
+  ],
+  "product": "AI Agent Control Plane",
+  "codename": "Nexus",
+  "tagline": "Simple, affordable agent observability for indie developers — the Plausible of AI agents",
+  "branchName": "ralph/nexus",
+  "domain": "nexus.keylightdigital.com",
+  "repositoryName": "nexus",
+  "status": "PRD — awaiting Steve approval",
+  "createdAt": "2026-04-05",
+  "updatedAt": "2026-04-09",
+  "author": "Ralph (AI agent, Keylight Digital LLC)",
+  "positioning": {
+    "problem": "Developers building AI agents have no simple, affordable way to monitor what their agents are doing. Enterprise tools (Galileo $100/mo, LangSmith $39/mo) are overkill. Self-hosting Langfuse is a maintenance burden. There is no 'Plausible' for AI agents — simple, privacy-aware, just works.",
+    "solution": "A hosted agent observability dashboard. Drop in the SDK. See your traces. Get alerts when agents fail. No self-hosting, no enterprise contracts, no lock-in.",
+    "targetCustomer": "Indie developers and small teams (1-10 people) building AI agents who need observability without enterprise complexity or cost.",
+    "positioning": "Plausible for AI agents — simple, affordable, privacy-aware. $9/mo. No self-hosting. No contracts.",
+    "differentiator": "The only hosted agent control plane priced for individual developers. Cloudflare-native means near-zero COGS and global edge performance. Open-source SDK from day 1.",
+    "metaNarrative": "Built by an AI agent (Ralph), for AI agents. Keylight Digital built this because we needed it to manage our own agent infrastructure."
+  },
+  "pricing": {
+    "free": {
+      "name": "Free",
+      "price": 0,
+      "traces": 1000,
+      "agents": 1,
+      "retention": "30 days",
+      "features": [
+        "1 agent",
+        "1,000 traces/month",
+        "30-day retention",
+        "Trace viewer",
+        "Community support"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "price": 9,
+      "billingCycle": "monthly",
+      "traces": 50000,
+      "agents": "unlimited",
+      "retention": "90 days",
+      "features": [
+        "Unlimited agents",
+        "50,000 traces/month",
+        "90-day retention",
+        "Email alerts",
+        "Team access (up to 5)",
+        "Priority support"
+      ]
+    }
+  },
+  "architecture": {
+    "runtime": "Cloudflare Workers (Hono framework)",
+    "database": "Cloudflare D1 (SQLite at edge)",
+    "cache": "Cloudflare KV (rate limits, sessions, API key lookup)",
+    "realtime": "Cloudflare Durable Objects (trace streaming)",
+    "email": "Resend API (magic link auth, alerts)",
+    "payments": "Stripe (Checkout, webhooks)",
+    "frontend": "Server-rendered HTML + Tailwind CDN (no build step, proven Beam pattern)",
+    "sdk": "TypeScript npm package (open-source from day 1)",
+    "deployment": "Cloudflare Pages/Workers with wrangler",
+    "testing": "Playwright smoke suite",
+    "rationale": "Same stack as Beam. Ralph has proven patterns for all components. Zero infrastructure cost on CF free tier."
+  },
+  "distributionStrategy": {
+    "principle": "Distribution-first. Launch publicly within the first week, not after 186 stories.",
+    "actions": [
+      "Open-source the SDK on GitHub from day 1 (drives stars, backlinks, trust)",
+      "Show HN post within first 7 days of launch — 'Show HN: I built an open-source control plane for AI agents, runs on Cloudflare, $9/mo'",
+      "Dev.to and Hashnode articles: 'How I monitor my AI agents for $9/month'",
+      "Submit to awesome-ai-agents, awesome-llm-observability within week 1",
+      "Product Hunt launch in week 2",
+      "Build in public on Twitter/X — post trace screenshots, agent failures, weekly metrics",
+      "Cloudflare partner ecosystem: submit to Cloudflare Marketplace / Workers templates"
+    ],
+    "keyDifferenceFromBeam": "Beam launched with zero distribution plan. Nexus pre-writes the Show HN post before the first story is coded. The README IS the launch post."
+  },
+  "lessonsFromBeam": {
+    "summary": "184 stories, 0 external users, $0 revenue. Every lesson points to distribution.",
+    "lessons": [
+      "Distribution must be designed in Story 1, not Story 184",
+      "Open-source is a distribution channel, not a risk — Rybbit proved this (11K stars, traction)",
+      "SEO collision kills organic discovery — validate the brand name against search results before launch",
+      "The awesome-list strategy requires human follow-up; agent can open PRs but can't merge them",
+      "Product Hunt within week 1, not after the product is 'finished' — it's never finished",
+      "The meta-narrative must be in the README from day 1: 'built by an AI agent for AI agents'",
+      "Rate limiting in local dev must skip loopback addresses (::1, 127.0.0.1) — Beam lost hours to this",
+      "Playwright smoke tests catch regressions; run them after every deploy, not just at launch"
+    ]
+  },
+  "urgency": {
+    "window": "3-6 months",
+    "drivers": [
+      "JetBrains Central EAP launches Q2 2026 — narrows indie first-mover window",
+      "EU AI Act general application August 2026 — creates compliance driver even for SMBs",
+      "Galileo just went open-source — free tier will absorb power users who self-host",
+      "Enterprise tools (Snowflake, Microsoft) are building down-market features",
+      "Activant Capital published VC thesis — institutional money will fund competitors within 6-12 months"
+    ],
+    "verdict": "The window is open now. 3-6 months before enterprise trickle-down or open-source hosted tiers close the gap."
+  },
+  "project": "AI Agent Control Plane — Nexus",
+  "description": "Simple, affordable agent observability for indie developers — the Plausible of AI agents"
+}

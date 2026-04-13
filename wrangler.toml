@@ -18,3 +18,19 @@ crons = ["0 2 * * *", "*/5 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
+
+[env.staging]
+name = "nexus-staging"
+
+[[env.staging.d1_databases]]
+binding = "NEXUS_DB"
+database_name = "nexus-db-staging"
+database_id = "ce65e1b6-656e-4b3d-9c29-b1e2492b1a1e"
+migrations_dir = "migrations"
+
+[[env.staging.kv_namespaces]]
+binding = "NEXUS_KV"
+id = "1776216c1a7749759fcab713acf35e12"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
