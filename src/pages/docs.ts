@@ -54,6 +54,7 @@ export function docsPage(): string {
           <a href="#sdk-python" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Python SDK</a>
           <a href="#examples" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Examples</a>
           <div class="border-t border-gray-800 mt-4 pt-4">
+            <a href="/docs/api-reference" class="block text-sm text-indigo-400 hover:text-indigo-300 py-1 transition-colors font-medium">Full API Reference →</a>
             <a href="/changelog" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Changelog</a>
             <a href="/blog" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Blog</a>
           </div>

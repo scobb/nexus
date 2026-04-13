@@ -175,6 +175,83 @@ test.describe('Public pages', () => {
     expect(body).toContain('Sitemap:')
   })
 
+  // ACP-164: API reference page smoke tests
+  test('ACP-164: GET /docs/api-reference returns 200 with full endpoint coverage', async ({ page }) => {
+    const response = await page.goto('/docs/api-reference')
+    expect(response?.status()).toBe(200)
+
+    const content = await page.content()
+    // Page title and header
+    expect(content).toContain('API Reference')
+    // All four endpoints present
+    expect(content).toContain('/api/v1/traces')
+    expect(content).toContain('/api/v1/traces/:trace_id/spans')
+    expect(content).toContain('/api/v1/traces/:trace_id')
+    expect(content).toContain('/health')
+    // HTTP method badges
+    expect(content).toContain('POST')
+    expect(content).toContain('PATCH')
+    expect(content).toContain('GET')
+    // Auth section
+    expect(content).toContain('Authentication')
+    expect(content).toContain('Authorization')
+    expect(content).toContain('Bearer')
+    // Rate limits section
+    expect(content).toContain('Rate Limit')
+    // Error codes section
+    expect(content).toContain('Error Code')
+    // curl examples present
+    expect(content).toContain('curl')
+    expect(content).toContain('NEXUS_API_KEY')
+  })
+
+  test('ACP-164: /docs/api-reference has error codes table with 400, 401, 403, 404, 429, 500', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    const content = await page.content()
+    expect(content).toContain('400')
+    expect(content).toContain('401')
+    expect(content).toContain('403')
+    expect(content).toContain('404')
+    expect(content).toContain('429')
+    expect(content).toContain('500')
+  })
+
+  test('ACP-164: /docs/api-reference has anchor links for each endpoint section', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    const content = await page.content()
+    expect(content).toContain('id="post-traces"')
+    expect(content).toContain('id="post-spans"')
+    expect(content).toContain('id="patch-trace"')
+    expect(content).toContain('id="get-trace"')
+    expect(content).toContain('id="get-health"')
+    expect(content).toContain('id="authentication"')
+    expect(content).toContain('id="rate-limits"')
+    expect(content).toContain('id="errors"')
+  })
+
+  test('ACP-164: /docs/api-reference linked from /docs sidebar', async ({ page }) => {
+    await page.goto('/docs')
+    const content = await page.content()
+    expect(content).toContain('/docs/api-reference')
+  })
+
+  test('ACP-164: /docs/api-reference has OG meta tags', async ({ page }) => {
+    await page.goto('/docs/api-reference')
+    const content = await page.content()
+    expect(content).toContain('og:title')
+    expect(content).toContain('og:description')
+    expect(content).toContain('og:url')
+  })
+
+  test('ACP-164: mobile /docs/api-reference has no horizontal overflow at 375px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/docs/api-reference')
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
+    const viewportWidth = await page.evaluate(() => window.innerWidth)
+    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 2)
+  })
+
   test('mobile: /pricing has no horizontal overflow at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/pricing')

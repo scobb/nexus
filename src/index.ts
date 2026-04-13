@@ -7,6 +7,7 @@ import { privacyPage, termsPage } from './pages/legal'
 import { notFoundPage } from './pages/notFound'
 import { changelogPage } from './pages/changelog'
 import { docsPage } from './pages/docs'
+import { apiReferencePage } from './pages/api-reference'
 import { docsLangchainPage, docsCrewAIPage, docsAnthropicSDKPage, docsOpenAIAgentsPage, docsAutoGenPage, docsPydanticAIPage, docsLlamaIndexPage, docsDSPyPage, docsGoogleADKPage, docsPythonQuickstartPage } from './pages/guides'
 import { pricingPage } from './pages/pricing'
 import { vsLangfusePage, vsLangsmithPage, vsArizePhoenixPage, vsAgentopsPage, vsHeliconePage, vsBraintrustPage, vsDatadogPage, vsWandbPage, vsPortkeyPage, alternativesPage } from './pages/comparison'
@@ -341,6 +342,7 @@ app.get('/sitemap.xml', async (c) => {
     { loc: `${base}/demo`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/alternatives`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/docs`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${base}/docs/api-reference`, priority: '0.9', changefreq: 'monthly' },
     { loc: `${base}/docs/anthropic-sdk`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/langchain`, priority: '0.8', changefreq: 'monthly' },
     { loc: `${base}/docs/crewai`, priority: '0.8', changefreq: 'monthly' },
@@ -449,6 +451,7 @@ app.get('/og-image.png', (c) => {
 app.get('/changelog', (c) => c.html(changelogPage()))
 
 // API documentation and integration guides
+app.get('/docs/api-reference', (c) => c.html(apiReferencePage()))
 app.get('/docs', (c) => c.html(docsPage()))
 app.get('/docs/langchain', (c) => c.html(docsLangchainPage()))
 app.get('/docs/crewai', (c) => c.html(docsCrewAIPage()))
