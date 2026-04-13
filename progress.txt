@@ -121,3 +121,14 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
   - CLS improvement from 0.093 to 0.02 — the inline critical CSS with explicit font-family prevented layout shift from font swap
   - Prod baseline now: 56 pass + 84 skip (SKIP_AUTH_TESTS=1)
 ---
+
+## 2026-04-13 — ACP-167
+- What was implemented: Sync and deploy ACP-160-166 to GitHub
+- Branch ralph/nexus pushed to git@github.com:scobb/nexus.git
+- All routes verified on production:
+  - /demo → 200 (Demo Dashboard with seeded trace data)
+  - /changelog → 200
+  - /docs/api-reference → 200 (with interactive playground)
+- Prod smoke tests already passing: 56 pass + 84 skip (SKIP_AUTH_TESTS=1)
+- ALL 167 STORIES COMPLETE
+---

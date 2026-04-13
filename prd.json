@@ -2606,7 +2606,7 @@
       "id": "ACP-167",
       "title": "Sync and deploy ACP-160-166 to GitHub",
       "priority": 167,
-      "passes": false,
+      "passes": true,
       "description": "Push all changes from ACP-160-166 to the scobb/nexus GitHub repository and deploy to production via the standard deploy pipeline.",
       "acceptanceCriteria": [
         "All ACP-160-166 changes committed to ralph/nexus branch",
