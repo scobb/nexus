@@ -352,32 +352,33 @@ test.describe('Public pages', () => {
   })
 
   test('ACP-166: landing page uses non-blocking font loading (preconnect + async stylesheet)', async ({ page }) => {
-    await page.goto('/')
-    const content = await page.content()
+    // Check raw HTML source (before JS runs) to verify non-blocking font pattern
+    const response = await page.request.get('/')
+    const html = await response.text()
     // preconnect hints
-    expect(content).toContain('rel="preconnect"')
-    expect(content).toContain('fonts.googleapis.com')
-    expect(content).toContain('fonts.gstatic.com')
+    expect(html).toContain('rel="preconnect"')
+    expect(html).toContain('fonts.googleapis.com')
+    expect(html).toContain('fonts.gstatic.com')
     // preload hint
-    expect(content).toContain('rel="preload"')
-    expect(content).toContain('as="style"')
-    // async font loading (media="print" trick)
-    expect(content).toContain('media="print"')
-    expect(content).toContain('this.media=\'all\'')
+    expect(html).toContain('rel="preload"')
+    expect(html).toContain('as="style"')
+    // async font loading (media="print" trick — checked in raw source)
+    expect(html).toContain('media="print"')
+    expect(html).toContain("this.media='all'")
     // noscript fallback
-    expect(content).toContain('<noscript>')
+    expect(html).toContain('<noscript>')
     // critical CSS inline
-    expect(content).toContain('background-color: #030712')
+    expect(html).toContain('background-color: #030712')
     // no render-blocking @import
-    expect(content).not.toContain('@import url')
+    expect(html).not.toContain('@import url')
   })
 
   test('ACP-166: changelog uses non-blocking font loading', async ({ page }) => {
-    await page.goto('/changelog')
-    const content = await page.content()
-    expect(content).toContain('rel="preconnect"')
-    expect(content).toContain('media="print"')
-    expect(content).not.toContain('@import url')
+    const response = await page.request.get('/changelog')
+    const html = await response.text()
+    expect(html).toContain('rel="preconnect"')
+    expect(html).toContain('media="print"')
+    expect(html).not.toContain('@import url')
   })
 
   test('ACP-166: /docs/api-reference does not have render-blocking Google Fonts import', async ({ page }) => {
