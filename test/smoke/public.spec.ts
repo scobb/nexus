@@ -91,9 +91,51 @@ test.describe('Public pages', () => {
     expect(content).toMatch(/blog|article|post/i)
   })
 
-  test('GET /changelog returns 200', async ({ request }) => {
-    const response = await request.get('/changelog')
-    expect(response.status()).toBe(200)
+  // ACP-163: Changelog page smoke tests
+  test('GET /changelog returns 200 with entries, category badges, and RSS link', async ({ page }) => {
+    const response = await page.goto('/changelog')
+    expect(response?.status()).toBe(200)
+
+    const content = await page.content()
+    // Has a title
+    expect(content).toContain('Changelog')
+    // Entries present (newest first — Apr 13 should appear before Apr 5)
+    expect(content).toContain('Apr 13')
+    expect(content).toContain('Apr 5')
+    // Category badges present
+    expect(content).toContain('Feature')
+    expect(content).toContain('Improvement')
+    expect(content).toContain('Fix')
+    expect(content).toContain('Content')
+    // RSS link present
+    expect(content).toContain('/blog/rss.xml')
+    // OG meta tags
+    expect(content).toContain('og:title')
+    expect(content).toContain('og:description')
+    expect(content).toContain('og:image')
+    expect(content).toContain('twitter:card')
+  })
+
+  test('ACP-163: changelog linked from /docs sidebar', async ({ page }) => {
+    await page.goto('/docs')
+    const content = await page.content()
+    expect(content).toContain('/changelog')
+  })
+
+  test('ACP-163: changelog linked from landing page footer', async ({ page }) => {
+    await page.goto('/')
+    const content = await page.content()
+    // Footer contains /changelog link
+    expect(content).toMatch(/href="\/changelog"/)
+  })
+
+  test('ACP-163: mobile /changelog has no horizontal overflow at 375px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/changelog')
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
+    const viewportWidth = await page.evaluate(() => window.innerWidth)
+    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 2)
   })
 
   test('GET /privacy returns 200', async ({ request }) => {
