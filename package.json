@@ -14,7 +14,10 @@
     "test:smoke:prod": "BASE_URL=https://nexus.keylightdigital.dev SKIP_AUTH_TESTS=1 playwright test",
     "test:webhooks": "npx tsx test/stripe-webhooks.ts",
     "migrations:local": "wrangler d1 migrations apply nexus-db --local",
-    "migrations:staging": "wrangler d1 migrations apply nexus-db-staging --env staging --remote"
+    "migrations:staging": "wrangler d1 migrations apply nexus-db-staging --env staging --remote",
+    "seed-demo:local": "wrangler d1 execute nexus-db --local --file=scripts/seed-demo.sql",
+    "seed-demo:staging": "wrangler d1 execute nexus-db-staging --env staging --remote --file=scripts/seed-demo.sql",
+    "seed-demo:prod": "wrangler d1 execute nexus-db --remote --file=scripts/seed-demo.sql"
   },
   "dependencies": {
     "@sentry/cloudflare": "^10.47.0",
