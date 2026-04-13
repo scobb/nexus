@@ -1,7 +1,27 @@
 import { test, expect } from '@playwright/test'
-import { bootstrap, setTraceCount } from './helpers'
+import { bootstrap, setTraceCount, hasTestEndpoints } from './helpers'
 
-test.describe('Trace ingestion API', () => {
+test.describe('Trace ingestion API — public', () => {
+  test('POST /api/v1/traces with invalid key returns 401', async ({ request }) => {
+    const response = await request.post('/api/v1/traces', {
+      headers: { Authorization: 'Bearer nxs_invalid_key_that_does_not_exist' },
+      data: {
+        agent_id: 'test',
+        name: 'test',
+        status: 'success',
+        started_at: new Date().toISOString(),
+      },
+    })
+
+    expect(response.status()).toBe(401)
+    const body = await response.json()
+    expect(body.error).toBeTruthy()
+  })
+})
+
+test.describe('Trace ingestion API — authenticated', () => {
+  test.skip(!hasTestEndpoints, 'Skipped: requires /test/bootstrap (not available on production)')
+
   test('POST /api/v1/traces with valid key returns 201 with trace_id', async ({ request }) => {
     const user = await bootstrap(request)
 
@@ -20,22 +40,6 @@ test.describe('Trace ingestion API', () => {
     const body = await response.json()
     expect(typeof body.trace_id).toBe('string')
     expect(body.trace_id).toMatch(/^[0-9a-f-]{36}$/)
-  })
-
-  test('POST /api/v1/traces with invalid key returns 401', async ({ request }) => {
-    const response = await request.post('/api/v1/traces', {
-      headers: { Authorization: 'Bearer nxs_invalid_key_that_does_not_exist' },
-      data: {
-        agent_id: 'test',
-        name: 'test',
-        status: 'success',
-        started_at: new Date().toISOString(),
-      },
-    })
-
-    expect(response.status()).toBe(401)
-    const body = await response.json()
-    expect(body.error).toBeTruthy()
   })
 
   test('POST /api/v1/traces missing required fields returns 400', async ({ request }) => {

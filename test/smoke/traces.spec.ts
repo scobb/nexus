@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { bootstrap, authenticate } from './helpers'
+import { bootstrap, authenticate, hasTestEndpoints } from './helpers'
 
 test.describe('Trace viewer', () => {
+  test.skip(!hasTestEndpoints, 'Skipped: requires /test/bootstrap (not available on production)')
+
   test('/dashboard/traces shows ingested trace', async ({ page, request, context }) => {
     const user = await bootstrap(request)
 
