@@ -1,14 +1,24 @@
 ## Last completed
-ACP-159 - Comprehensive smoke test suite for all core user flows
+ACP-160 - Demo seed script — populate D1 with realistic AI agent traces
 
 ## Next up
-All 159 stories pass: true — no more work to do.
+ACP-161 - Public demo dashboard at /demo — try before signing up
+
+Notes on ACP-161 approach:
+- The demo route/page already exists at `src/routes/demo.ts` and `src/pages/demo.ts` with hardcoded data (DEMO_TRACES, DEMO_SPANS arrays)
+- ACP-161 requires "Demo data loaded from the seed script output (ACP-160)" — so update the demo route to query D1 instead of using hardcoded data
+- Demo user ID in D1: `demo-user-seed-001`, email: `demo@nexus.keylightdigital.dev`
+- Demo agents: demo-agent-001 through 005 (Customer Support Bot, Research Assistant, Code Review Agent, Data Pipeline Monitor, Content Generator)
+- The route already has no auth requirement — just needs to query D1 for the demo user's data
+- Keep the DEMO_BANNER and DEMO_NAV (already well-designed)
+- ACP-161 AC: show trace list, clickable trace detail, 'Demo Dashboard' header with CTA, landing page CTA, mobile 375px, read-only
 
 ## Active issues
-None. All stories complete.
+- 2 pre-existing smoke test failures on staging (keys empty name, settings non-https URL) — NOT my work, don't investigate
+- Mobile webkit browser not installed on this machine — all mobile project tests fail with "Executable doesn't exist" — pre-existing
+- Production smoke tests expect 39 pass + 72 skip (SKIP_AUTH_TESTS=1 behavior) — this is correct
 
 ## Key decisions this session
-- Added migration 0008_subscriptions_created_at.sql to fix 500 errors on dashboard/agents/settings (subscriptions table was missing created_at column that ORDER BY queries referenced)
-- Production d1_migrations was out of sync — manually inserted rows for 0004-0008 to fix migration tracking
-- hasTestEndpoints flag gates bootstrap-dependent smoke tests; production runs use SKIP_AUTH_TESTS=1
-- Test suite: 63/63 on staging, 27 pass + 36 skip on production (no failures anywhere)
+- ACP-160 implemented as a SQL file (`scripts/seed-demo.sql`) not a TypeScript script — simpler, runs via `wrangler d1 execute --file`
+- Used INSERT OR IGNORE with fixed IDs for full idempotency
+- Seed already applied to both staging and production D1 databases
