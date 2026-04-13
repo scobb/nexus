@@ -65,6 +65,8 @@ export function apiReferencePage(): string {
           <a href="#patch-trace" class="block text-sm text-gray-400 hover:text-white py-1 pl-2 transition-colors">PATCH /traces/:id</a>
           <a href="#get-trace" class="block text-sm text-gray-400 hover:text-white py-1 pl-2 transition-colors">GET /traces/:id</a>
           <a href="#get-health" class="block text-sm text-gray-400 hover:text-white py-1 pl-2 transition-colors">GET /health</a>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1 mt-4">Try It</p>
+          <a href="#playground" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Playground</a>
           <div class="border-t border-gray-800 mt-4 pt-4 space-y-0.5">
             <a href="/docs" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">← Docs &amp; SDKs</a>
             <a href="/changelog" class="block text-sm text-gray-400 hover:text-white py-1 transition-colors">Changelog</a>
@@ -673,6 +675,110 @@ export function apiReferencePage(): string {
           </div>
         </section>
 
+        <!-- Playground -->
+        <section id="playground">
+          <div class="mb-2">
+            <span class="text-xs font-semibold text-green-400 uppercase tracking-widest">Interactive</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white mb-2">API Playground</h2>
+          <p class="text-gray-300 mb-6">
+            Try the API directly from your browser. Enter your API key, pick an endpoint, and hit Send.
+            Your key is stored in <code class="bg-gray-900 text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono">sessionStorage</code> — cleared automatically when you close the tab.
+          </p>
+
+          <div class="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800">
+
+            <!-- API key row -->
+            <div class="border-b border-gray-800 px-5 py-4">
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">API Key</label>
+              <div class="flex gap-2 flex-wrap">
+                <div class="relative flex-1 min-w-0">
+                  <input
+                    id="pg-api-key"
+                    type="password"
+                    placeholder="nxs_your_api_key_here"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-indigo-500"
+                    autocomplete="off"
+                    oninput="pgSaveKey()"
+                  >
+                </div>
+                <button onclick="pgToggleKey()" id="pg-key-toggle" class="px-3 py-2 text-xs text-gray-400 hover:text-white bg-gray-800 border border-gray-700 rounded-lg transition-colors whitespace-nowrap">Show</button>
+                <a href="/dashboard/keys" class="px-3 py-2 text-xs text-indigo-400 hover:text-indigo-300 bg-gray-800 border border-gray-700 rounded-lg transition-colors whitespace-nowrap">Get key &rarr;</a>
+              </div>
+            </div>
+
+            <!-- Endpoint selector -->
+            <div class="border-b border-gray-800 px-5 py-4">
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Endpoint</label>
+              <select id="pg-endpoint" onchange="pgSelectEndpoint()" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500">
+                <option value="get-health">GET /health &mdash; Health check (no auth required)</option>
+                <option value="post-trace">POST /api/v1/traces &mdash; Create trace</option>
+                <option value="post-span">POST /api/v1/traces/:id/spans &mdash; Add span</option>
+                <option value="patch-trace">PATCH /api/v1/traces/:id &mdash; Finalize trace</option>
+                <option value="get-trace">GET /api/v1/traces/:id &mdash; Retrieve trace</option>
+              </select>
+            </div>
+
+            <!-- Trace ID row (shown for endpoints that need a trace ID) -->
+            <div id="pg-traceid-row" class="hidden border-b border-gray-800 px-5 py-4">
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Trace ID</label>
+              <input
+                id="pg-trace-id"
+                type="text"
+                placeholder="e.g. tr_abc123 (from a previous POST /traces response)"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-indigo-500"
+                oninput="pgUpdateCurl()"
+              >
+              <p class="text-xs text-gray-500 mt-1.5">Create a trace first with POST /api/v1/traces, then paste the <code class="bg-gray-800 px-1 rounded">id</code> from the response here.</p>
+            </div>
+
+            <!-- Request body -->
+            <div id="pg-body-row" class="border-b border-gray-800 px-5 py-4">
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Request Body</label>
+              <textarea
+                id="pg-body"
+                rows="8"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-indigo-500 resize-y"
+                oninput="pgUpdateCurl()"
+              ></textarea>
+            </div>
+
+            <!-- Curl preview -->
+            <div class="border-b border-gray-800">
+              <div class="bg-gray-800 px-5 py-2 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                <span class="text-xs text-gray-400 ml-2">curl equivalent</span>
+                <button onclick="pgCopyCurl()" id="pg-copy-btn" class="ml-auto text-xs text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded transition-colors">Copy</button>
+              </div>
+              <pre id="pg-curl" class="px-5 py-4 text-xs font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap break-all"></pre>
+            </div>
+
+            <!-- Send button -->
+            <div class="px-5 py-4 flex items-center gap-3">
+              <button onclick="pgSend()" id="pg-send-btn" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                Send Request
+              </button>
+              <span id="pg-sending" class="hidden text-xs text-gray-400">Sending&hellip;</span>
+            </div>
+
+            <!-- Response area -->
+            <div id="pg-response-area" class="hidden border-t border-gray-800">
+              <div class="px-5 py-3 flex items-center gap-3 border-b border-gray-800 bg-gray-800/40">
+                <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Response</span>
+                <span id="pg-status-badge" class="text-xs font-bold font-mono px-2 py-0.5 rounded"></span>
+                <span id="pg-latency" class="text-xs text-gray-500"></span>
+              </div>
+              <pre id="pg-response-body" class="px-5 py-4 text-xs font-mono text-gray-200 overflow-x-auto whitespace-pre-wrap"></pre>
+              <div id="pg-error-hint" class="hidden px-5 pb-4">
+                <p id="pg-error-hint-text" class="text-xs text-amber-300 bg-amber-950 border border-amber-800 rounded-lg px-3 py-2"></p>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
         <!-- Footer links -->
         <div class="border-t border-gray-800 pt-8 flex flex-wrap gap-6 text-sm text-gray-500">
           <a href="/docs" class="hover:text-white transition-colors">← Docs &amp; SDKs</a>
@@ -684,6 +790,155 @@ export function apiReferencePage(): string {
       </main>
     </div>
   </div>
+
+  <script>
+  (function() {
+    var ENDPOINTS = {
+      'get-health':  { method: 'GET',   path: '/health',                  auth: false, body: null },
+      'post-trace':  { method: 'POST',  path: '/api/v1/traces',           auth: true,  body: '{\\n  "agent_name": "my-agent",\\n  "input": "What is the weather in Paris?",\\n  "metadata": { "model": "claude-3-5-sonnet" }\\n}' },
+      'post-span':   { method: 'POST',  path: '/api/v1/traces/{id}/spans', auth: true,  body: '{\\n  "type": "llm_call",\\n  "name": "Claude generate",\\n  "input": "What is the weather in Paris?",\\n  "output": "The weather in Paris is sunny and 18\\u00b0C.",\\n  "duration_ms": 1234\\n}' },
+      'patch-trace': { method: 'PATCH', path: '/api/v1/traces/{id}',      auth: true,  body: '{\\n  "status": "completed",\\n  "output": "Done. Here is the result."\\n}' },
+      'get-trace':   { method: 'GET',   path: '/api/v1/traces/{id}',      auth: true,  body: null }
+    };
+    var BASE = 'https://nexus.keylightdigital.dev';
+
+    function pgGetKey() { return document.getElementById('pg-api-key').value.trim(); }
+    function pgGetTraceId() { return document.getElementById('pg-trace-id').value.trim() || 'TRACE_ID'; }
+    function pgResolvePath(ep) { return ep.path.replace('{id}', pgGetTraceId()); }
+
+    window.pgSaveKey = function() {
+      try { sessionStorage.setItem('nexus_pg_key', document.getElementById('pg-api-key').value); } catch(e) {}
+      pgUpdateCurl();
+    };
+
+    window.pgToggleKey = function() {
+      var inp = document.getElementById('pg-api-key');
+      var btn = document.getElementById('pg-key-toggle');
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+      else { inp.type = 'password'; btn.textContent = 'Show'; }
+    };
+
+    window.pgSelectEndpoint = function() {
+      var sel = document.getElementById('pg-endpoint').value;
+      var ep = ENDPOINTS[sel];
+      var bodyRow = document.getElementById('pg-body-row');
+      var traceRow = document.getElementById('pg-traceid-row');
+      var bodyEl = document.getElementById('pg-body');
+      var needsId = ep.path.indexOf('{id}') !== -1;
+      if (needsId) { traceRow.classList.remove('hidden'); } else { traceRow.classList.add('hidden'); }
+      if (ep.body !== null) {
+        bodyRow.classList.remove('hidden');
+        if (bodyEl.dataset.auto !== 'false') { bodyEl.value = ep.body; bodyEl.dataset.auto = 'true'; }
+      } else {
+        bodyRow.classList.add('hidden');
+      }
+      pgUpdateCurl();
+    };
+
+    window.pgUpdateCurl = function() {
+      var sel = document.getElementById('pg-endpoint').value;
+      var ep = ENDPOINTS[sel];
+      var key = pgGetKey();
+      var path = pgResolvePath(ep);
+      var url = BASE + path;
+      var cmd = 'curl -s';
+      if (ep.method !== 'GET') { cmd += ' -X ' + ep.method; }
+      cmd += ' \\\\\\n  "' + url + '"';
+      if (ep.auth) {
+        var keyStr = key || '$NEXUS_API_KEY';
+        cmd += ' \\\\\\n  -H "Authorization: Bearer ' + keyStr + '"';
+      }
+      if (ep.body !== null) {
+        cmd += ' \\\\\\n  -H "Content-Type: application/json"';
+        var body = document.getElementById('pg-body').value.trim();
+        if (body) {
+          var oneline = body.replace(/\\n\\s*/g, ' ');
+          cmd += ' \\\\\\n  -d \\'' + oneline + '\\'';
+        }
+      }
+      document.getElementById('pg-curl').textContent = cmd;
+    };
+
+    window.pgCopyCurl = function() {
+      var btn = document.getElementById('pg-copy-btn');
+      try {
+        navigator.clipboard.writeText(document.getElementById('pg-curl').textContent);
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+      } catch(e) {}
+    };
+
+    window.pgSend = async function() {
+      var sel = document.getElementById('pg-endpoint').value;
+      var ep = ENDPOINTS[sel];
+      var key = pgGetKey();
+      var path = pgResolvePath(ep);
+      var url = BASE + path;
+      var btn = document.getElementById('pg-send-btn');
+      var sending = document.getElementById('pg-sending');
+      var responseArea = document.getElementById('pg-response-area');
+      var statusBadge = document.getElementById('pg-status-badge');
+      var latencyEl = document.getElementById('pg-latency');
+      var responseBody = document.getElementById('pg-response-body');
+      var errorHint = document.getElementById('pg-error-hint');
+      var errorHintText = document.getElementById('pg-error-hint-text');
+
+      btn.disabled = true;
+      sending.classList.remove('hidden');
+      errorHint.classList.add('hidden');
+      responseArea.classList.add('hidden');
+
+      var headers = {};
+      if (ep.auth && key) { headers['Authorization'] = 'Bearer ' + key; }
+      var fetchOpts = { method: ep.method, headers: headers };
+      if (ep.body !== null) {
+        headers['Content-Type'] = 'application/json';
+        fetchOpts.body = document.getElementById('pg-body').value.trim();
+      }
+
+      var HINTS = {
+        401: 'Invalid or revoked API key. Copy the full key from Dashboard \u2192 API Keys.',
+        403: 'Plan limit reached or this operation is not permitted on your current plan.',
+        404: 'Trace not found. Confirm the trace ID and that it belongs to this API key.',
+        429: 'Rate limit hit. Free plan: 1,000 traces/month. Upgrade to Pro for 50,000/month.',
+        500: 'Server error on our end. Please try again in a moment or contact support.'
+      };
+
+      var t0 = Date.now();
+      try {
+        var res = await fetch(url, fetchOpts);
+        var ms = Date.now() - t0;
+        var text = await res.text();
+        try { text = JSON.stringify(JSON.parse(text), null, 2); } catch(e) {}
+        responseArea.classList.remove('hidden');
+        statusBadge.textContent = String(res.status);
+        statusBadge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded ' +
+          (res.ok ? 'bg-green-950 text-green-400' : 'bg-red-950 text-red-400');
+        latencyEl.textContent = ms + 'ms';
+        responseBody.textContent = text;
+        var hint = HINTS[res.status];
+        if (hint) { errorHintText.textContent = hint; errorHint.classList.remove('hidden'); }
+      } catch(err) {
+        responseArea.classList.remove('hidden');
+        statusBadge.textContent = 'Network Error';
+        statusBadge.className = 'text-xs font-bold font-mono px-2 py-0.5 rounded bg-red-950 text-red-400';
+        latencyEl.textContent = '';
+        responseBody.textContent = String(err);
+        errorHintText.textContent = 'Could not reach the API. Check your internet connection.';
+        errorHint.classList.remove('hidden');
+      }
+      btn.disabled = false;
+      sending.classList.add('hidden');
+    };
+
+    // Init: restore saved API key from sessionStorage
+    try {
+      var saved = sessionStorage.getItem('nexus_pg_key');
+      if (saved) { document.getElementById('pg-api-key').value = saved; }
+    } catch(e) {}
+    pgSelectEndpoint();
+  })();
+  </script>
 </body>
 </html>`
 }
