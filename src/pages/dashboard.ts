@@ -34,6 +34,7 @@ export interface DashboardMetrics {
   hasApiKey: boolean
   hasTrace: boolean
   onboardingDismissed: boolean
+  apiKeyPrefix?: string // key_prefix of first API key, for onboarding snippets
 }
 
 function escHtml(s: string): string {
@@ -180,42 +181,254 @@ function hourlyBarChart(hourlyVolume: HourCount[]): string {
     </div>`
 }
 
-function onboardingChecklist(hasApiKey: boolean, hasTrace: boolean): string {
-  const step = (num: number, done: boolean, title: string, desc: string, href?: string) => {
-    const circle = done
-      ? `<div class="flex-shrink-0 w-7 h-7 rounded-full bg-green-600 flex items-center justify-center text-white text-sm">✓</div>`
-      : `<div class="flex-shrink-0 w-7 h-7 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-400 text-sm font-medium">${num}</div>`
-    const titleEl = href
-      ? `<a href="${escHtml(href)}" class="font-medium ${done ? 'text-gray-400 line-through' : 'text-white hover:text-indigo-300 transition-colors'}">${title}</a>`
-      : `<p class="font-medium ${done ? 'text-gray-400 line-through' : 'text-white'}">${title}</p>`
-    return `
-      <div class="flex items-start gap-3">
-        ${circle}
-        <div>
-          ${titleEl}
-          <p class="text-sm text-gray-500 mt-0.5">${desc}</p>
+function onboardingWidget(hasApiKey: boolean, apiKeyPrefix: string | undefined): string {
+  const maskedKey = apiKeyPrefix
+    ? `${escHtml(apiKeyPrefix)}••••••••`
+    : 'YOUR_API_KEY'
+  const codeKey = apiKeyPrefix ? `${escHtml(apiKeyPrefix)}••••••••` : 'YOUR_API_KEY'
+
+  // Step indicator dot
+  const dot = (num: number, label: string) => `
+    <div class="flex flex-col items-center gap-1.5 flex-1">
+      <div class="w-8 h-8 rounded-full bg-indigo-700 flex items-center justify-center text-white text-sm font-bold shrink-0">${num}</div>
+      <span class="text-xs text-gray-400 text-center leading-snug hidden sm:block">${escHtml(label)}</span>
+    </div>`
+
+  const connector = `<div class="flex-1 h-px bg-gray-700 mt-4 hidden sm:block"></div>`
+
+  const pythonSnippet = `import nexus
+
+client = nexus.Client(api_key="${codeKey}")
+
+with client.trace(name="my-agent-run") as trace:
+    # your agent logic here
+    trace.log_event("step_complete", {"result": "success"})
+`
+
+  const tsSnippet = `import { NexusClient } from '@keylightdigital/nexus'
+
+const client = new NexusClient({ apiKey: '${codeKey}' })
+
+const trace = await client.startTrace({ name: 'my-agent-run' })
+// your agent logic here
+await trace.logEvent('step_complete', { result: 'success' })
+await trace.end()
+`
+
+  const curlSnippet = `curl -X POST https://nexus.keylightdigital.dev/api/v1/traces \\
+  -H "Authorization: Bearer ${codeKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"my-agent-run","status":"success"}'`
+
+  const keySection = hasApiKey
+    ? `<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div class="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 font-mono text-sm flex-1 min-w-0">
+          <span id="ob-key-display" class="text-indigo-300 truncate">${maskedKey}</span>
+          <button type="button" id="ob-key-reveal" onclick="obRevealKey()" class="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap ml-auto pl-2 border-l border-gray-700 transition-colors" aria-label="Reveal key prefix">Reveal</button>
         </div>
-      </div>`
-  }
+        <div class="flex gap-2 shrink-0">
+          <button type="button" onclick="obCopyKey('${escHtml(apiKeyPrefix ?? '')}', this)" class="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg font-medium transition-colors">Copy prefix</button>
+          <a href="/dashboard/keys" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg font-medium transition-colors">Manage keys →</a>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">This is your key prefix — for security, the full key is only shown when created. <a href="/dashboard/keys" class="text-indigo-400 hover:underline">View your keys →</a></p>`
+    : `<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div class="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 font-mono text-sm flex-1">
+          <span class="text-gray-500 italic">No API key yet</span>
+        </div>
+        <a href="/dashboard/keys" class="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shrink-0">Create API key →</a>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">You'll need an API key to authenticate. Create one on the <a href="/dashboard/keys" class="text-indigo-400 hover:underline">API Keys page</a>.</p>`
 
   return `
-    <div class="bg-gray-900 rounded-xl border border-indigo-900 p-5 mb-8">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-base font-semibold text-white">Get started with Nexus</h2>
-          <p class="text-sm text-gray-400 mt-0.5">Complete these steps to start monitoring your agents</p>
+    <div id="onboarding-widget" class="bg-gray-900 rounded-xl border border-indigo-900 mb-8 overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 pt-5 pb-4 border-b border-gray-800">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-base font-semibold text-white">Send your first trace</h2>
+            <p class="text-sm text-gray-400 mt-0.5">Follow these 3 steps to start monitoring your AI agents</p>
+          </div>
+          <form method="POST" action="/dashboard/onboarding/dismiss" class="shrink-0">
+            <button type="submit" class="text-gray-500 hover:text-gray-300 transition-colors text-xl leading-none p-1" aria-label="Dismiss onboarding">&times;</button>
+          </form>
         </div>
-        <form method="POST" action="/dashboard/onboarding/dismiss">
-          <button type="submit" class="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none" aria-label="Dismiss onboarding">&times;</button>
-        </form>
+
+        <!-- Step progress dots -->
+        <div class="flex items-center mt-5">
+          ${dot(1, 'Get your API key')}
+          ${connector}
+          ${dot(2, 'Install SDK')}
+          ${connector}
+          ${dot(3, 'Send first trace')}
+        </div>
       </div>
-      <div class="space-y-4">
-        ${step(1, hasApiKey, 'Create an API key', 'Generate a key to authenticate your agents with Nexus', '/dashboard/keys')}
-        ${step(2, false, 'Install the SDK', 'Run: <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">npm install @keylightdigital/nexus</code> or <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">pip install keylightdigital-nexus</code>')}
-        ${step(3, hasTrace, 'Send your first trace', 'Instrument your agent and call <code class="bg-gray-800 px-1.5 py-0.5 rounded text-indigo-300 text-xs">client.startTrace()</code>', '/docs')}
-        ${step(4, false, 'Explore your data', 'View traces, spans, and agent health in your dashboard', '/dashboard/traces')}
+
+      <!-- Step 1: API Key -->
+      <div class="px-5 py-4 border-b border-gray-800">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-800 text-indigo-300 text-xs flex items-center justify-center font-bold">1</span>
+          Get your API key
+        </h3>
+        ${keySection}
       </div>
-    </div>`
+
+      <!-- Step 2: Install SDK — tabbed -->
+      <div class="px-5 py-4 border-b border-gray-800">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-800 text-indigo-300 text-xs flex items-center justify-center font-bold">2</span>
+          Install the SDK and send a trace
+        </h3>
+        <!-- Tab buttons -->
+        <div class="flex gap-1 mb-3" role="tablist" aria-label="SDK language">
+          <button type="button" role="tab" aria-selected="true" id="tab-python" onclick="obTab('python')"
+            class="ob-tab text-xs px-3 py-1.5 rounded-md font-medium transition-colors bg-indigo-700 text-white"
+            aria-controls="panel-python">Python</button>
+          <button type="button" role="tab" aria-selected="false" id="tab-ts" onclick="obTab('ts')"
+            class="ob-tab text-xs px-3 py-1.5 rounded-md font-medium transition-colors bg-gray-800 text-gray-400 hover:text-white"
+            aria-controls="panel-ts">TypeScript</button>
+          <button type="button" role="tab" aria-selected="false" id="tab-curl" onclick="obTab('curl')"
+            class="ob-tab text-xs px-3 py-1.5 rounded-md font-medium transition-colors bg-gray-800 text-gray-400 hover:text-white"
+            aria-controls="panel-curl">curl</button>
+        </div>
+        <!-- Python panel -->
+        <div id="panel-python" role="tabpanel" aria-labelledby="tab-python">
+          <p class="text-xs text-gray-400 mb-2">Install: <code class="bg-gray-800 text-indigo-300 px-1.5 py-0.5 rounded">pip install keylightdigital-nexus</code></p>
+          <div class="relative group">
+            <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto leading-relaxed font-mono"><code>${pythonSnippet}</code></pre>
+            <button type="button" onclick="obCopySnippet('python', this)"
+              class="absolute top-2 right-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+          </div>
+        </div>
+        <!-- TypeScript panel -->
+        <div id="panel-ts" role="tabpanel" aria-labelledby="tab-ts" class="hidden">
+          <p class="text-xs text-gray-400 mb-2">Install: <code class="bg-gray-800 text-indigo-300 px-1.5 py-0.5 rounded">npm install @keylightdigital/nexus</code></p>
+          <div class="relative group">
+            <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto leading-relaxed font-mono"><code>${tsSnippet}</code></pre>
+            <button type="button" onclick="obCopySnippet('ts', this)"
+              class="absolute top-2 right-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+          </div>
+        </div>
+        <!-- curl panel -->
+        <div id="panel-curl" role="tabpanel" aria-labelledby="tab-curl" class="hidden">
+          <p class="text-xs text-gray-400 mb-2">No install needed — works anywhere with curl</p>
+          <div class="relative group">
+            <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto leading-relaxed font-mono"><code>${curlSnippet}</code></pre>
+            <button type="button" onclick="obCopySnippet('curl', this)"
+              class="absolute top-2 right-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Waiting for first trace -->
+      <div class="px-5 py-4">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-800 text-indigo-300 text-xs flex items-center justify-center font-bold">3</span>
+          Waiting for your first trace
+        </h3>
+        <div id="ob-waiting" class="flex items-center gap-3 text-sm text-gray-400">
+          <span class="relative flex h-3 w-3 shrink-0">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+          </span>
+          Listening for your first trace&hellip; Run the code above and your trace will appear here automatically.
+        </div>
+        <div id="ob-success" class="hidden items-center gap-3 text-sm text-green-400 font-medium">
+          <span class="text-xl">🎉</span>
+          Your first trace arrived! Reloading dashboard&hellip;
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-5 py-3 bg-gray-950 border-t border-gray-800 flex flex-wrap gap-4 text-xs text-gray-500">
+        <a href="/docs" class="hover:text-indigo-400 transition-colors">Read the docs →</a>
+        <a href="https://github.com/keylightdigital/nexus-examples" class="hover:text-indigo-400 transition-colors">Examples repo →</a>
+        <a href="/docs/python-quickstart" class="hover:text-indigo-400 transition-colors">Python quickstart →</a>
+      </div>
+    </div>
+
+    <script>
+    (function() {
+      var snippets = {
+        python: ${JSON.stringify(pythonSnippet)},
+        ts: ${JSON.stringify(tsSnippet)},
+        curl: ${JSON.stringify(curlSnippet)}
+      };
+      var keyPrefix = ${JSON.stringify(apiKeyPrefix ?? '')};
+
+      window.obTab = function(lang) {
+        ['python','ts','curl'].forEach(function(l) {
+          var panel = document.getElementById('panel-' + l);
+          var btn = document.getElementById('tab-' + l);
+          if (!panel || !btn) return;
+          if (l === lang) {
+            panel.classList.remove('hidden');
+            btn.classList.add('bg-indigo-700', 'text-white');
+            btn.classList.remove('bg-gray-800', 'text-gray-400');
+            btn.setAttribute('aria-selected', 'true');
+          } else {
+            panel.classList.add('hidden');
+            btn.classList.remove('bg-indigo-700', 'text-white');
+            btn.classList.add('bg-gray-800', 'text-gray-400');
+            btn.setAttribute('aria-selected', 'false');
+          }
+        });
+      };
+
+      window.obCopySnippet = function(lang, btn) {
+        var text = snippets[lang] || '';
+        navigator.clipboard.writeText(text).then(function() {
+          var orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = orig; }, 1500);
+        }).catch(function() {});
+      };
+
+      window.obRevealKey = function() {
+        var display = document.getElementById('ob-key-display');
+        var btn = document.getElementById('ob-key-reveal');
+        if (!display || !btn) return;
+        if (keyPrefix) {
+          display.textContent = keyPrefix;
+          btn.textContent = 'Hide';
+          btn.onclick = function() {
+            display.textContent = keyPrefix + '\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022';
+            btn.textContent = 'Reveal';
+            btn.onclick = window.obRevealKey;
+          };
+        }
+      };
+
+      window.obCopyKey = function(text, btn) {
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(function() {
+          var orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = orig; }, 1500);
+        }).catch(function() {});
+      };
+
+      // Poll for first trace every 5 seconds
+      var pollTimer = setInterval(function() {
+        fetch('/dashboard/onboarding/check')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.hasTrace) {
+              clearInterval(pollTimer);
+              var waiting = document.getElementById('ob-waiting');
+              var success = document.getElementById('ob-success');
+              if (waiting) waiting.classList.add('hidden');
+              if (success) {
+                success.classList.remove('hidden');
+                success.classList.add('flex');
+              }
+              setTimeout(function() { window.location.reload(); }, 2500);
+            }
+          })
+          .catch(function() {});
+      }, 5000);
+    })();
+    </script>`
 }
 
 export function dashboardPage(metrics: DashboardMetrics): string {
@@ -336,7 +549,7 @@ export function dashboardPage(metrics: DashboardMetrics): string {
 
     ${usageBanner}
 
-    ${(!metrics.onboardingDismissed && !(metrics.hasApiKey && metrics.hasTrace)) ? onboardingChecklist(metrics.hasApiKey, metrics.hasTrace) : ''}
+    ${(!metrics.onboardingDismissed && !metrics.hasTrace) ? onboardingWidget(metrics.hasApiKey, metrics.apiKeyPrefix) : ''}
 
     <!-- Summary stat cards -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

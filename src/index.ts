@@ -583,6 +583,14 @@ app.post('/dashboard/onboarding/dismiss', async (c) => {
   return c.redirect('/dashboard')
 })
 
+app.get('/dashboard/onboarding/check', async (c) => {
+  const userId = c.get('userId')
+  const traceRow = await c.env.NEXUS_DB.prepare(
+    "SELECT 1 FROM traces WHERE user_id = ? LIMIT 1"
+  ).bind(userId).first<{ '1': number }>()
+  return c.json({ hasTrace: traceRow != null })
+})
+
 app.route('/dashboard/keys', keysRoutes)
 app.route('/dashboard/traces', tracesRoutes)
 app.route('/dashboard/agents', agentsRoutes)
@@ -677,7 +685,7 @@ app.get('/dashboard', async (c) => {
     db.prepare(
       "SELECT plan FROM subscriptions WHERE user_id = ? AND status IN ('active','trialing') ORDER BY created_at DESC LIMIT 1"
     ).bind(userId).first<{ plan: string }>(),
-    db.prepare("SELECT 1 FROM api_keys WHERE user_id = ? AND deleted_at IS NULL LIMIT 1").bind(userId).first<{ '1': number }>(),
+    db.prepare("SELECT id, key_prefix FROM api_keys WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1").bind(userId).first<{ id: string; key_prefix: string }>(),
     db.prepare("SELECT 1 FROM traces WHERE user_id = ? LIMIT 1").bind(userId).first<{ '1': number }>(),
     c.env.NEXUS_KV.get(`onboarding_dismissed:${userId}`),
     getDashboardStats(db, c.env.NEXUS_KV, userId),
@@ -709,6 +717,7 @@ app.get('/dashboard', async (c) => {
     hasApiKey: apiKeyRow != null,
     hasTrace: traceRow != null,
     onboardingDismissed: onboardingDismissedVal != null,
+    apiKeyPrefix: apiKeyRow?.key_prefix,
   }
 
   return c.html(dashboardPage(metrics))
