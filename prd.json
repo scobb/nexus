@@ -2567,7 +2567,7 @@
       "id": "ACP-165",
       "title": "Interactive API playground — test endpoints from the browser",
       "priority": 165,
-      "passes": false,
+      "passes": true,
       "description": "An interactive API playground where developers can enter their API key and make real API calls directly from the docs page. Shows the request being built, sends it, and displays the response in real-time. This reduces friction dramatically — test the API without installing anything. Lives at /docs/api/playground or as an interactive section within the API reference page.",
       "acceptanceCriteria": [
         "Interactive form on the API reference page (or separate /docs/api/playground route)",

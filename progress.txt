@@ -89,3 +89,15 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
   - API reference page was a pure new file — no scaffold stub existed unlike changelog. Import and route both needed adding in index.ts
   - Prod baseline has shifted up: now 48 pass + 84 skip (was 42 + 84 before ACP-164)
 ---
+
+## 2026-04-13 — ACP-165
+- What was implemented: Interactive API playground on /docs/api-reference page
+- Files changed:
+  - `src/pages/api-reference.ts` — added `#playground` section with API key input (sessionStorage), endpoint selector (GET /health, POST/PATCH traces, GET trace), dynamic trace ID field, pre-filled JSON body, live curl command builder, copy-to-clipboard, Send button (fetch() to real API), response area with status badge + latency + pretty JSON + error hints (401/403/404/429/500). Added sidebar anchor.
+  - `test/smoke/public.spec.ts` — 6 new ACP-165 tests: playground section present, sidebar link, curl updates on endpoint change, GET /health send returns 200, sessionStorage persistence, mobile 375px
+- Smoke tests: staging 100 pass + pre-existing webkit failures; prod 52 pass + 84 skip (new baseline: 52 pass, was 48)
+- **Learnings for future iterations:**
+  - Template literal backslash escaping for embedded JS: `\\\\\\n` in TS template (6 backslashes + n) → `\\\n` in HTML → `\\` + `\n` in JS = backslash + newline ✓
+  - Playground uses vanilla ES5 `var` style (except async pgSend) to avoid transpilation concerns
+  - Prod baseline now: 52 pass + 84 skip (SKIP_AUTH_TESTS=1)
+---

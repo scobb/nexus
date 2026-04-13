@@ -1,24 +1,24 @@
 ## Last completed
-ACP-164 - API reference documentation at /docs/api-reference
+ACP-165 - Interactive API playground on /docs/api-reference
 
 ## Next up
-ACP-165 - Interactive API playground — test endpoints from the browser
+ACP-166 - Core Web Vitals audit and performance optimization
 
-Notes on ACP-165 approach:
-- Add an interactive playground section to the existing /docs/api-reference page (or at /docs/api/playground)
-- Form: API key input (sessionStorage, not localStorage), endpoint selector dropdown, editable JSON request body, Send button
-- On send: fetch() to the Nexus API with the provided key, display response with status code and syntax highlighting
-- Show the equivalent curl command (update dynamically as user edits)
-- Pre-fill example bodies for each endpoint
-- Error responses: display with suggestions (401 → "check your API key", 429 → "rate limit hit", etc.)
-- Read-only demo endpoints (GET /api/v1/traces/:id) work without an API key
-- Mobile-responsive at 375px
+Notes on ACP-166 approach:
+- Run Lighthouse on landing page, pricing, docs, blog via Playwright or CLI tool
+- Document baseline scores in progress.txt
+- Target: landing page performance >= 90, all public pages CLS <= 0.1, LCP < 2.5s
+- Optimizations: inline critical CSS above fold, font-display: swap, preload key fonts, explicit image dimensions
+- TTFB: document for cached vs uncached (Cloudflare Workers serve edge-cached)
+- Since no images are used (it's a pure text/CSS app), CLS/LCP issues are likely CSS-related
+- Critical CSS to inline: focus on what styles the above-fold of the landing page (nav + hero)
 
 ## Active issues
 - 2 pre-existing smoke test failures: keys.spec empty name (chromium), mobile webkit not installed (all mobile tests)
-- Production smoke tests: 48 pass + 84 skip + pre-existing mobile failures (SKIP_AUTH_TESTS=1) — new baseline after ACP-164
+- Production smoke tests: 52 pass + 84 skip + pre-existing mobile failures (SKIP_AUTH_TESTS=1) — new baseline after ACP-165
 
 ## Key decisions this session
-- ACP-163: Badge types are 'feature' (green), 'improvement' (blue), 'fix' (orange), 'content' (purple)
-- ACP-164: Pure new file (no scaffold stub). Route in index.ts + import + sidebar link in docs.ts.
-- Prod baseline has shifted: now 48 pass (was 42 before ACP-164)
+- ACP-165: Playground is a section on the existing /docs/api-reference page (no new route)
+- ACP-165: Uses sessionStorage for API key (cleared on tab close, per security requirement)
+- Backslash escaping in TS template: 6 backslashes + n (\\\\\\n) → \\\n in HTML → \\ + \n in JS = backslash+newline ✓
+- Prod baseline now: 52 pass + 84 skip
