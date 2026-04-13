@@ -35,9 +35,9 @@ function tryPretty(json: string): string {
   }
 }
 
-// --- Hardcoded demo data ---
+// --- Demo data types ---
 
-interface DemoTrace {
+export interface DemoTrace {
   id: string
   agent_id: string
   agent_name: string
@@ -47,7 +47,7 @@ interface DemoTrace {
   ended_at: string | null
 }
 
-interface DemoSpan {
+export interface DemoSpan {
   id: string
   name: string
   status: string
@@ -57,6 +57,15 @@ interface DemoSpan {
   output: string | null
   error: string | null
   parent_span_id: string | null
+}
+
+export interface DemoAgentCard {
+  id: string
+  name: string
+  lastStatus: string | null
+  lastTraceAt: string | null
+  errors24h: number
+  total24h: number
 }
 
 export const DEMO_TRACES: DemoTrace[] = [
@@ -116,17 +125,17 @@ export const DEMO_SPANS: Record<string, DemoSpan[]> = {
 
 // ---- Computed demo stats ----
 
-function computeDemoStats() {
-  const total = DEMO_TRACES.length // 12
-  const errors = DEMO_TRACES.filter(t => t.status === 'error' || t.status === 'timeout').length // 3
-  const errorRate = Math.round((errors / total) * 100) // 25%
+function computeDemoStats(traces: DemoTrace[]) {
+  const total = traces.length
+  const errors = traces.filter(t => t.status === 'error' || t.status === 'timeout').length
+  const errorRate = total > 0 ? Math.round((errors / total) * 100) : 0
 
-  const durations = DEMO_TRACES
+  const durations = traces
     .filter(t => t.ended_at)
     .map(t => new Date(t.ended_at!).getTime() - new Date(t.started_at).getTime())
-  const avgMs = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+  const avgMs = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
 
-  return { total, errorRate, avgMs }
+  return { errorRate, avgMs }
 }
 
 function demoWeeklyBars(): string {
@@ -154,7 +163,7 @@ function demoWeeklyBars(): string {
   return `<div class="flex items-end gap-1">${bars}</div>`
 }
 
-const DEMO_AGENT_CARDS = [
+export const DEMO_AGENT_CARDS: DemoAgentCard[] = [
   { id: 'demo-a1', name: 'email-assistant', lastStatus: 'success', lastTraceAt: '2026-04-06T13:45:00Z', errors24h: 1, total24h: 4 },
   { id: 'demo-a2', name: 'code-review-bot', lastStatus: 'success', lastTraceAt: '2026-04-06T13:20:00Z', errors24h: 1, total24h: 3 },
   { id: 'demo-a3', name: 'customer-support-agent', lastStatus: 'running', lastTraceAt: '2026-04-06T14:05:00Z', errors24h: 1, total24h: 5 },
@@ -167,7 +176,7 @@ const DEMO_BANNER = `
       This is what Nexus looks like when your agents are running.
     </span>
     <a href="/register" class="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-1.5 rounded-lg whitespace-nowrap">
-      Sign up free &rarr;
+      Start monitoring your agents &mdash; free &rarr;
     </a>
   </div>`
 
@@ -181,11 +190,18 @@ const DEMO_NAV = `
     </div>
   </nav>`
 
-export function demoOverviewPage(): string {
-  const { total, errorRate, avgMs } = computeDemoStats()
+export function demoOverviewPage(data?: {
+  traces: DemoTrace[]
+  agentCards: DemoAgentCard[]
+  monthlyTotal?: number
+}): string {
+  const traces = data?.traces ?? DEMO_TRACES
+  const agentCards = data?.agentCards ?? DEMO_AGENT_CARDS
+  const monthlyTotal = data?.monthlyTotal ?? traces.length
+  const { errorRate, avgMs } = computeDemoStats(traces)
   const avgDuration = avgMs < 1000 ? `${avgMs}ms` : `${(avgMs / 1000).toFixed(2)}s`
 
-  const agentCards = DEMO_AGENT_CARDS.map(a => {
+  const agentCardHtml = agentCards.map(a => {
     const errorRatePct = a.total24h > 0 ? Math.round((a.errors24h / a.total24h) * 100) : 0
     const successRatePct = a.total24h > 0 ? (100 - errorRatePct) : null
     const isUnhealthy = errorRatePct > 10
@@ -207,13 +223,13 @@ export function demoOverviewPage(): string {
           </div>
           <div>
             <p class="text-xs text-gray-500 mb-0.5">Last active</p>
-            <p class="text-gray-300 text-xs">${formatDate(a.lastTraceAt)}</p>
+            <p class="text-gray-300 text-xs">${a.lastTraceAt ? formatDate(a.lastTraceAt) : '—'}</p>
           </div>
         </div>
       </div>`
   }).join('')
 
-  const traceRows = DEMO_TRACES.map(t => `
+  const traceRows = traces.map(t => `
     <tr class="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
       <td class="py-3 pr-4">
         <a href="/demo/traces/${escHtml(t.id)}" class="text-indigo-400 hover:text-indigo-300 transition-colors font-medium text-sm">${escHtml(t.name)}</a>
@@ -243,8 +259,8 @@ export function demoOverviewPage(): string {
   <main id="main-content" class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
       <div>
-        <h1 class="text-2xl font-bold">Overview</h1>
-        <p class="text-sm text-gray-500 mt-0.5">3 agents · sample data from a typical day</p>
+        <h1 class="text-2xl font-bold">Demo Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-0.5">${agentCards.length} agents · live demo data</p>
       </div>
       <a href="/register" class="text-sm bg-indigo-600 hover:bg-indigo-500 transition-colors text-white px-4 py-2 rounded-lg font-medium">
         Instrument your own agents &rarr;
@@ -255,8 +271,8 @@ export function demoOverviewPage(): string {
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
         <p class="text-xs text-gray-400 mb-1 uppercase tracking-wide">Traces this month</p>
-        <p class="text-3xl font-bold">${total}</p>
-        <p class="text-xs text-gray-500 mt-1">of 1,000 (Free)</p>
+        <p class="text-3xl font-bold">${monthlyTotal}</p>
+        <p class="text-xs text-gray-500 mt-1">of 50,000 (Pro)</p>
       </div>
       <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
         <p class="text-xs text-gray-400 mb-1 uppercase tracking-wide">Error rate</p>
@@ -270,8 +286,8 @@ export function demoOverviewPage(): string {
       </div>
       <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
         <p class="text-xs text-gray-400 mb-1 uppercase tracking-wide">Agents</p>
-        <p class="text-3xl font-bold">3</p>
-        <p class="text-xs text-gray-500 mt-1">of 1 (Free)</p>
+        <p class="text-3xl font-bold">${agentCards.length}</p>
+        <p class="text-xs text-gray-500 mt-1">active agents</p>
       </div>
     </div>
 
@@ -285,7 +301,7 @@ export function demoOverviewPage(): string {
     <div class="mb-8">
       <h2 class="text-lg font-semibold mb-4">Agent health</h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        ${agentCards}
+        ${agentCardHtml}
       </div>
     </div>
 
@@ -315,7 +331,7 @@ export function demoOverviewPage(): string {
       <h2 class="text-2xl font-bold mb-2">Ready to monitor your agents?</h2>
       <p class="text-gray-400 mb-6">Drop in 3 lines of code. See traces in seconds. Free to start.</p>
       <a href="/register" class="inline-block bg-indigo-600 hover:bg-indigo-500 transition-colors text-white font-semibold px-8 py-3 rounded-xl text-lg">
-        Start free &rarr;
+        Start monitoring your agents &mdash; free &rarr;
       </a>
       <p class="text-xs text-gray-600 mt-4">No credit card required · 1,000 traces/month free forever</p>
     </div>
@@ -324,8 +340,11 @@ export function demoOverviewPage(): string {
 </html>`
 }
 
-export function demoTraceDetailPage(traceId: string): string {
-  const trace = DEMO_TRACES.find(t => t.id === traceId)
+export function demoTraceDetailPage(traceId: string, data?: {
+  trace: DemoTrace
+  spans: DemoSpan[]
+}): string {
+  const trace = data?.trace ?? DEMO_TRACES.find(t => t.id === traceId)
   if (!trace) {
     return `<!DOCTYPE html>
 <html lang="en">
@@ -339,7 +358,7 @@ export function demoTraceDetailPage(traceId: string): string {
 </html>`
   }
 
-  const spans = DEMO_SPANS[traceId] ?? []
+  const spans = data?.spans ?? (DEMO_SPANS[traceId] ?? [])
 
   const spanRows = spans.map((s, i) => {
     const indent = s.parent_span_id ? 'pl-8' : 'pl-0'

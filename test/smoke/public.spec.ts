@@ -38,20 +38,49 @@ test.describe('Public pages', () => {
     expect(response.status()).toBe(200)
   })
 
-  test('GET /demo returns 200 with demo trace viewer', async ({ page }) => {
+  test('GET /demo returns 200 — Demo Dashboard with agents, traces, and CTAs', async ({ page }) => {
     const response = await page.goto('/demo')
     expect(response?.status()).toBe(200)
 
     const content = await page.content()
-    expect(content).toMatch(/demo|trace/i)
+    // ACP-161: Demo Dashboard header
+    expect(content).toContain('Demo Dashboard')
+    // ACP-161: trace list present
+    expect(content).toMatch(/trace/i)
+    // ACP-161: prominent CTA at top (banner) and bottom
+    expect(content).toContain('Start monitoring your agents')
+    // ACP-161: demo-specific nav (no settings or billing links in nav)
+    expect(content).not.toMatch(/<a[^>]+href="\/settings"/)
+    expect(content).not.toMatch(/<a[^>]+href="\/billing"/)
+    // ACP-161: sign-up CTA present
+    expect(content).toContain('/register')
   })
 
-  test('GET /demo/traces/demo-t1 returns 200 with trace detail', async ({ page }) => {
+  test('GET /demo/traces/demo-t1 returns 200 with trace detail (fallback data)', async ({ page }) => {
     const response = await page.goto('/demo/traces/demo-t1')
     expect(response?.status()).toBe(200)
 
     const content = await page.content()
     expect(content).toMatch(/trace|span/i)
+  })
+
+  test('GET /demo/traces/demo-tr-cs-001 returns 200 with trace detail (D1 seed data)', async ({ page }) => {
+    const response = await page.goto('/demo/traces/demo-tr-cs-001')
+    expect(response?.status()).toBe(200)
+
+    const content = await page.content()
+    expect(content).toMatch(/trace|span/i)
+    // Should show the Customer Support Bot trace from seed
+    expect(content).toContain('ticket')
+  })
+
+  test('GET / landing page includes "See a live demo" CTA linking to /demo', async ({ page }) => {
+    const response = await page.goto('/')
+    expect(response?.status()).toBe(200)
+
+    const content = await page.content()
+    expect(content).toContain('live demo')
+    expect(content).toContain('/demo')
   })
 
   test('GET /blog returns 200 with blog listing', async ({ page }) => {

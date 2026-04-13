@@ -121,7 +121,7 @@ export function landingPage(deletedMessage?: boolean): string {
           Start free — no card required
         </a>
         <a href="/demo" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-gray-100 px-6 py-3 rounded-lg font-semibold text-base transition-colors">
-          View demo
+          See a live demo &rarr;
         </a>
       </div>
       <p class="mt-4 text-sm text-gray-500">Free forever up to 1,000 traces/month</p>
@@ -484,7 +484,7 @@ export function landingPage(deletedMessage?: boolean): string {
           Start free
         </a>
         <a href="/demo" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-gray-100 px-6 py-3 rounded-lg font-semibold text-base transition-colors">
-          View demo
+          See a live demo &rarr;
         </a>
       </div>
     </div>
