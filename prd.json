@@ -2587,7 +2587,7 @@
       "id": "ACP-166",
       "title": "Core Web Vitals audit and performance optimization",
       "priority": 166,
-      "passes": false,
+      "passes": true,
       "description": "Audit all public pages for Core Web Vitals (LCP, FID, CLS) and overall Lighthouse performance score. Optimize: inline critical CSS, minimize layout shifts, optimize font loading, reduce server response time where possible. Target 90+ Lighthouse performance score on all public routes. Better CWV scores improve Google ranking.",
       "acceptanceCriteria": [
         "Audit landing page, pricing, docs, blog posts, comparison pages for Lighthouse scores",

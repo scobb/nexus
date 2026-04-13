@@ -101,3 +101,23 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
   - Playground uses vanilla ES5 `var` style (except async pgSend) to avoid transpilation concerns
   - Prod baseline now: 52 pass + 84 skip (SKIP_AUTH_TESTS=1)
 ---
+
+## 2026-04-13 — ACP-166
+- What was implemented: Core Web Vitals audit and performance optimization
+- Files changed:
+  - `src/pages/landing.ts` — replaced render-blocking `@import url(...)` with non-blocking font load: preconnect hints (fonts.googleapis.com + fonts.gstatic.com), preload as="style", async stylesheet (media="print" onload trick), noscript fallback. Added inline critical CSS (background-color + font-family + skip-link).
+  - `src/pages/changelog.ts` — same font optimization as landing.ts
+  - `test/smoke/public.spec.ts` — 3 new ACP-166 tests: landing non-blocking fonts (raw HTML check), changelog non-blocking fonts, api-reference no @import
+- **Lighthouse scores (before → after):**
+  - Landing: Performance 97→99, LCP 1.7s→1.6s, CLS 0.093→0.02, TBT 0ms, TTFB 20ms
+  - Pricing: 100 (no change — already optimal)
+  - Docs: 100 (no change — already optimal)
+  - Blog: 100 (no change — already optimal)
+  - Render-blocking Google Fonts @import removed: 775ms savings
+- Smoke tests: staging 103 pass + pre-existing webkit; prod 56 pass + 84 skip (new baseline: 56 pass)
+- **Learnings for future iterations:**
+  - Playwright page.content() returns rendered DOM after JS runs — `media="print"` becomes `media="all"` after onload fires. Use `page.request.get()` for raw HTML source checks
+  - Non-blocking font pattern: preconnect + preload + `media="print" onload="this.onload=null;this.media='all'"` + noscript
+  - CLS improvement from 0.093 to 0.02 — the inline critical CSS with explicit font-family prevented layout shift from font swap
+  - Prod baseline now: 56 pass + 84 skip (SKIP_AUTH_TESTS=1)
+---
