@@ -10,9 +10,11 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
 - Auth: `nexus_session` HttpOnly cookie. `requireAuth` middleware in `src/middleware/`.
 - SQL escaping in .sql files: Use `''` to escape single quotes (NOT `\'` which is shell syntax)
 - subscriptions table: Use `ORDER BY rowid DESC LIMIT 1` for latest sub. Production d1_migrations may lag.
-- Demo data: Hardcoded in `src/pages/demo.ts` (DEMO_TRACES, DEMO_SPANS). Seed data in D1 via `scripts/seed-demo.sql`.
+- Demo data: D1 seed at `scripts/seed-demo.sql` (demo-user-seed-001). Route `src/routes/demo.ts` queries D1, falls back to hardcoded DEMO_TRACES/DEMO_SPANS in `src/pages/demo.ts`.
 - Smoke test pattern: `hasTestEndpoints` flag gates bootstrap tests. Production runs with SKIP_AUTH_TESTS=1.
-- Pre-existing test failures (not my work): keys.spec empty name, settings.spec non-https URL, mobile webkit missing.
+- Pre-existing test failures (not my work): keys.spec empty name, mobile webkit missing (webkit not installed on this machine).
+- D1 agent health query: use CAST(IFNULL(...COUNT..., 0) AS INTEGER) for subquery count fields — avoids null issues in TypeScript.
+- PRD structure: prd.userStories (not prd.stories) — use `prd.userStories.find(s => s.id === ...)`
 
 ---
 
@@ -28,4 +30,20 @@ Started: Mon Apr 13 09:07:57 AM PDT 2026
   - wrangler d1 execute `--file` is the right approach for seeding; `INSERT OR IGNORE` handles idempotency cleanly
   - Must run `npm run migrations:local` before first local seed (tables don't exist in fresh DB)
   - D1 remote seed takes ~30ms on prod vs ~8ms on staging for same data
+---
+
+## 2026-04-13 — ACP-161
+- What was implemented: Public demo dashboard at /demo loading real D1 seed data
+- Files changed:
+  - `src/pages/demo.ts` — exported DemoTrace, DemoSpan, DemoAgentCard interfaces; updated demoOverviewPage() and demoTraceDetailPage() to accept optional data params with graceful fallback to hardcoded arrays; h1 "Overview" → "Demo Dashboard"; CTA text → "Start monitoring your agents — free"
+  - `src/routes/demo.ts` — full async D1 query of demo-user-seed-001 traces, agent health cards, monthly total; parallel D1 queries; try/catch fallback to hardcoded data
+  - `src/pages/landing.ts` — "View demo" → "See a live demo →" (both hero and footer CTA)
+  - `test/smoke/public.spec.ts` — added 4 ACP-161 smoke tests: Demo Dashboard header, D1 trace detail (demo-tr-cs-001), landing page CTA text, read-only nav check
+  - `src/generated-styles.ts` / `tailwind/output.css` — CSS rebuild
+- Smoke tests: 64/65 chromium pass on staging (1 pre-existing keys failure), 29 pass + 36 skip on prod (SKIP_AUTH_TESTS=1, 0 failures from my changes)
+- **Learnings for future iterations:**
+  - PRD structure uses `prd.userStories` not `prd.stories` — check with `Object.keys(prd)` if unsure
+  - D1 subquery COUNT fields should use `CAST(IFNULL(..., 0) AS INTEGER)` to avoid null/string type issues in TypeScript
+  - When refactoring page functions to accept optional params, grep for all variable names in the template string — easy to miss old names still referenced
+  - The demo route can be async (Hono supports it without any config change) — existing sync demoRoutes.get('/', ...) just becomes async
 ---
